@@ -1094,11 +1094,15 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
       <div class="gemini-brand">
         <div class="gemini-avatar">✦</div>
         <div class="gemini-meta">
-          <div class="gemini-title">Gemini Co-Pilot <span class="pro-badge">Pro</span></div>
-          <div class="gemini-subtitle"><span class="dot"></span> Online · Gemini 2.0 Flash</div>
+          <div class="gemini-title">AI Co-Pilot <span class="pro-badge" style="background:linear-gradient(135deg,#06b6d4,#3b82f6)">Puter.js</span></div>
+          <div class="gemini-subtitle"><span class="dot"></span> Online · DeepSeek V3</div>
         </div>
       </div>
-      <div class="refine-header-actions">
+      <div class="refine-header-actions" style="display:flex;align-items:center;gap:0.4rem;">
+        <button class="header-icon-btn" id="builder-puter-btn" onclick="toggleBuilderPuterMenu(event)" title="Puter AI Account & Credits" style="padding:0.25rem 0.55rem;font-size:0.72rem;font-weight:700;background:#1e1b4b;border:1px solid #6366f1;color:#c7d2fe;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+          <span id="b-puter-dot" style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+          <span id="b-puter-name">Puter AI</span>
+        </button>
         <button class="header-icon-btn" onclick="clearChatLog()" title="Clear conversation">🗑</button>
         <button class="header-icon-btn" onclick="toggleChatHistory()" title="Toggle history" id="chat-toggle-btn">▾</button>
       </div>
@@ -1310,6 +1314,10 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 
 <div class="toast" id="toast"><span id="toast-text"></span></div>
 
+<!-- Puter.js & WebCraft AI Client Service -->
+<script src="https://js.puter.com/v2/"></script>
+<script src="<?= SITE_URL ?>/assets/js/puter-service.js"></script>
+
 <script>
 // ═════════════════════════════════════════════════════
 //  GLOBAL STATE
@@ -1471,11 +1479,35 @@ async function generate3Designs() {
       display3Designs(payload.data.biz_name);
       showToast('✨ 3 concepts generated!');
     } else {
-      showToast('Error generating designs: ' + (result.error || 'Server error'));
+      console.warn('Backend generation failed or key error, trying Puter AI (DeepSeek)...');
+      showToast('⚡ Generating with Puter AI (DeepSeek)...');
+      const puterDesigns = await window.PuterService.generateConceptsWithPuter(payload.data);
+      if (puterDesigns && puterDesigns.length >= 3) {
+        generatedDesigns = puterDesigns.map(d => ({ ...d, history: [] }));
+        saveProjectToStorage();
+        display3Designs(payload.data.biz_name);
+        showToast('✨ 3 concepts generated with Puter AI!');
+      } else {
+        showToast('Error generating designs: ' + (result.error || 'Server error'));
+      }
     }
   } catch (err) {
-    console.error('[generate3Designs]', err);
-    showToast('Network error: ' + err.message);
+    console.warn('[generate3Designs fetch failed, trying Puter AI]:', err);
+    try {
+      showToast('⚡ Generating with Puter AI (DeepSeek)...');
+      const puterDesigns = await window.PuterService.generateConceptsWithPuter(payload.data);
+      if (puterDesigns && puterDesigns.length >= 3) {
+        generatedDesigns = puterDesigns.map(d => ({ ...d, history: [] }));
+        saveProjectToStorage();
+        display3Designs(payload.data.biz_name);
+        showToast('✨ 3 concepts generated with Puter AI!');
+      } else {
+        throw new Error('Puter AI generation returned incomplete designs.');
+      }
+    } catch (puterErr) {
+      console.error('[Puter AI generation error]:', puterErr);
+      showToast('Generation error: ' + puterErr.message);
+    }
   } finally {
     genBtn.disabled = false;
     genBtn.innerHTML = '⚡ Generate 3 Concepts';
@@ -1826,13 +1858,121 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function formatMarkdown(text) {
+  if (!text) return '';
+  let escaped = escapeHtml(text);
+  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  escaped = escaped.replace(/`([^`]+)`/g, '<code style="background:#1e293b;padding:0.1rem 0.35rem;border-radius:4px;color:#a5b4fc;font-size:0.75rem;">$1</code>');
+  escaped = escaped.replace(/\n\n/g, '<br><br>');
+  escaped = escaped.replace(/\n/g, '<br>');
+  return escaped;
+}
+
+// ═════════════════════════════════════════════════════
+//  PUTER.JS AUTH & ACCOUNT IN BUILDER
+// ═════════════════════════════════════════════════════
+window.addEventListener('puter-auth-changed', (e) => {
+  const { user, isSignedIn } = e.detail || {};
+  const dot = document.getElementById('b-puter-dot');
+  const name = document.getElementById('b-puter-name');
+  if (isSignedIn && user) {
+    if (dot) dot.style.background = '#10b981';
+    if (name) name.textContent = '@' + (user.username || 'Puter');
+  } else {
+    if (dot) dot.style.background = '#94a3b8';
+    if (name) name.textContent = 'Sign In';
+  }
+});
+
+async function toggleBuilderPuterMenu(e) {
+  if (e) e.stopPropagation();
+  const isSigned = await window.PuterService.isSignedIn();
+  const user = await window.PuterService.getUser();
+
+  const existing = document.getElementById('builder-puter-menu');
+  if (existing) { existing.remove(); return; }
+
+  const menu = document.createElement('div');
+  menu.id = 'builder-puter-menu';
+  menu.style.cssText = `
+    position: fixed; bottom: 85px; right: 20px; z-index: 100060;
+    background: #111726; border: 1.5px solid #283347; border-radius: 14px;
+    padding: 1rem; width: 270px; box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+    color: #f8fafc; font-family: inherit; font-size: 0.82rem;
+  `;
+
+  if (isSigned && user) {
+    menu.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem;padding-bottom:0.75rem;border-bottom:1px solid #1e293b;">
+        <div style="width:34px;height:34px;border-radius:50%;background:#4f46e5;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;">👤</div>
+        <div>
+          <div style="font-weight:700;color:#fff;">@${escapeHtml(user.username || 'User')}</div>
+          <div style="font-size:0.68rem;color:#10b981;">🟢 Puter.js AI Active</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.45rem;">
+        <button class="tb-btn" onclick="handleBuilderPuterSwitch()" style="justify-content:flex-start;width:100%;">🔄 Switch Account</button>
+        <button class="tb-btn" onclick="window.PuterService.openSignUp()" style="justify-content:flex-start;width:100%;">➕ Create Free Account</button>
+        <button class="tb-btn" onclick="handleBuilderPuterSignOut()" style="justify-content:flex-start;width:100%;color:#f43f5e;border-color:#3f1826;">🚪 Sign Out</button>
+      </div>
+    `;
+  } else {
+    menu.innerHTML = `
+      <div style="margin-bottom:0.75rem;padding-bottom:0.75rem;border-bottom:1px solid #1e293b;">
+        <div style="font-weight:700;color:#fff;margin-bottom:0.2rem;">Puter AI Integration</div>
+        <div style="font-size:0.72rem;color:#94a3b8;line-height:1.4;">Sign in to unlock free DeepSeek V3 generations &amp; chat.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.45rem;">
+        <button class="tb-btn" onclick="handleBuilderPuterSignIn()" style="justify-content:center;width:100%;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;">✦ Sign In with Puter</button>
+        <button class="tb-btn" onclick="window.PuterService.openSignUp()" style="justify-content:center;width:100%;">➕ Create Free Account</button>
+      </div>
+    `;
+  }
+
+  document.body.appendChild(menu);
+  const closeMenu = (ev) => {
+    if (!menu.contains(ev.target) && ev.target.id !== 'builder-puter-btn') {
+      menu.remove();
+      document.removeEventListener('click', closeMenu);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeMenu), 10);
+}
+
+async function handleBuilderPuterSignIn() {
+  document.getElementById('builder-puter-menu')?.remove();
+  try {
+    await window.PuterService.signIn();
+    showToast('✓ Signed in with Puter!');
+  } catch (e) {
+    showToast('Sign in cancelled');
+  }
+}
+
+async function handleBuilderPuterSwitch() {
+  document.getElementById('builder-puter-menu')?.remove();
+  try {
+    await window.PuterService.switchAccount();
+    showToast('✓ Switched Puter account!');
+  } catch (e) {
+    showToast('Account switch cancelled');
+  }
+}
+
+async function handleBuilderPuterSignOut() {
+  document.getElementById('builder-puter-menu')?.remove();
+  await window.PuterService.signOut();
+  showToast('Signed out of Puter');
+}
+
 function quickRefine(promptText) {
   document.getElementById('refine-query').value = promptText;
   executeRefine();
 }
 
 // ═════════════════════════════════════════════════════
-//  REFINE (Backend API)
+//  REFINE (Puter.js AI & Gemini Fallback)
 // ═════════════════════════════════════════════════════
 async function executeRefine() {
   const inputEl = document.getElementById('refine-query');
@@ -1856,30 +1996,31 @@ async function executeRefine() {
   if (chatLog) chatLog.scrollTop = chatLog.scrollHeight;
 
   try {
-    const res = await fetch('<?= SITE_URL ?>/api/generate.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'refine',
-        api_key: localStorage.getItem('gemini_api_key') || '',
-        current_html: currentHtml,
-        instruction: query,
-        concept_index: activeDesignIndex,
-        concept_name: currentConceptName,
-        biz_name: document.getElementById('biz_name')?.value || 'Website'
-      })
+    // 1. First attempt with PuterService (DeepSeek V3 client-side)
+    const res = await window.PuterService.chatAndEdit({
+      userPrompt: query,
+      selectedElement: null,
+      currentHtml: currentHtml,
+      context: {
+        bizName: document.getElementById('biz_name')?.value || 'Website',
+        summary: `Concept: ${currentConceptName}`
+      }
     });
-    const result = await res.json();
 
-    if (result.success && result.html) {
+    // Conversational response
+    appendGeminiChatMessage(formatMarkdown(res.conversation));
+
+    // If edit was generated
+    if (res.isEdit && res.updatedHtml) {
       pushHistory(snapshotDesignIndex, snapshotHtml);
 
-      currentHtml = result.html;
+      let newHtml = res.updatedHtml;
+      if (newHtml.includes('<html') || newHtml.includes('<!DOCTYPE')) {
+        currentHtml = newHtml;
+      } else {
+        currentHtml = currentHtml.replace('</body>', `${newHtml}\n</body>`);
+      }
       generatedDesigns[snapshotDesignIndex].html = currentHtml;
-      if (result.name)        generatedDesigns[snapshotDesignIndex].name = result.name;
-      if (result.badge)       generatedDesigns[snapshotDesignIndex].badge = result.badge;
-      if (result.description) generatedDesigns[snapshotDesignIndex].description = result.description;
-
       saveProjectToStorage();
       updateLiveIframe(currentHtml);
       updateUndoBtn();
@@ -1890,27 +2031,55 @@ async function executeRefine() {
         previewBox.style.boxShadow = '0 0 35px rgba(99,102,241,0.65)';
         setTimeout(() => { previewBox.style.boxShadow = ''; }, 1200);
       }
-
-      const aiMsg = result.response_msg || `Applied: "${query}"`;
-      appendGeminiChatMessage(
-        `✨ <strong>${escapeHtml(aiMsg)}</strong><br>
-         <span style="color:#94a3b8; font-size:0.78rem;">✅ Updated in <strong style="color:#a5b4fc;">${escapeHtml(currentConceptName)}</strong>. You can <strong>Undo AI</strong> if needed.</span>`
-      );
       showToast(`✨ ${currentConceptName} updated!`);
-    } else {
-      currentHtml = snapshotHtml;
-      const errMsg = result.error || 'Failed to update website';
-      appendGeminiChatMessage(`⚠️ ${escapeHtml(errMsg)}<br><span style="color:#94a3b8; font-size:0.78rem;">No changes applied — your website is safe.</span>`);
-      showToast('Notice: ' + errMsg);
     }
-  } catch (err) {
-    currentHtml = snapshotHtml;
-    appendGeminiChatMessage(`⚠️ Connection error: ${escapeHtml(err.message)}<br><span style="color:#94a3b8; font-size:0.78rem;">No changes applied.</span>`);
-    showToast('Error: ' + err.message);
+
+  } catch (puterErr) {
+    console.warn('[Puter AI error in builder]:', puterErr);
+    if (window.PuterService.isQuotaOrCreditError(puterErr)) {
+      appendGeminiChatMessage('⚠️ Puter AI credit limit reached on this account. Please switch accounts or create a new free Puter account using the button above.');
+    } else {
+      // Backend Gemini fallback
+      try {
+        await executeGeminiBackendRefine(query, snapshotHtml, snapshotDesignIndex, currentConceptName);
+      } catch (geminiErr) {
+        appendGeminiChatMessage(`⚠️ AI request failed: ${escapeHtml(geminiErr.message)}`);
+        showToast('Error: ' + geminiErr.message);
+      }
+    }
   } finally {
     if (thinking) thinking.style.display = 'none';
     btn.disabled = false;
     btn.innerHTML = '<span>✦</span><span>Refine</span>';
+  }
+}
+
+async function executeGeminiBackendRefine(query, snapshotHtml, snapshotDesignIndex, currentConceptName) {
+  const res = await fetch('<?= SITE_URL ?>/api/generate.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'refine',
+      api_key: localStorage.getItem('gemini_api_key') || '',
+      current_html: currentHtml,
+      instruction: query,
+      concept_index: activeDesignIndex,
+      concept_name: currentConceptName,
+      biz_name: document.getElementById('biz_name')?.value || 'Website'
+    })
+  });
+  const result = await res.json();
+  if (result.success && result.html) {
+    pushHistory(snapshotDesignIndex, snapshotHtml);
+    currentHtml = result.html;
+    generatedDesigns[snapshotDesignIndex].html = currentHtml;
+    saveProjectToStorage();
+    updateLiveIframe(currentHtml);
+    updateUndoBtn();
+    appendGeminiChatMessage(`✨ ${escapeHtml(result.response_msg || 'Updated via Gemini')}`);
+    showToast(`✨ ${currentConceptName} updated!`);
+  } else {
+    throw new Error(result.error || 'Backend failed');
   }
 }
 

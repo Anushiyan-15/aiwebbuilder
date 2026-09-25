@@ -13,7 +13,10 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Cinzel:wght@500;700;800&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/grapesjs/0.21.10/css/grapes.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/grapesjs/0.21.10/grapes.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/grapesjs/0.21.10/grapes.min.js"></script>
+  <!-- Puter.js & WebCraft AI Client Service -->
+  <script src="https://js.puter.com/v2/"></script>
+  <script src="<?= SITE_URL ?>/assets/js/puter-service.js"></script>
   <style>
     *,
     *::before,
@@ -2221,6 +2224,94 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       color: #cbd5e1;
     }
 
+    /* ── Puter AI & Target Selection Styles ── */
+    .ai-target-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.5rem 0.85rem;
+      background: #0b101d;
+      border-bottom: 1px solid #1e293b;
+      font-size: 0.74rem;
+      color: #94a3b8;
+      transition: all 0.2s ease;
+    }
+    .ai-target-banner.has-selection {
+      background: rgba(99, 102, 241, 0.15);
+      border-bottom-color: rgba(99, 102, 241, 0.4);
+      color: #c7d2fe;
+    }
+    .ai-target-info {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .ai-target-tag {
+      background: #312e81;
+      color: #a5b4fc;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 0.1rem 0.45rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .ai-target-preview {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+    .ai-target-clear {
+      background: none;
+      border: none;
+      color: #f43f5e;
+      cursor: pointer;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .ai-target-clear:hover {
+      background: rgba(244, 63, 94, 0.15);
+    }
+    .puter-model-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.35rem 0.85rem;
+      background: #080c14;
+      border-bottom: 1px solid #162032;
+      font-size: 0.7rem;
+      gap: 0.5rem;
+    }
+    .puter-model-select {
+      background: #111726;
+      border: 1px solid #283347;
+      color: #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.45rem;
+      font-family: inherit;
+      outline: none;
+    }
+    .puter-acc-link {
+      color: #818cf8;
+      cursor: pointer;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .puter-acc-link:hover {
+      text-decoration: underline;
+    }
+
     @media (max-width: 480px) {
       .magic-ai-panel {
         right: 0.75rem;
@@ -2731,7 +2822,12 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       <div class="header-divider"></div>
       <select class="lang-select" id="header-lang-select" onchange="switchCanvasLanguage(this.value)" title="Preview site in a different language"></select>
       <button class="hdr-btn help-btn" onclick="openShortcutsModal()" title="Keyboard shortcuts & tips">❓ <span class="lbl">Help</span></button>
-      <button class="hdr-btn ai-btn" onclick="toggleMagicAi()" title="Ask Gemini AI to build sections or rewrite copy">✦ <span class="lbl">Magic AI</span></button>
+      <div class="header-divider"></div>
+      <button class="hdr-btn" id="header-puter-btn" onclick="togglePuterAccountMenu(event)" title="Puter AI Account & Credits" style="background:#1e1b4b; border-color:#6366f1; color:#c7d2fe; font-weight:700;">
+        <span id="puter-status-dot" style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+        <span id="header-puter-name">Puter AI</span>
+      </button>
+      <button class="hdr-btn ai-btn" onclick="toggleMagicAi()" title="Ask AI to build sections, rewrite copy, or edit selected elements">✦ <span class="lbl">Magic AI</span></button>
       <button class="hdr-btn" onclick="openStudioPreview()" title="Preview your site in a new tab">👁️ <span class="lbl">Preview</span></button>
       <button class="hdr-btn save-btn" onclick="saveAndReturnToBuilder()" title="Save all changes and return">✓ <span class="lbl">Save</span></button>
     </div>
@@ -3052,6 +3148,7 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
   <div class="ctx-menu" id="custom-context-menu">
     <button class="ctx-item" onclick="ctxEditSelected()"><span class="ctx-icon">✏️</span> Edit</button>
     <button class="ctx-item" onclick="ctxEditText()"><span class="ctx-icon">✍️</span> Edit Text</button>
+    <button class="ctx-item" onclick="ctxAskAiToEdit()"><span class="ctx-icon">✦</span> Ask AI to Edit This</button>
     <button class="ctx-item" onclick="ctxCustomizeSection()"><span class="ctx-icon">🎨</span> Customize This Element</button>
     <button class="ctx-item" onclick="ctxEditSectionContent()"><span class="ctx-icon">📝</span> Edit Section Content</button>
     <button class="ctx-item" onclick="ctxAnimate()"><span class="ctx-icon">🎬</span> Animate Element</button>
@@ -3068,7 +3165,7 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
 
   <button class="floating-gemini-btn" onclick="toggleMagicAi()">
     <span class="fg-orb">✦</span>
-    <span>Gemini Magic AI</span>
+    <span>WebCraft AI</span>
   </button>
 
   <div class="magic-ai-panel" id="magic-ai-panel">
@@ -3077,8 +3174,8 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       <div class="magic-brand">
         <div class="magic-avatar">✦</div>
         <div class="magic-brand-text">
-          <div class="magic-brand-name">Gemini Magic Studio</div>
-          <div class="magic-brand-sub"><span class="dot"></span> Online · Gemini 2.0 Flash</div>
+          <div class="magic-brand-name">WebCraft AI Studio</div>
+          <div class="magic-brand-sub"><span class="dot"></span> Online · Puter.js &amp; DeepSeek</div>
         </div>
       </div>
       <div class="magic-header-actions">
@@ -3087,20 +3184,46 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       </div>
     </div>
 
+    <!-- Puter Model Selector & Account Row -->
+    <div class="puter-model-row">
+      <div style="display:flex; align-items:center; gap:0.4rem;">
+        <span style="color:#818cf8; font-weight:700;">Model:</span>
+        <select class="puter-model-select" id="magic-model-select" onchange="changePuterModel(this.value)">
+          <option value="deepseek/deepseek-chat" selected>DeepSeek V3 (Free)</option>
+          <option value="gpt-4o-mini">GPT-4o Mini</option>
+          <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+        </select>
+      </div>
+      <a class="puter-acc-link" onclick="togglePuterAccountMenu(event)" id="panel-puter-account-link">Sign In / Switch</a>
+    </div>
+
+    <!-- Target Element Selection Banner -->
+    <div class="ai-target-banner" id="ai-target-banner">
+      <div class="ai-target-info">
+        <span class="ai-target-icon" id="ai-target-icon">🌐</span>
+        <span class="ai-target-tag" id="ai-target-tag" style="display:none;">PAGE</span>
+        <span class="ai-target-preview" id="ai-target-preview">Entire Website Mode</span>
+      </div>
+      <button class="ai-target-clear" id="ai-target-clear-btn" onclick="clearSelectedComponentForAi()" style="display:none;" title="Deselect element and switch to whole website">✕ Clear</button>
+    </div>
+
     <div class="magic-chat-log" id="magic-chat-log">
       <div class="msg ai">
         <div class="msg-avatar">✦</div>
         <div class="msg-body">
           <div class="msg-bubble">
-            👋 <strong>Hey there!</strong> I can add sections, animations, galleries, and rewrite copy for you.<br>
-            🔒 Your theme &amp; colors stay locked unless you ask.
+            👋 <strong>Welcome to WebCraft AI!</strong><br>
+            • Click any element on canvas to <strong>edit it with AI</strong>.<br>
+            • Or chat freely, ask for advice, or add new sections!<br>
+            <span style="color:#94a3b8;font-size:0.75rem;">🔒 Powered by Puter.js — free credits, no API key required.</span>
           </div>
-          <div class="msg-meta">Gemini · just now</div>
+          <div class="msg-meta">AI · just now</div>
         </div>
       </div>
     </div>
 
-    <div class="m-chip-row">
+    <div class="m-chip-row" id="magic-chips-container">
       <span class="m-chip" onclick="quickMagic('Add 5-star customer testimonials section with slide-up animation')">⭐ Reviews</span>
       <span class="m-chip" onclick="quickMagic('Add pricing table with 3 tiers')">💰 Pricing</span>
       <span class="m-chip" onclick="quickMagic('Add FAQ section')">❓ FAQ</span>
@@ -3112,13 +3235,13 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       <div class="magic-input-wrap">
         <span class="magic-input-icon">✦</span>
         <input type="text" class="magic-input" id="magic-input"
-          placeholder="Ask Gemini to build or rewrite…"
+          placeholder="Ask AI to change text, style, or build sections…"
           onkeydown="if(event.key==='Enter') executeMagicAi()">
       </div>
       <button class="magic-btn" id="magic-btn" onclick="executeMagicAi()" title="Send message">➤</button>
     </div>
 
-    <div class="magic-hint">Press <kbd>Enter</kbd> to send · 🔒 Theme &amp; colors are locked</div>
+    <div class="magic-hint">Press <kbd>Enter</kbd> to send · Edit selected element or entire website</div>
 
   </div>
 
@@ -4689,10 +4812,16 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         configureEditorComponent(model);
         renderSmartLayers();
         updateFloatingContentBtn(model);
+        updateAiSelectedTarget(model);
         if (isButtonLike(model) && !suppressEditorOpen && !activeFreeDrag) openButtonEditor(model);
       });
       grapesEditor.on('component:dblclick', (model) => { if ((model.get('tagName') || '').toLowerCase() === 'img') openImageEditor(model); });
-      grapesEditor.on('component:deselected', () => { selectedComponent = null; renderSmartLayers(); updateFloatingContentBtn(null); });
+      grapesEditor.on('component:deselected', () => {
+        selectedComponent = null;
+        renderSmartLayers();
+        updateFloatingContentBtn(null);
+        updateAiSelectedTarget(null);
+      });
       grapesEditor.on('block:drag:stop', (component) => {
         suppressEditorOpen = true;
         if (component) configureEditorComponent(component);
@@ -5158,6 +5287,19 @@ ${WC_ANIMATION_RUNTIME}
     function ctxCustomizeSection() { hideContextMenu(); if (!ctxTargetComponent) return; grapesEditor.select(ctxTargetComponent); openSectionEditor(ctxTargetComponent); }
     function ctxEditSectionContent() { hideContextMenu(); if (!ctxTargetComponent) return; grapesEditor.select(ctxTargetComponent); setTimeout(openContentEditorForSelectedSection, 50); }
     function ctxAnimate() { hideContextMenu(); if (!ctxTargetComponent) return; grapesEditor.select(ctxTargetComponent); switchDrawerTab('anim'); showToast('🎬 Pick an animation'); }
+    function ctxAskAiToEdit() {
+      hideContextMenu();
+      if (!ctxTargetComponent) return;
+      grapesEditor.select(ctxTargetComponent);
+      const tag = (ctxTargetComponent.get('tagName') || 'element').toLowerCase();
+      toggleMagicAi(true);
+      const input = document.getElementById('magic-input');
+      if (input) {
+        input.focus();
+        input.value = `Update this <${tag}>: `;
+      }
+      showToast(`✦ Selected <${tag.toUpperCase()}> for AI edit`);
+    }
     function ctxCropImage() { hideContextMenu(); if (!ctxTargetComponent || (ctxTargetComponent.get('tagName') || '').toLowerCase() !== 'img') return; openCropTool(ctxTargetComponent); }
     function ctxEditImage() { hideContextMenu(); if (!ctxTargetComponent || (ctxTargetComponent.get('tagName') || '').toLowerCase() !== 'img') return; openImageEditor(ctxTargetComponent); }
     function ctxEditLink() { hideContextMenu(); if (!ctxTargetComponent) return; openButtonEditor(ctxTargetComponent); setTimeout(() => switchBtnEditorTab('link'), 100); }
@@ -6064,9 +6206,191 @@ ${WC_ANIMATION_RUNTIME}
     }
 
     /* ══════════════════════════════════════════════════
-       EXECUTE MAGIC AI — Backend API (Gemini via api/generate.php)
+       PUTER.JS & SELECTED ELEMENT AI INTEGRATION
     ══════════════════════════════════════════════════ */
-    async function executeMagicAi(){
+    function updateAiSelectedTarget(model) {
+      const banner = document.getElementById('ai-target-banner');
+      const icon = document.getElementById('ai-target-icon');
+      const tagEl = document.getElementById('ai-target-tag');
+      const prevEl = document.getElementById('ai-target-preview');
+      const clearBtn = document.getElementById('ai-target-clear-btn');
+      const input = document.getElementById('magic-input');
+      const chips = document.getElementById('magic-chips-container');
+      if (!banner) return;
+
+      if (model) {
+        banner.classList.add('has-selection');
+        const tag = (model.get('tagName') || 'element').toLowerCase();
+        let preview = '';
+        try {
+          const el = model.getEl ? model.getEl() : null;
+          preview = el ? (el.innerText || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 28) : '';
+        } catch (e) {}
+        if (!preview) preview = tag.toUpperCase() + ' component';
+
+        if (icon) icon.textContent = '🎯';
+        if (tagEl) { tagEl.style.display = 'inline-block'; tagEl.textContent = tag.toUpperCase(); }
+        if (prevEl) prevEl.textContent = `"${preview}"`;
+        if (clearBtn) clearBtn.style.display = 'inline-block';
+        if (input) input.placeholder = `Ask AI to modify this <${tag}> (e.g. rewrite text, style, colors)...`;
+
+        if (chips) {
+          chips.innerHTML = `
+            <span class="m-chip" onclick="quickMagic('Rewrite this text to be more punchy and modern')">✍️ Rewrite Text</span>
+            <span class="m-chip" onclick="quickMagic('Make this look premium with modern colors and sleek typography')">✨ Luxury Look</span>
+            <span class="m-chip" onclick="quickMagic('Add a subtle modern box-shadow and rounded corners')">🎨 Soft Shadow</span>
+            <span class="m-chip" onclick="quickMagic('Change colors to match the primary brand theme')">🌈 Brand Colors</span>
+            <span class="m-chip" onclick="quickMagic('Adjust spacing and padding for better readability')">📐 Spacing</span>
+          `;
+        }
+      } else {
+        banner.classList.remove('has-selection');
+        if (icon) icon.textContent = '🌐';
+        if (tagEl) tagEl.style.display = 'none';
+        if (prevEl) prevEl.textContent = 'Entire Website Mode';
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (input) input.placeholder = 'Ask AI to change text, style, or build sections…';
+
+        if (chips) {
+          chips.innerHTML = `
+            <span class="m-chip" onclick="quickMagic('Add 5-star customer testimonials section with slide-up animation')">⭐ Reviews</span>
+            <span class="m-chip" onclick="quickMagic('Add pricing table with 3 tiers')">💰 Pricing</span>
+            <span class="m-chip" onclick="quickMagic('Add FAQ section')">❓ FAQ</span>
+            <span class="m-chip" onclick="quickMagic('Add WhatsApp floating button')">💬 WhatsApp</span>
+            <span class="m-chip" onclick="quickMagic('Add photo gallery section with fade-in animation')">🖼️ Gallery</span>
+          `;
+        }
+      }
+    }
+
+    function clearSelectedComponentForAi() {
+      if (grapesEditor) grapesEditor.select(null);
+      selectedComponent = null;
+      updateAiSelectedTarget(null);
+      showToast('Switched to Entire Website mode');
+    }
+
+    function changePuterModel(model) {
+      if (window.PuterService) {
+        window.PuterService.selectedModel = model;
+        localStorage.setItem('webcraft_puter_model', model);
+        showToast(`AI Model set to ${model}`);
+      }
+    }
+
+    async function togglePuterAccountMenu(e) {
+      if (e) e.stopPropagation();
+      const isSigned = await window.PuterService.isSignedIn();
+      const user = await window.PuterService.getUser();
+
+      const existing = document.getElementById('puter-account-menu');
+      if (existing) { existing.remove(); return; }
+
+      const menu = document.createElement('div');
+      menu.id = 'puter-account-menu';
+      menu.style.cssText = `
+        position: fixed; top: 58px; right: 1.25rem; z-index: 100060;
+        background: #111726; border: 1.5px solid #283347; border-radius: 14px;
+        padding: 1rem; width: 280px; box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+        color: #f8fafc; font-family: inherit; font-size: 0.82rem;
+      `;
+
+      if (isSigned && user) {
+        menu.innerHTML = `
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem;padding-bottom:0.75rem;border-bottom:1px solid #1e293b;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#4f46e5;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;">👤</div>
+            <div>
+              <div style="font-weight:700;color:#fff;">@${escapeHtml(user.username || 'User')}</div>
+              <div style="font-size:0.7rem;color:#10b981;">🟢 Connected to Puter.js</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.45rem;">
+            <button class="hdr-btn" onclick="handlePuterSwitch()" style="justify-content:flex-start;width:100%;">🔄 Switch Account</button>
+            <button class="hdr-btn" onclick="window.PuterService.openSignUp()" style="justify-content:flex-start;width:100%;">➕ Sign Up New Account</button>
+            <button class="hdr-btn" onclick="handlePuterSignOut()" style="justify-content:flex-start;width:100%;color:#f43f5e;border-color:#3f1826;">🚪 Sign Out</button>
+          </div>
+        `;
+      } else {
+        menu.innerHTML = `
+          <div style="margin-bottom:0.75rem;padding-bottom:0.75rem;border-bottom:1px solid #1e293b;">
+            <div style="font-weight:700;color:#fff;margin-bottom:0.2rem;">Puter AI Integration</div>
+            <div style="font-size:0.72rem;color:#94a3b8;line-height:1.4;">Sign in to enjoy free DeepSeek & Gemini AI generations.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.45rem;">
+            <button class="hdr-btn save-btn" onclick="handlePuterSignIn()" style="justify-content:center;width:100%;">✦ Sign In with Puter</button>
+            <button class="hdr-btn" onclick="window.PuterService.openSignUp()" style="justify-content:center;width:100%;">➕ Create Free Account</button>
+          </div>
+        `;
+      }
+
+      document.body.appendChild(menu);
+      const closeMenu = (ev) => {
+        if (!menu.contains(ev.target) && ev.target.id !== 'header-puter-btn') {
+          menu.remove();
+          document.removeEventListener('click', closeMenu);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', closeMenu), 10);
+    }
+
+    async function handlePuterSignIn() {
+      document.getElementById('puter-account-menu')?.remove();
+      try {
+        await window.PuterService.signIn();
+        showToast('✓ Signed in with Puter!');
+      } catch (e) {
+        showToast('Sign in cancelled');
+      }
+    }
+
+    async function handlePuterSwitch() {
+      document.getElementById('puter-account-menu')?.remove();
+      try {
+        await window.PuterService.switchAccount();
+        showToast('✓ Switched Puter account!');
+      } catch (e) {
+        showToast('Account switch cancelled');
+      }
+    }
+
+    async function handlePuterSignOut() {
+      document.getElementById('puter-account-menu')?.remove();
+      await window.PuterService.signOut();
+      showToast('Signed out of Puter');
+    }
+
+    // Listen to Puter auth changes to update header
+    window.addEventListener('puter-auth-changed', (e) => {
+      const { user, isSignedIn } = e.detail || {};
+      const dot = document.getElementById('puter-status-dot');
+      const name = document.getElementById('header-puter-name');
+      const link = document.getElementById('panel-puter-account-link');
+      if (isSignedIn && user) {
+        if (dot) dot.style.background = '#10b981';
+        if (name) name.textContent = '@' + (user.username || 'Puter');
+        if (link) link.textContent = '@' + (user.username || 'User');
+      } else {
+        if (dot) dot.style.background = '#94a3b8';
+        if (name) name.textContent = 'Sign In (Puter)';
+        if (link) link.textContent = 'Sign In with Puter';
+      }
+    });
+
+    function formatMarkdown(text) {
+      if (!text) return '';
+      let escaped = escapeHtml(text);
+      escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      escaped = escaped.replace(/`([^`]+)`/g, '<code style="background:#1e293b;padding:0.1rem 0.35rem;border-radius:4px;color:#a5b4fc;font-size:0.75rem;">$1</code>');
+      escaped = escaped.replace(/\n\n/g, '<br><br>');
+      escaped = escaped.replace(/\n/g, '<br>');
+      return escaped;
+    }
+
+    /* ══════════════════════════════════════════════════
+       EXECUTE MAGIC AI — Puter.js & Selected Element Editing
+    ══════════════════════════════════════════════════ */
+    async function executeMagicAi() {
       const input = document.getElementById('magic-input');
       const q = input.value.trim();
       if (!q) return;
@@ -6082,72 +6406,125 @@ ${WC_ANIMATION_RUNTIME}
       appendMagicChat(q, 'user');
       showMagicTyping();
 
+      // Check if an element is currently selected
+      const comp = selectedComponent;
+      const hasSelected = !!comp;
+      let selectedPayload = null;
+
+      if (hasSelected) {
+        try {
+          const el = comp.getEl ? comp.getEl() : null;
+          const outer = el ? el.outerHTML : (comp.toHTML ? comp.toHTML() : '');
+          const tag = (comp.get('tagName') || 'div').toLowerCase();
+          selectedPayload = { tag, html: outer };
+        } catch (err) {
+          console.warn('Could not serialize selected component:', err);
+        }
+      }
+
       try {
-        const res = await fetch('<?= SITE_URL ?>/api/generate.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'refine',
-            api_key: localStorage.getItem('gemini_api_key') || '',
-            current_html: currentHtml,
-            instruction: `Analyze the ENTIRE current website HTML/CSS/DOM before making changes. Preserve existing animations, mobile overrides, language attributes. Then implement ONLY: ${q}. Return complete HTML.`,
-            customer_requirement: q,
-            analysis_mode: 'full_project_analysis',
-            studio_context: buildAiStudioContext(),
-            biz_name: projectData?.bizName || 'Website',
-            concept_index: activeConceptIndex
-          })
+        // Run via PuterService (DeepSeek / Free Client-Side AI)
+        const result = await window.PuterService.chatAndEdit({
+          userPrompt: q,
+          selectedElement: selectedPayload,
+          currentHtml: currentHtml,
+          context: {
+            bizName: projectData?.bizName || 'Website',
+            summary: buildAiStudioContext()
+          }
         });
-        const result = await res.json();
 
-        if (!result.success) {
-          appendMagicChat(`⚠️ ${escapeHtml(result.error || 'Failed')}`, 'ai');
-          showToast('⚠️ AI request failed');
-          return;
+        // 1. Render conversational response in chat
+        appendMagicChat(formatMarkdown(result.conversation), 'ai');
+
+        // 2. Apply edits if AI modified the selected element or page
+        if (result.isEdit && result.updatedHtml) {
+          if (hasSelected && comp) {
+            // Replace selected element with updated HTML
+            const parent = comp.parent();
+            if (parent) {
+              const idx = comp.index();
+              comp.remove();
+              const added = parent.append(result.updatedHtml, { at: idx });
+              const freshComp = Array.isArray(added) ? added[0] : added;
+              if (freshComp) {
+                configureEditorComponent(freshComp);
+                grapesEditor.select(freshComp);
+              }
+            } else {
+              comp.components(result.updatedHtml);
+            }
+            syncCanvasToHtml();
+            if (projectData && projectData.designs && projectData.designs[activeConceptIndex]) {
+              projectData.designs[activeConceptIndex].html = currentHtml;
+              saveProjectData();
+            }
+            renderSmartLayers();
+            showToast('✨ Selected element updated & saved!');
+          } else {
+            // Whole page or added section
+            if (result.updatedHtml.includes('<html') || result.updatedHtml.includes('<!DOCTYPE')) {
+              currentHtml = result.updatedHtml;
+              loadHtmlIntoStudioCanvas();
+            } else {
+              // Append as new section
+              grapesEditor.addComponents(result.updatedHtml);
+              syncCanvasToHtml();
+            }
+            if (projectData && projectData.designs && projectData.designs[activeConceptIndex]) {
+              projectData.designs[activeConceptIndex].html = currentHtml;
+              saveProjectData();
+            }
+            renderSmartLayers();
+            showToast('✨ Website updated & saved!');
+          }
         }
 
-        if (!result.html || result.html.trim() === snap.trim()) {
-          appendMagicChat('⚠️ No changes detected.', 'ai');
-          showToast('⚠️ No changes made');
-          return;
-        }
-
-        let newHtml = result.html;
-
-        if (!userAskedForThemeChange(q)) {
-          newHtml = restoreLockedTheme(newHtml);
-          appendMagicChat(
-            `✨ ${escapeHtml(result.response_msg || 'Updated')}<br>
-             <span style="color:#94a3b8;font-size:0.72rem;">🔒 Theme preserved.</span>`,
-            'ai'
-          );
+      } catch (err) {
+        console.warn('[Puter AI error, checking fallback]:', err);
+        if (window.PuterService.isQuotaOrCreditError(err)) {
+          appendMagicChat('⚠️ Puter AI credit limit reached. Click **Switch Account** or **Create Free Account** in the popup to continue.', 'ai');
         } else {
-          lockTheme(newHtml, true);
-          appendMagicChat(
-            `✨ ${escapeHtml(result.response_msg || 'Updated')}<br>
-             <span style="color:#94a3b8;font-size:0.72rem;">🎨 Theme updated.</span>`,
-            'ai'
-          );
+          appendMagicChat(`⚠️ Puter AI notice: ${escapeHtml(err.message)}. Trying backend Gemini fallback...`, 'ai');
+          try {
+            await executeGeminiBackendFallback(q, snap);
+          } catch (backendErr) {
+            appendMagicChat(`⚠️ Backend failed: ${escapeHtml(backendErr.message)}`, 'ai');
+            showToast('AI request failed: ' + backendErr.message);
+          }
         }
-
-        currentHtml = newHtml;
-
-        if (projectData && projectData.designs && projectData.designs[activeConceptIndex]) {
-          projectData.designs[activeConceptIndex].html = currentHtml;
-          saveProjectData();
-        }
-
-        loadHtmlIntoStudioCanvas();
-        showToast('✨ Updated live!');
-
-      } catch (e) {
-        currentHtml = snap;
-        appendMagicChat(`⚠️ Network error: ${escapeHtml(e.message)}`, 'ai');
-        showToast('Error: ' + e.message);
       } finally {
         hideMagicTyping();
         btn.disabled = false;
         btn.innerHTML = '➤';
+      }
+    }
+
+    async function executeGeminiBackendFallback(q, snap) {
+      const res = await fetch('<?= SITE_URL ?>/api/generate.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'refine',
+          api_key: localStorage.getItem('gemini_api_key') || '',
+          current_html: currentHtml,
+          instruction: q,
+          customer_requirement: q,
+          biz_name: projectData?.bizName || 'Website',
+          concept_index: activeConceptIndex
+        })
+      });
+      const result = await res.json();
+      if (!result.success) throw new Error(result.error || 'Failed');
+      if (result.html && result.html.trim() !== snap.trim()) {
+        currentHtml = result.html;
+        if (projectData && projectData.designs && projectData.designs[activeConceptIndex]) {
+          projectData.designs[activeConceptIndex].html = currentHtml;
+          saveProjectData();
+        }
+        loadHtmlIntoStudioCanvas();
+        appendMagicChat(`✨ ${escapeHtml(result.response_msg || 'Updated via Gemini')}`, 'ai');
+        showToast('✨ Updated live via Gemini!');
       }
     }
 
