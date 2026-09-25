@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zenith Studio | Accelerate Your Vision</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; color: #0f172a; background: #ffffff; overflow-x: hidden; }
+:root {
+  --primary: #6366f1;
+  --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  --primary-light: #ede9fe;
+  --dark: #0f172a;
+}
+h1, h2, h3, h4, .brand-font { font-family: 'Space Grotesk', sans-serif; }
+a { text-decoration: none; color: inherit; }
+
+.top-bar {
+  background: var(--dark); color: #fff; font-size: 0.8rem; font-weight: 600;
+  text-align: center; padding: 0.5rem 1rem;
+}
+.top-bar span { color: #38bdf8; }
+
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+  border-bottom: 2px solid #0f172a; padding: 1.1rem 2rem;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.logo { font-size: 1.4rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.4rem; }
+.logo-badge { background: var(--primary-gradient); color: #fff; border-radius: 6px; padding: 0.15rem 0.5rem; font-size: 0.85rem; }
+.nav-links { display: flex; align-items: center; gap: 2rem; font-weight: 600; font-size: 0.95rem; }
+.nav-btn {
+  background: var(--primary-gradient); color: #fff !important;
+  padding: 0.6rem 1.4rem; border-radius: 12px; font-weight: 700;
+  box-shadow: 4px 4px 0px #0f172a; border: 2px solid #0f172a;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.nav-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #0f172a; }
+.hamburger { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #0f172a; }
+
+#mobile-drawer {
+  display: none; flex-direction: column; background: #fff; padding: 1.5rem;
+  border-bottom: 2px solid #0f172a; gap: 1rem; font-weight: 700;
+}
+#mobile-drawer.open { display: flex; }
+
+.hero {
+  padding: 5rem 2rem; background: radial-gradient(circle at 80% 20%, #ede9fe 0%, #ffffff 60%);
+}
+.hero-container {
+  max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 3.5rem; align-items: center;
+}
+.pill-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: #f1f5f9; border: 2px solid #0f172a; padding: 0.35rem 0.9rem; border-radius: 999px;
+  font-size: 0.82rem; font-weight: 700; box-shadow: 3px 3px 0px #0f172a; margin-bottom: 1.5rem;
+}
+.hero h1 {
+  font-size: clamp(2.5rem, 5vw, 4.2rem); font-weight: 800; line-height: 1.08; color: #0f172a; margin-bottom: 1.5rem; letter-spacing: -0.03em;
+}
+.hero h1 span {
+  background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero p { font-size: 1.15rem; color: #475569; line-height: 1.7; margin-bottom: 2.2rem; max-width: 580px; }
+.hero-cta-group { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+.btn-bold {
+  padding: 1rem 2.2rem; border-radius: 12px; background: var(--primary-gradient); color: #fff;
+  font-size: 1rem; font-weight: 700; border: 2px solid #0f172a; box-shadow: 5px 5px 0px #0f172a;
+  transition: transform 0.15s, box-shadow 0.15s; display: inline-flex; align-items: center; gap: 0.5rem;
+}
+.btn-bold:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0px #0f172a; }
+.btn-outline-bold {
+  padding: 1rem 2.2rem; border-radius: 12px; background: #fff; color: #0f172a;
+  font-size: 1rem; font-weight: 700; border: 2px solid #0f172a; box-shadow: 5px 5px 0px #0f172a;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-outline-bold:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0px #0f172a; background: #f8fafc; }
+
+.hero-mockup {
+  background: #0f172a; border: 3px solid #0f172a; border-radius: 20px;
+  padding: 2rem; color: #fff; box-shadow: 12px 12px 0px var(--primary);
+}
+.mockup-header { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+.mockup-dot { width: 12px; height: 12px; border-radius: 50%; background: #ef4444; }
+.mockup-dot:nth-child(2) { background: #f59e0b; }
+.mockup-dot:nth-child(3) { background: #10b981; }
+.mockup-box { background: rgba(255,255,255,0.08); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+.mockup-stat { font-size: 2.2rem; font-weight: 800; color: #38bdf8; font-family: 'Space Grotesk'; }
+
+.section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; }
+.section-title { font-size: 2.6rem; font-weight: 800; text-align: center; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+.section-subtitle { text-align: center; color: #64748b; font-size: 1.1rem; margin-bottom: 3.5rem; }
+
+.bold-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
+.bold-card {
+  background: #ffffff; border: 2.5px solid #0f172a; border-radius: 18px;
+  padding: 2.2rem; box-shadow: 6px 6px 0px #0f172a; transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+.bold-card:hover { transform: translate(-3px, -3px); box-shadow: 9px 9px 0px #0f172a; }
+.bold-badge {
+  position: absolute; top: 1.2rem; right: 1.2rem; background: var(--primary-light); color: var(--primary);
+  font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 999px; border: 1px solid var(--primary);
+}
+.bold-icon { font-size: 2.5rem; margin-bottom: 1.25rem; }
+.bold-card h3 { font-size: 1.35rem; font-weight: 700; margin-bottom: 0.6rem; }
+.bold-card p { color: #64748b; font-size: 0.95rem; line-height: 1.6; }
+
+.cta-banner {
+  background: var(--primary-gradient); border: 3px solid #0f172a; border-radius: 24px;
+  padding: 4.5rem 2rem; text-align: center; color: #fff; box-shadow: 10px 10px 0px #0f172a; margin: 4rem 2rem;
+}
+.cta-banner h2 { font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 800; margin-bottom: 1rem; }
+.cta-banner p { font-size: 1.15rem; max-width: 600px; margin: 0 auto 2rem; opacity: 0.95; }
+.btn-white {
+  background: #ffffff; color: #0f172a; padding: 1rem 2.5rem; border-radius: 12px;
+  font-weight: 800; font-size: 1rem; border: 2px solid #0f172a; box-shadow: 5px 5px 0px #0f172a;
+  display: inline-block; cursor: pointer; transition: transform 0.15s;
+}
+.btn-white:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0px #0f172a; }
+
+.contact-section { background: #f8fafc; border-top: 2px solid #0f172a; padding: 5rem 2rem; }
+.contact-wrap {
+  max-width: 1000px; margin: 0 auto; background: #fff; border: 3px solid #0f172a;
+  border-radius: 20px; padding: 3rem; box-shadow: 8px 8px 0px #0f172a;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;
+}
+.contact-form input, .contact-form textarea {
+  width: 100%; padding: 0.85rem; border: 2px solid #0f172a; border-radius: 10px;
+  margin-bottom: 1rem; font-family: inherit; font-size: 0.95rem;
+}
+.contact-form textarea { min-height: 120px; }
+
+#back-to-top {
+  display: none; position: fixed; bottom: 2rem; right: 2rem; z-index: 90;
+  width: 44px; height: 44px; border-radius: 10px; background: #0f172a;
+  color: #fff; border: 2px solid #0f172a; box-shadow: 3px 3px 0px #fff;
+  cursor: pointer; align-items: center; justify-content: center; font-size: 1.2rem;
+}
+
+footer { background: #0f172a; color: #fff; padding: 3rem 2rem; border-top: 2px solid #0f172a; text-align: center; }
+
+@media (max-width: 850px) {
+  .hero-container, .contact-wrap { grid-template-columns: 1fr; }
+  .nav-links { display: none; }
+  .hamburger { display: block; }
+}
+
+/* Visual Studio Overrides */
+* { box-sizing: border-box; } body {margin: 0;}#ijjmd{font-size:0.85rem;color:#94a3b8;}#igweg{font-size:0.85rem;color:#94a3b8;}#ixhcz{color:#10b981;}#iveif{font-size:0.85rem;opacity:0.8;}#ictigp{font-size:2rem;margin-bottom:1rem;}#ia7opn{color:#64748b;margin-bottom:2rem;}#i3pqaq{margin-bottom:0.75rem;}#it9a4g{margin-bottom:0.75rem;}#iu3fu6{width:100%;cursor:pointer;}#ix9jp2{font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;}#igjsee{font-size:0.85rem;color:#94a3b8;}
+</style>
+</head>
+<body>
+<body><div class="top-bar">⚡ Special Launch: Discover modern capabilities built for <span>High-growth brands and modern businesses seeking top-tier digital quality.</span></div><nav class="nav"><a href="#" class="logo"><span class="logo-badge">✦</span>
+    Zenith Studio
+  </a><div class="nav-links"><a href="#services">Features</a><a href="#contact">Contact</a><a href="#contact" class="nav-btn">Get Started →</a></div><button class="hamburger">☰</button></nav><div id="mobile-drawer"><a href="#services">Features</a><a href="#contact">Contact</a></div><header class="hero"><div class="hero-container"><div><div class="pill-badge">🚀 High-Performance Creative &amp; Digital Agency</div><h1>Accelerate your growth with <span>Zenith Studio</span>.</h1><p>Crafting next-generation digital experiences that inspire and scale.</p><div class="hero-cta-group"><a href="#contact" class="btn-bold">Claim Free Consultation →</a><a href="#services" class="btn-outline-bold">View Capabilities</a></div></div><div class="hero-mockup"><div class="mockup-header"><div class="mockup-dot"></div><div class="mockup-dot"></div><div class="mockup-dot"></div></div><div class="mockup-box"><div id="ijjmd">Growth Velocity</div><div class="mockup-stat">+340%</div></div><div class="mockup-box"><div id="igweg">Customer Conversion Rate</div><div class="mockup-stat" id="ixhcz">4.8x</div></div><p id="iveif">Empowering High-growth brands and modern businesses seeking top-tier digital quality. with outcomes that matter.</p></div></div></header><section id="services" class="section"><h2 class="section-title">High-Impact Capabilities</h2><p class="section-subtitle">Everything you need to outpace competitors and turn visitors into loyal advocates.</p><div class="bold-grid"><div class="bold-card"><div class="bold-badge">Feature 1</div><div class="bold-icon">🚀</div><h3>UI/UX Design</h3><p>Engineered for maximum velocity, user retention, and peak performance for High-growth brands and modern businesses seeking top-tier digital quality..</p></div><div class="bold-card"><div class="bold-badge">Feature 2</div><div class="bold-icon">🔥</div><h3>Full-Stack Web Development</h3><p>Engineered for maximum velocity, user retention, and peak performance for High-growth brands and modern businesses seeking top-tier digital quality..</p></div><div class="bold-card"><div class="bold-badge">Feature 3</div><div class="bold-icon">💎</div><h3>Brand Identity</h3><p>Engineered for maximum velocity, user retention, and peak performance for High-growth brands and modern businesses seeking top-tier digital quality..</p></div><div class="bold-card"><div class="bold-badge">Feature 4</div><div class="bold-icon">📈</div><h3>Growth Optimization</h3><p>Engineered for maximum velocity, user retention, and peak performance for High-growth brands and modern businesses seeking top-tier digital quality..</p></div></div></section><div class="cta-banner"><h2>Ready to transform your results?</h2><p>Join forward-thinking partners who rely on Zenith Studio for top-tier execution.</p><a href="#contact" class="btn-white">Book Your Discovery Call →</a></div><div id="contact" class="contact-section"><div class="contact-wrap"><div><h2 id="ictigp">Let's Connect</h2><p id="ia7opn">Reach out directly and our specialists will formulate a personalized growth plan for your team.</p><p id="i3pqaq"><strong>📞 Phone:</strong> +1 (555) 890-1234</p><p id="it9a4g"><strong>📧 Email:</strong> hello@zenithstudio.com</p><p><strong>📍 Address:</strong> 450 Innovation Parkway, San Francisco, CA</p></div><form class="contact-form"><input type="text" name="name" placeholder="Full Name" required/><input type="email" name="email" placeholder="Email Address" required/><textarea name="message" placeholder="How can we help you?" required></textarea><button type="submit" class="btn-bold" id="iu3fu6">Send Message Now →</button></form></div></div><button id="back-to-top" title="Back to top">↑</button><footer><p id="ix9jp2">Zenith Studio</p><p id="igjsee">© 2026 Zenith Studio. Designed to convert.</p></footer></body>
+<script>
+// ── Zero-Code Intelligent Navigation & Smooth Scroll ──
+document.querySelectorAll('a').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    let targetId = this.getAttribute('href') || '';
+    let targetEl = null;
+
+    // 1. Direct ID selector if specified (e.g. href="#about")
+    if (targetId && targetId.startsWith('#') && targetId.length > 1) {
+      try { targetEl = document.querySelector(targetId); } catch(err) {}
+    }
+
+    // 2. Intelligent fallback: Match by nav link text (e.g. user typed "About", "Services", "Pricing", "Team")
+    if (!targetEl) {
+      const rawText = this.innerText.trim().toLowerCase();
+      const cleanSlug = rawText.replace(/[^a-z0-9]/g, '');
+      if (cleanSlug.length >= 2) {
+        // Check IDs by slug, common synonyms
+        targetEl = document.getElementById(cleanSlug) ||
+                   document.getElementById(cleanSlug.replace('us', '')) ||
+                   document.querySelector('section[id*="' + cleanSlug + '"]');
+
+        // Check if section headline matches link text (e.g. <h2>About Zenith</h2>)
+        if (!targetEl) {
+          const headings = document.querySelectorAll('section h1, section h2, section h3, header h1, header h2');
+          for (const h of headings) {
+            const hText = h.innerText.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (hText.includes(cleanSlug) || cleanSlug.includes(hText)) {
+              targetEl = h.closest('section') || h.closest('header') || h;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (targetEl) {
+      e.preventDefault();
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // If navigating to contact form, auto-focus first input
+      if (targetId === '#contact' || targetEl.id === 'contact') {
+        const firstInput = targetEl.querySelector('input, textarea');
+        if (firstInput) setTimeout(() => firstInput.focus(), 600);
+      }
+      // Close mobile menu if open
+      const mob = document.getElementById('mobile-drawer');
+      if (mob) mob.classList.remove('open');
+    }
+  });
+});
+
+// ── Mobile Hamburger Drawer Toggle ──
+function toggleMobileMenu() {
+  const drawer = document.getElementById('mobile-drawer');
+  if (drawer) drawer.classList.toggle('open');
+}
+
+// ── Back to Top Button ──
+const btt = document.getElementById('back-to-top');
+if (btt) {
+  window.addEventListener('scroll', () => {
+    btt.style.display = (window.scrollY > 400) ? 'flex' : 'none';
+  });
+  btt.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+// ── Interactive Contact Form with Validation & Feedback ──
+function handleContactSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+  const name = form.querySelector('[name="name"], [type="text"]')?.value || 'Friend';
+  const email = form.querySelector('[type="email"]')?.value || '';
+  const btn = form.querySelector('button[type="submit"]');
+
+  if (btn) {
+    const origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Sending Message…';
+
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+      form.reset();
+
+      // Show in-page confirmation banner
+      let modal = document.getElementById('form-success-banner');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'form-success-banner';
+        modal.style.cssText = 'position:fixed;bottom:2rem;right:2rem;z-index:9999;background:#059669;color:#fff;padding:1.25rem 1.75rem;border-radius:14px;box-shadow:0 15px 35px rgba(0,0,0,0.3);display:flex;align-items:center;gap:1rem;font-size:0.95rem;font-weight:600;transition:all 0.3s;max-width:420px;';
+        document.body.appendChild(modal);
+      }
+      modal.innerHTML = `
+        <div style="font-size:1.8rem">🎉</div>
+        <div>
+          <div style="font-weight:700">Thank you, ${name}!</div>
+          <div style="font-size:0.85rem;opacity:0.9">Your message was delivered to Zenith Studio. We will reply to ${email || 'your email'} within 24 hours.</div>
+        </div>
+      `;
+      modal.style.opacity = '1';
+      modal.style.transform = 'translateY(0)';
+      setTimeout(() => {
+        modal.style.opacity = '0';
+        modal.style.transform = 'translateY(20px)';
+      }, 5000);
+    }, 800);
+  }
+}
+
+// ── Interactive FAQ Accordion ──
+function toggleFaq(el) {
+  const body = el.nextElementSibling;
+  const icon = el.querySelector('.faq-icon');
+  if (body) {
+    const isOpen = body.style.display === 'block';
+    body.style.display = isOpen ? 'none' : 'block';
+    if (icon) icon.textContent = isOpen ? '+' : '−';
+  }
+}
+</script>
+</body>
+</html>
