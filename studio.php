@@ -14,17 +14,10 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Cinzel:wght@500;700;800&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/grapesjs/0.21.10/css/grapes.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/grapesjs/0.21.10/grapes.min.js"></script>
-  <!-- Puter.js & WebCraft AI Client Service -->
   <script src="https://js.puter.com/v2/"></script>
   <script src="<?= SITE_URL ?>/assets/js/puter-service.js"></script>
   <style>
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background: #090d16;
@@ -51,1458 +44,620 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       width: 100%;
     }
 
-    .header-left,
-    .header-right {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 0.45rem;
-      min-width: 0;
+    .header-left, .header-right {
+      display: flex; align-items: center; flex-wrap: wrap;
+      gap: 0.45rem; min-width: 0;
     }
-
-    .header-left {
-      flex: 1 1 auto;
-      justify-content: flex-start;
-    }
-
-    .header-right {
-      flex: 0 1 auto;
-      justify-content: flex-end;
-      margin-left: auto;
-    }
+    .header-left { flex: 1 1 auto; justify-content: flex-start; }
+    .header-right { flex: 0 1 auto; justify-content: flex-end; margin-left: auto; }
 
     .studio-logo {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.95rem;
-      font-weight: 800;
-      color: #818cf8;
-      letter-spacing: -0.01em;
-      white-space: nowrap;
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.95rem; font-weight: 800;
+      color: #818cf8; letter-spacing: -0.01em; white-space: nowrap;
     }
 
     .canva-badge {
       background: linear-gradient(135deg, #06b6d4, #3b82f6);
-      color: #fff;
-      font-size: 0.68rem;
-      font-weight: 800;
-      padding: 0.15rem 0.5rem;
-      border-radius: 999px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      white-space: nowrap;
+      color: #fff; font-size: 0.68rem; font-weight: 800;
+      padding: 0.15rem 0.5rem; border-radius: 999px;
+      text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;
     }
 
-    .header-divider {
-      width: 1px;
-      height: 22px;
-      background: #1e293b;
-      flex-shrink: 0;
-    }
+    .header-divider { width: 1px; height: 22px; background: #1e293b; flex-shrink: 0; }
 
     .project-title-input {
-      background: transparent;
-      border: 1px solid transparent;
-      border-radius: 6px;
-      color: #fff;
-      font-family: inherit;
-      font-size: 0.88rem;
-      font-weight: 700;
-      padding: 0.3rem 0.6rem;
-      width: 150px;
-      max-width: 180px;
-      min-width: 70px;
-      flex: 0 1 auto;
-      transition: border-color 0.2s;
+      background: transparent; border: 1px solid transparent; border-radius: 6px;
+      color: #fff; font-family: inherit; font-size: 0.88rem; font-weight: 700;
+      padding: 0.3rem 0.6rem; width: 150px; max-width: 180px; min-width: 70px;
+      flex: 0 1 auto; transition: border-color 0.2s;
+    }
+    .project-title-input:hover, .project-title-input:focus {
+      border-color: #334155; background: #080c14; outline: none;
     }
 
-    .project-title-input:hover,
-    .project-title-input:focus {
-      border-color: #334155;
-      background: #080c14;
-      outline: none;
-    }
-
-    .concept-tabs {
-      display: flex;
-      gap: 0.3rem;
-      flex-wrap: nowrap;
-      flex-shrink: 0;
-    }
-
+    .concept-tabs { display: flex; gap: 0.3rem; flex-wrap: nowrap; flex-shrink: 0; }
     .c-tab {
-      padding: 0.3rem 0.65rem;
-      border-radius: 7px;
-      border: 1px solid #283347;
-      background: #080c14;
-      color: #94a3b8;
-      font-size: 0.74rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-      flex-shrink: 0;
+      padding: 0.3rem 0.65rem; border-radius: 7px;
+      border: 1px solid #283347; background: #080c14; color: #94a3b8;
+      font-size: 0.74rem; font-weight: 700; cursor: pointer;
+      transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
     }
-
     .c-tab.active {
-      background: #4f46e5;
-      border-color: #6366f1;
-      color: #fff;
+      background: #4f46e5; border-color: #6366f1; color: #fff;
       box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
     }
-
-    .c-short {
-      display: none;
-    }
+    .c-short { display: none; }
 
     .device-toggles {
-      display: flex;
-      gap: 0.25rem;
-      background: #080c14;
-      padding: 3px;
-      border-radius: 8px;
-      border: 1px solid #1e293b;
-      flex-wrap: nowrap;
-      flex-shrink: 0;
+      display: flex; gap: 0.25rem; background: #080c14;
+      padding: 3px; border-radius: 8px; border: 1px solid #1e293b;
+      flex-wrap: nowrap; flex-shrink: 0;
     }
-
     .dev-btn {
-      padding: 0.25rem 0.55rem;
-      border: none;
-      border-radius: 6px;
-      background: transparent;
-      color: #94a3b8;
-      font-size: 0.75rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-      flex-shrink: 0;
+      padding: 0.25rem 0.55rem; border: none; border-radius: 6px;
+      background: transparent; color: #94a3b8; font-size: 0.75rem;
+      font-weight: 600; cursor: pointer; transition: all 0.15s;
+      white-space: nowrap; flex-shrink: 0;
     }
-
-    .dev-btn.active {
-      background: #1e293b;
-      color: #fff;
-    }
+    .dev-btn.active { background: #1e293b; color: #fff; }
 
     .hdr-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.38rem 0.75rem;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.76rem;
-      font-weight: 600;
-      border: 1px solid #283347;
-      background: #111726;
-      color: #cbd5e1;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-      flex-shrink: 0;
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.38rem 0.75rem; border-radius: 8px;
+      font-family: inherit; font-size: 0.76rem; font-weight: 600;
+      border: 1px solid #283347; background: #111726; color: #cbd5e1;
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap; flex-shrink: 0;
     }
-
     .hdr-btn:hover {
-      background: #1e293b;
-      border-color: #64748b;
-      color: #fff;
+      background: #1e293b; border-color: #64748b; color: #fff;
     }
-
     .hdr-btn.save-btn {
       background: linear-gradient(135deg, #10b981, #059669);
-      border: none;
-      color: #fff;
-      font-weight: 700;
+      border: none; color: #fff; font-weight: 700;
       padding: 0.4rem 1rem;
       box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
     }
-
-    .hdr-btn.save-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.5);
-    }
-
+    .hdr-btn.save-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.5); }
     .hdr-btn.ai-btn {
       background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      border: 1px solid #818cf8;
-      color: #fff;
-      font-weight: 700;
+      border: 1px solid #818cf8; color: #fff; font-weight: 700;
     }
-
     .hdr-btn.edit-section-btn {
       background: linear-gradient(135deg, #f59e0b, #d97706);
-      border: 1px solid #fbbf24;
-      color: #fff;
-      font-weight: 800;
+      border: 1px solid #fbbf24; color: #fff; font-weight: 800;
       box-shadow: 0 2px 10px rgba(245, 158, 11, 0.4);
     }
-
-    .hdr-btn.edit-section-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.6);
-    }
-
-    .hdr-btn.help-btn {
-      background: #1e1b4b;
-      border-color: #4f46e5;
-      color: #c7d2fe;
-      font-weight: 700;
-    }
-
-    .hdr-btn.help-btn:hover {
-      background: #312e81;
-      border-color: #6366f1;
-      color: #fff;
-    }
-
-    .hdr-btn.fullscreen-btn {
-      background: #111827;
-      border-color: #374151;
-      color: #d1d5db;
-    }
-
-    .hdr-btn.fullscreen-btn:hover {
-      background: #1f2937;
-      border-color: #4b5563;
-      color: #fff;
-    }
-
+    .hdr-btn.edit-section-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.6); }
+    .hdr-btn.help-btn { background: #1e1b4b; border-color: #4f46e5; color: #c7d2fe; font-weight: 700; }
+    .hdr-btn.help-btn:hover { background: #312e81; border-color: #6366f1; color: #fff; }
+    .hdr-btn.fullscreen-btn { background: #111827; border-color: #374151; color: #d1d5db; }
+    .hdr-btn.fullscreen-btn:hover { background: #1f2937; border-color: #4b5563; color: #fff; }
     .hdr-btn.fullscreen-btn.active {
-      background: #4f46e5;
-      border-color: #6366f1;
-      color: #fff;
+      background: #4f46e5; border-color: #6366f1; color: #fff;
       box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
     }
-
     .hdr-btn.mobile-mode-btn.active {
       background: linear-gradient(135deg, #ec4899, #db2777);
-      border-color: #f472b6;
-      color: #fff;
+      border-color: #f472b6; color: #fff;
       box-shadow: 0 0 12px rgba(236, 72, 153, 0.5);
     }
-
-    .lbl-short {
-      display: none;
-    }
+    .lbl-short { display: none; }
 
     .lang-select {
-      padding: 0.38rem 0.6rem;
-      border-radius: 8px;
-      border: 1px solid #283347;
-      background: #111726;
-      color: #cbd5e1;
-      font-family: inherit;
-      font-size: 0.76rem;
-      font-weight: 600;
-      cursor: pointer;
-      flex-shrink: 0;
+      padding: 0.38rem 0.6rem; border-radius: 8px;
+      border: 1px solid #283347; background: #111726; color: #cbd5e1;
+      font-family: inherit; font-size: 0.76rem; font-weight: 600;
+      cursor: pointer; flex-shrink: 0;
     }
-
-    .lang-select:focus {
-      outline: none;
-      border-color: #6366f1;
-    }
+    .lang-select:focus { outline: none; border-color: #6366f1; }
 
     @media (max-width: 1560px) {
-      .studio-header {
-        padding: 0.45rem 1rem;
-      }
-
-      .project-title-input {
-        width: 120px;
-      }
-
-      .c-tab {
-        padding: 0.3rem 0.55rem;
-        font-size: 0.72rem;
-      }
+      .studio-header { padding: 0.45rem 1rem; }
+      .project-title-input { width: 120px; }
+      .c-tab { padding: 0.3rem 0.55rem; font-size: 0.72rem; }
     }
-
     @media (max-width: 1420px) {
-      .studio-header {
-        gap: 0.35rem 0.5rem;
-        padding: 0.45rem 0.85rem;
-      }
-
-      .dev-btn .lbl {
-        display: none;
-      }
-
-      .dev-btn {
-        padding: 0.28rem 0.5rem;
-        font-size: 0.82rem;
-      }
-
-      .hdr-btn {
-        padding: 0.34rem 0.6rem;
-        font-size: 0.72rem;
-      }
-
-      .project-title-input {
-        width: 100px;
-        font-size: 0.82rem;
-      }
-
-      .studio-logo {
-        font-size: 0.88rem;
-      }
+      .studio-header { gap: 0.35rem 0.5rem; padding: 0.45rem 0.85rem; }
+      .dev-btn .lbl { display: none; }
+      .dev-btn { padding: 0.28rem 0.5rem; font-size: 0.82rem; }
+      .hdr-btn { padding: 0.34rem 0.6rem; font-size: 0.72rem; }
+      .project-title-input { width: 100px; font-size: 0.82rem; }
+      .studio-logo { font-size: 0.88rem; }
     }
-
     @media (max-width: 1220px) {
-      .c-full {
-        display: none;
-      }
-
-      .c-short {
-        display: inline;
-      }
-
-      .hdr-btn .lbl {
-        display: none;
-      }
-
-      .hdr-btn.save-btn .lbl {
-        display: none;
-      }
-
-      .hdr-btn.save-btn .lbl-short {
-        display: inline;
-      }
-
-      .canva-badge {
-        display: none;
-      }
+      .c-full { display: none; }
+      .c-short { display: inline; }
+      .hdr-btn .lbl { display: none; }
+      .hdr-btn.save-btn .lbl { display: none; }
+      .hdr-btn.save-btn .lbl-short { display: inline; }
+      .canva-badge { display: none; }
     }
-
     @media (max-width: 980px) {
-      .studio-header {
-        padding: 0.4rem 0.6rem;
-      }
-
-      .header-divider {
-        display: none;
-      }
-
-      .studio-logo .logo-text {
-        display: none;
-      }
-
-      .project-title-input {
-        width: 90px;
-      }
-
-      .hdr-btn {
-        padding: 0.32rem 0.55rem;
-      }
-
-      .device-toggles {
-        order: 5;
-      }
+      .studio-header { padding: 0.4rem 0.6rem; }
+      .header-divider { display: none; }
+      .studio-logo .logo-text { display: none; }
+      .project-title-input { width: 90px; }
+      .hdr-btn { padding: 0.32rem 0.55rem; }
+      .device-toggles { order: 5; }
     }
 
-    .studio-main {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-      position: relative;
-      min-height: 0;
-    }
+    .studio-main { display: flex; flex: 1; overflow: hidden; position: relative; min-height: 0; }
 
     .canva-rail {
-      width: 72px;
-      background: #0b0f1a;
-      border-right: 1px solid #1e293b;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0.75rem 0;
-      flex-shrink: 0;
-      z-index: 20;
-      gap: 0.5rem;
-      overflow-y: auto;
+      width: 72px; background: #0b0f1a; border-right: 1px solid #1e293b;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 0.75rem 0; flex-shrink: 0; z-index: 20;
+      gap: 0.5rem; overflow-y: auto;
     }
-
     .rail-item {
-      width: 58px;
-      height: 58px;
-      border-radius: 12px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: #94a3b8;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.25rem;
-      font-size: 0.65rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.15s;
-      text-align: center;
-      flex-shrink: 0;
+      width: 58px; height: 58px; border-radius: 12px;
+      border: 1px solid transparent; background: transparent;
+      color: #94a3b8; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 0.25rem; font-size: 0.65rem; font-weight: 700;
+      cursor: pointer; transition: all 0.15s;
+      text-align: center; flex-shrink: 0;
     }
-
-    .rail-item span.icon {
-      font-size: 1.25rem;
-    }
-
-    .rail-item:hover {
-      color: #cbd5e1;
-      background: #141b2d;
-    }
-
+    .rail-item span.icon { font-size: 1.25rem; }
+    .rail-item:hover { color: #cbd5e1; background: #141b2d; }
     .rail-item.active {
-      background: #1e1b4b;
-      border-color: #6366f1;
-      color: #a5b4fc;
+      background: #1e1b4b; border-color: #6366f1; color: #a5b4fc;
       box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
     }
 
     .canva-drawer {
-      width: 340px;
-      background: #0e1424;
-      border-right: 1px solid #1e293b;
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      z-index: 15;
-      transition: width 0.2s ease;
-      overflow: hidden;
+      width: 340px; background: #0e1424; border-right: 1px solid #1e293b;
+      display: flex; flex-direction: column; flex-shrink: 0;
+      z-index: 15; transition: width 0.2s ease; overflow: hidden;
     }
-
-    .canva-drawer.collapsed {
-      width: 0;
-      border-right: none;
-    }
-
-    @media (max-width: 1100px) {
-      .canva-drawer {
-        width: 300px;
-      }
-    }
+    .canva-drawer.collapsed { width: 0; border-right: none; }
+    @media (max-width: 1100px) { .canva-drawer { width: 300px; } }
 
     .drawer-header {
-      padding: 0.85rem 1rem;
-      background: #0a0e1a;
+      padding: 0.85rem 1rem; background: #0a0e1a;
       border-bottom: 1px solid #1e293b;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      display: flex; justify-content: space-between; align-items: center;
       flex-shrink: 0;
     }
-
     .drawer-title {
-      font-size: 0.82rem;
-      font-weight: 800;
-      color: #fff;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      font-size: 0.82rem; font-weight: 800; color: #fff;
+      text-transform: uppercase; letter-spacing: 0.05em;
     }
-
     .drawer-close {
-      background: none;
-      border: none;
-      color: #64748b;
-      font-size: 1.1rem;
-      cursor: pointer;
+      background: none; border: none; color: #64748b;
+      font-size: 1.1rem; cursor: pointer;
     }
-
-    .drawer-close:hover {
-      color: #fff;
-    }
-
-    .drawer-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0.85rem;
-    }
+    .drawer-close:hover { color: #fff; }
+    .drawer-content { flex: 1; overflow-y: auto; padding: 0.85rem; }
 
     .block-search {
-      width: 100%;
-      padding: 0.6rem 0.85rem;
-      border: 1.5px solid #283347;
-      border-radius: 8px;
-      background: #080c14;
-      color: #fff;
-      font-size: 0.8rem;
-      margin-bottom: 0.75rem;
-      font-family: inherit;
+      width: 100%; padding: 0.6rem 0.85rem;
+      border: 1.5px solid #283347; border-radius: 8px;
+      background: #080c14; color: #fff; font-size: 0.8rem;
+      margin-bottom: 0.75rem; font-family: inherit;
     }
+    .block-search:focus { outline: none; border-color: #6366f1; }
 
-    .block-search:focus {
-      outline: none;
-      border-color: #6366f1;
-    }
-
-    .block-pills {
-      display: flex;
-      gap: 0.35rem;
-      margin-bottom: 0.85rem;
-      overflow-x: auto;
-      padding-bottom: 2px;
-    }
-
+    .block-pills { display: flex; gap: 0.35rem; margin-bottom: 0.85rem; overflow-x: auto; padding-bottom: 2px; }
     .bpill {
-      padding: 0.25rem 0.6rem;
-      border-radius: 999px;
-      border: 1px solid #283347;
-      background: #080c14;
-      color: #94a3b8;
-      font-size: 0.7rem;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.15s;
+      padding: 0.25rem 0.6rem; border-radius: 999px;
+      border: 1px solid #283347; background: #080c14; color: #94a3b8;
+      font-size: 0.7rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap; transition: all 0.15s;
+    }
+    .bpill.active, .bpill:hover {
+      border-color: #6366f1; color: #fff; background: #1e1b4b;
     }
 
-    .bpill.active,
-    .bpill:hover {
-      border-color: #6366f1;
-      color: #fff;
-      background: #1e1b4b;
-    }
-
-    .friendly-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 0.9rem;
-      padding: 0.15rem;
-    }
-
+    .friendly-panel { display: flex; flex-direction: column; gap: 0.9rem; padding: 0.15rem; }
     .friendly-card {
       background: linear-gradient(180deg, #131a2b 0%, #0f1522 100%);
-      border: 1.5px solid #243049;
-      border-radius: 14px;
+      border: 1.5px solid #243049; border-radius: 14px;
       padding: 1rem 1rem 1.1rem;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
     }
-
-    .friendly-card-hdr {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      margin-bottom: 0.7rem;
-    }
-
+    .friendly-card-hdr { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.7rem; }
     .friendly-card-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.15rem;
-      flex-shrink: 0;
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.15rem; flex-shrink: 0;
       background: linear-gradient(135deg, #4f46e5, #7c3aed);
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
     }
-
-    .friendly-card-title {
-      font-size: 0.92rem;
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -0.01em;
-      line-height: 1.2;
-    }
-
-    .friendly-card-sub {
-      font-size: 0.72rem;
-      color: #94a3b8;
-      margin-top: 0.1rem;
-    }
-
-    .friendly-card-desc {
-      font-size: 0.78rem;
-      color: #cbd5e1;
-      line-height: 1.55;
-      margin-bottom: 0.85rem;
-    }
-
-    .friendly-btn-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-    }
-
+    .friendly-card-title { font-size: 0.92rem; font-weight: 800; color: #fff; letter-spacing: -0.01em; line-height: 1.2; }
+    .friendly-card-sub { font-size: 0.72rem; color: #94a3b8; margin-top: 0.1rem; }
+    .friendly-card-desc { font-size: 0.78rem; color: #cbd5e1; line-height: 1.55; margin-bottom: 0.85rem; }
+    .friendly-btn-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
     .friendly-action {
-      flex: 1 1 auto;
-      min-width: 110px;
-      padding: 0.55rem 0.85rem;
-      border-radius: 9px;
-      border: 1.5px solid #334155;
-      background: #0a0f1c;
-      color: #cbd5e1;
-      font-family: inherit;
-      font-size: 0.78rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.15s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.3rem;
-      white-space: nowrap;
+      flex: 1 1 auto; min-width: 110px;
+      padding: 0.55rem 0.85rem; border-radius: 9px;
+      border: 1.5px solid #334155; background: #0a0f1c; color: #cbd5e1;
+      font-family: inherit; font-size: 0.78rem; font-weight: 700;
+      cursor: pointer; transition: all 0.15s;
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 0.3rem; white-space: nowrap;
     }
-
     .friendly-action:hover {
-      border-color: #6366f1;
-      color: #fff;
-      background: #1a1f36;
+      border-color: #6366f1; color: #fff; background: #1a1f36;
       transform: translateY(-1px);
     }
-
     .friendly-action.primary {
       background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      border-color: #818cf8;
-      color: #fff;
+      border-color: #818cf8; color: #fff;
       box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
     }
-
     .friendly-action.whatsapp {
       background: linear-gradient(135deg, #25D366, #059669);
-      border-color: #34d399;
-      color: #fff;
+      border-color: #34d399; color: #fff;
       box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
     }
-
     .friendly-action.customize {
       background: linear-gradient(135deg, #f59e0b, #d97706);
-      border-color: #fbbf24;
-      color: #fff;
+      border-color: #fbbf24; color: #fff;
       box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
     }
 
     .friendly-sections-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      max-height: 200px;
-      overflow-y: auto;
-      padding: 0.5rem;
-      background: #080c14;
-      border: 1px solid #1e293b;
-      border-radius: 9px;
-      margin-bottom: 0.7rem;
+      display: flex; flex-direction: column; gap: 0.35rem;
+      max-height: 200px; overflow-y: auto; padding: 0.5rem;
+      background: #080c14; border: 1px solid #1e293b;
+      border-radius: 9px; margin-bottom: 0.7rem;
     }
-
     .friendly-section-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.45rem 0.65rem;
-      border-radius: 6px;
-      background: #0d1320;
-      border: 1px solid #1e293b;
-      cursor: pointer;
-      transition: all 0.15s;
-      gap: 0.4rem;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.45rem 0.65rem; border-radius: 6px;
+      background: #0d1320; border: 1px solid #1e293b;
+      cursor: pointer; transition: all 0.15s; gap: 0.4rem;
     }
-
-    .friendly-section-item:hover {
-      border-color: #6366f1;
-      background: #141b2d;
-    }
-
-    .friendly-section-item-left {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      min-width: 0;
-      flex: 1;
-    }
-
+    .friendly-section-item:hover { border-color: #6366f1; background: #141b2d; }
+    .friendly-section-item-left { display: flex; align-items: center; gap: 0.45rem; min-width: 0; flex: 1; }
     .friendly-section-item-left .sec-tag {
-      font-size: 0.6rem;
-      font-weight: 800;
-      padding: 0.12rem 0.4rem;
-      border-radius: 4px;
-      background: #312e81;
-      color: #c7d2fe;
-      text-transform: uppercase;
-      flex-shrink: 0;
+      font-size: 0.6rem; font-weight: 800; padding: 0.12rem 0.4rem;
+      border-radius: 4px; background: #312e81; color: #c7d2fe;
+      text-transform: uppercase; flex-shrink: 0;
     }
-
     .friendly-section-item-left .sec-name {
-      font-size: 0.74rem;
-      color: #cbd5e1;
-      font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      font-size: 0.74rem; color: #cbd5e1; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-
     .friendly-section-item .sec-jump {
-      font-size: 0.68rem;
-      color: #818cf8;
-      font-weight: 700;
-      padding: 0.15rem 0.45rem;
-      border-radius: 4px;
-      background: rgba(99, 102, 241, 0.12);
-      border: none;
-      cursor: pointer;
-      flex-shrink: 0;
+      font-size: 0.68rem; color: #818cf8; font-weight: 700;
+      padding: 0.15rem 0.45rem; border-radius: 4px;
+      background: rgba(99, 102, 241, 0.12); border: none;
+      cursor: pointer; flex-shrink: 0;
     }
-
-    .friendly-section-item .sec-jump.gold {
-      color: #fbbf24;
-      background: rgba(245, 158, 11, 0.15);
-    }
+    .friendly-section-item .sec-jump.gold { color: #fbbf24; background: rgba(245, 158, 11, 0.15); }
 
     .friendly-theme-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.5rem;
-      margin-bottom: 0.85rem;
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem; margin-bottom: 0.85rem;
     }
-
     .friendly-theme-swatch {
-      aspect-ratio: 1 / 1;
-      border-radius: 12px;
-      border: 2.5px solid #1e293b;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
-      overflow: hidden;
+      aspect-ratio: 1 / 1; border-radius: 12px;
+      border: 2.5px solid #1e293b; cursor: pointer;
+      transition: all 0.2s; position: relative; overflow: hidden;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
-
     .friendly-theme-swatch:hover {
-      transform: scale(1.05);
-      border-color: #fff;
+      transform: scale(1.05); border-color: #fff;
       box-shadow: 0 6px 20px rgba(255, 255, 255, 0.2);
     }
-
     .friendly-advanced {
-      background: #0a0f1a;
-      border: 1px solid #1e293b;
-      border-radius: 10px;
-      padding: 0.6rem 0.75rem;
+      background: #0a0f1a; border: 1px solid #1e293b;
+      border-radius: 10px; padding: 0.6rem 0.75rem;
     }
-
     .friendly-advanced summary {
-      cursor: pointer;
-      font-size: 0.76rem;
-      font-weight: 700;
-      color: #94a3b8;
-      user-select: none;
-      list-style: none;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
+      cursor: pointer; font-size: 0.76rem; font-weight: 700;
+      color: #94a3b8; user-select: none; list-style: none;
+      display: flex; align-items: center; gap: 0.4rem;
     }
+    .friendly-advanced summary::-webkit-details-marker { display: none; }
+    .friendly-advanced[open] summary { color: #cbd5e1; margin-bottom: 0.5rem; }
 
-    .friendly-advanced summary::-webkit-details-marker {
-      display: none;
-    }
-
-    .friendly-advanced[open] summary {
-      color: #cbd5e1;
-      margin-bottom: 0.5rem;
-    }
-
-    .anim-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.5rem;
-      margin-bottom: 0.9rem;
-    }
-
+    .anim-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
     .anim-card {
-      padding: 0.75rem 0.5rem;
-      border-radius: 10px;
-      border: 1.5px solid #243049;
-      background: #0a0f1c;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.15s;
+      padding: 0.75rem 0.5rem; border-radius: 10px;
+      border: 1.5px solid #243049; background: #0a0f1c;
+      cursor: pointer; text-align: center; transition: all 0.15s;
     }
-
     .anim-card:hover {
-      border-color: #6366f1;
-      background: #131a2b;
-      transform: translateY(-2px);
+      border-color: #6366f1; background: #131a2b; transform: translateY(-2px);
     }
-
     .anim-card.active {
       border-color: #818cf8;
       background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(124, 58, 237, 0.2));
       box-shadow: 0 0 14px rgba(99, 102, 241, 0.35);
     }
-
-    .anim-card .a-icon {
-      font-size: 1.5rem;
-      display: block;
-      margin-bottom: 0.2rem;
-    }
-
-    .anim-card .a-name {
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: #cbd5e1;
-    }
+    .anim-card .a-icon { font-size: 1.5rem; display: block; margin-bottom: 0.2rem; }
+    .anim-card .a-name { font-size: 0.7rem; font-weight: 700; color: #cbd5e1; }
 
     .anim-preview-box {
-      padding: 1.25rem;
-      text-align: center;
-      background: #080c14;
-      border-radius: 10px;
-      border: 1.5px dashed #283347;
-      margin-bottom: 0.9rem;
+      padding: 1.25rem; text-align: center;
+      background: #080c14; border-radius: 10px;
+      border: 1.5px dashed #283347; margin-bottom: 0.9rem;
     }
-
     .anim-preview-box .ap-demo {
-      display: inline-block;
-      padding: 0.65rem 1.4rem;
+      display: inline-block; padding: 0.65rem 1.4rem;
       border-radius: 10px;
       background: linear-gradient(135deg, #6366f1, #a855f7);
-      color: #fff;
-      font-weight: 700;
-      font-size: 0.85rem;
+      color: #fff; font-weight: 700; font-size: 0.85rem;
     }
-
-    .anim-field {
-      margin-bottom: 0.75rem;
-    }
-
+    .anim-field { margin-bottom: 0.75rem; }
     .anim-field label {
-      display: block;
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: #cbd5e1;
-      margin-bottom: 0.3rem;
+      display: block; font-size: 0.72rem; font-weight: 700;
+      color: #cbd5e1; margin-bottom: 0.3rem;
     }
-
-    .anim-field input[type=range] {
-      width: 100%;
-      accent-color: #6366f1;
-    }
-
+    .anim-field input[type=range] { width: 100%; accent-color: #6366f1; }
     .anim-field .val {
-      font-family: 'Fira Code', monospace;
-      font-size: 0.72rem;
-      color: #818cf8;
-      font-weight: 700;
-      float: right;
+      font-family: 'Fira Code', monospace; font-size: 0.72rem;
+      color: #818cf8; font-weight: 700; float: right;
     }
-
     .anim-field select {
-      width: 100%;
-      padding: 0.45rem 0.7rem;
-      border-radius: 7px;
-      border: 1.5px solid #283347;
-      background: #080c14;
-      color: #fff;
-      font-family: inherit;
-      font-size: 0.76rem;
+      width: 100%; padding: 0.45rem 0.7rem; border-radius: 7px;
+      border: 1.5px solid #283347; background: #080c14; color: #fff;
+      font-family: inherit; font-size: 0.76rem;
     }
 
     .lang-card {
-      background: #0a0f1c;
-      border: 1.5px solid #243049;
-      border-radius: 12px;
-      padding: 0.9rem;
-      margin-bottom: 0.75rem;
+      background: #0a0f1c; border: 1.5px solid #243049;
+      border-radius: 12px; padding: 0.9rem; margin-bottom: 0.75rem;
     }
-
     .lang-card .lc-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 0.6rem;
     }
-
-    .lang-card .lc-title {
-      font-size: 0.82rem;
-      font-weight: 800;
-      color: #fff;
-    }
-
-    .lang-card .lc-sub {
-      font-size: 0.7rem;
-      color: #94a3b8;
-    }
-
-    .lang-chip-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-bottom: 0.6rem;
-    }
-
+    .lang-card .lc-title { font-size: 0.82rem; font-weight: 800; color: #fff; }
+    .lang-card .lc-sub { font-size: 0.7rem; color: #94a3b8; }
+    .lang-chip-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.6rem; }
     .lang-chip {
-      padding: 0.35rem 0.7rem;
-      border-radius: 999px;
-      border: 1.5px solid #283347;
-      background: #080c14;
-      color: #cbd5e1;
-      font-size: 0.72rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.15s;
+      padding: 0.35rem 0.7rem; border-radius: 999px;
+      border: 1.5px solid #283347; background: #080c14; color: #cbd5e1;
+      font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
     }
-
-    .lang-chip:hover {
-      border-color: #6366f1;
-      color: #fff;
-    }
-
+    .lang-chip:hover { border-color: #6366f1; color: #fff; }
     .lang-chip.on {
       background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      border-color: #818cf8;
-      color: #fff;
+      border-color: #818cf8; color: #fff;
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
     }
 
     .crop-stage {
-      position: relative;
-      display: inline-block;
-      background: #050810;
-      border-radius: 10px;
-      overflow: hidden;
-      margin: 0 auto 1rem;
-      max-width: 100%;
-      line-height: 0;
-      user-select: none;
+      position: relative; display: inline-block;
+      background: #050810; border-radius: 10px; overflow: hidden;
+      margin: 0 auto 1rem; max-width: 100%; line-height: 0; user-select: none;
     }
-
-    .crop-stage img {
-      max-width: 100%;
-      max-height: 380px;
-      display: block;
-      pointer-events: none;
-    }
-
+    .crop-stage img { max-width: 100%; max-height: 380px; display: block; pointer-events: none; }
     .crop-rect {
-      position: absolute;
-      border: 2px solid #818cf8;
+      position: absolute; border: 2px solid #818cf8;
       box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
-      cursor: move;
-      box-sizing: border-box;
+      cursor: move; box-sizing: border-box;
     }
-
     .crop-handle {
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      background: #818cf8;
-      border: 2px solid #fff;
-      border-radius: 50%;
+      position: absolute; width: 14px; height: 14px;
+      background: #818cf8; border: 2px solid #fff; border-radius: 50%;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
     }
+    .crop-handle.nw { top: -7px; left: -7px; cursor: nwse-resize; }
+    .crop-handle.ne { top: -7px; right: -7px; cursor: nesw-resize; }
+    .crop-handle.sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
+    .crop-handle.se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+    .crop-ratio-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1rem; }
 
-    .crop-handle.nw {
-      top: -7px;
-      left: -7px;
-      cursor: nwse-resize;
-    }
-
-    .crop-handle.ne {
-      top: -7px;
-      right: -7px;
-      cursor: nesw-resize;
-    }
-
-    .crop-handle.sw {
-      bottom: -7px;
-      left: -7px;
-      cursor: nesw-resize;
-    }
-
-    .crop-handle.se {
-      bottom: -7px;
-      right: -7px;
-      cursor: nwse-resize;
-    }
-
-    .crop-ratio-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem;
-      margin-bottom: 1rem;
-    }
-
-    .gal-layouts {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.6rem;
-      margin-bottom: 1rem;
-    }
-
+    .gal-layouts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-bottom: 1rem; }
     .gal-layout {
-      padding: 0.85rem 0.5rem;
-      border-radius: 10px;
-      border: 1.5px solid #243049;
-      background: #0a0f1c;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.15s;
+      padding: 0.85rem 0.5rem; border-radius: 10px;
+      border: 1.5px solid #243049; background: #0a0f1c;
+      cursor: pointer; text-align: center; transition: all 0.15s;
     }
-
-    .gal-layout:hover {
-      border-color: #6366f1;
-      transform: translateY(-2px);
-    }
-
+    .gal-layout:hover { border-color: #6366f1; transform: translateY(-2px); }
     .gal-layout.active {
       border-color: #818cf8;
       background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(124, 58, 237, 0.15));
     }
-
     .gal-layout .gl-demo {
-      display: grid;
-      gap: 3px;
-      width: 44px;
-      height: 34px;
+      display: grid; gap: 3px; width: 44px; height: 34px;
       margin: 0 auto 0.35rem;
     }
-
-    .gal-layout .gl-demo div {
-      background: #6366f1;
-      border-radius: 3px;
-      opacity: 0.85;
-    }
-
-    .gal-layout .gl-name {
-      font-size: 0.68rem;
-      font-weight: 700;
-      color: #cbd5e1;
-    }
+    .gal-layout .gl-demo div { background: #6366f1; border-radius: 3px; opacity: 0.85; }
+    .gal-layout .gl-name { font-size: 0.68rem; font-weight: 700; color: #cbd5e1; }
 
     .gal-picker {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.5rem;
-      max-height: 280px;
-      overflow-y: auto;
-      padding: 0.5rem;
-      background: #080c14;
-      border: 1px solid #1e293b;
-      border-radius: 9px;
-      margin-bottom: 1rem;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
+      max-height: 280px; overflow-y: auto; padding: 0.5rem;
+      background: #080c14; border: 1px solid #1e293b;
+      border-radius: 9px; margin-bottom: 1rem;
     }
-
     .gal-picker .gp-item {
-      position: relative;
-      aspect-ratio: 1;
-      border-radius: 7px;
-      overflow: hidden;
-      cursor: pointer;
-      border: 2px solid transparent;
+      position: relative; aspect-ratio: 1; border-radius: 7px;
+      overflow: hidden; cursor: pointer; border: 2px solid transparent;
       transition: all 0.15s;
     }
-
-    .gal-picker .gp-item img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .gal-picker .gp-item.on {
-      border-color: #10b981;
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
-    }
-
+    .gal-picker .gp-item img { width: 100%; height: 100%; object-fit: cover; }
+    .gal-picker .gp-item.on { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3); }
     .gal-picker .gp-item.on::after {
-      content: '✓';
-      position: absolute;
-      top: 3px;
-      right: 3px;
-      background: #10b981;
-      color: #fff;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.7rem;
-      font-weight: 900;
+      content: '✓'; position: absolute; top: 3px; right: 3px;
+      background: #10b981; color: #fff; width: 18px; height: 18px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 900;
     }
 
     .mobile-mode-banner {
-      position: absolute;
-      top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
       z-index: 99999;
       background: linear-gradient(135deg, #ec4899, #db2777);
-      color: #fff;
-      padding: 0.4rem 1rem;
-      border-radius: 999px;
-      font-size: 0.72rem;
-      font-weight: 800;
+      color: #fff; padding: 0.4rem 1rem; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 800;
       box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
-      display: none;
-      align-items: center;
-      gap: 0.5rem;
+      display: none; align-items: center; gap: 0.5rem;
       pointer-events: auto;
     }
-
-    .mobile-mode-banner.on {
-      display: inline-flex;
-    }
+    .mobile-mode-banner.on { display: inline-flex; }
 
     .floating-edit-content-btn {
-      position: absolute;
-      bottom: 1.5rem;
-      left: 50%;
+      position: absolute; bottom: 1.5rem; left: 50%;
       transform: translateX(-50%) translateY(20px);
-      z-index: 9998;
-      display: none;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.5rem;
-      border-radius: 999px;
+      z-index: 9998; display: none; align-items: center; gap: 0.5rem;
+      padding: 0.75rem 1.5rem; border-radius: 999px;
       border: 2px solid #fbbf24;
       background: linear-gradient(135deg, #f59e0b, #d97706);
-      color: #fff;
-      font-family: inherit;
-      font-size: 0.88rem;
-      font-weight: 800;
+      color: #fff; font-family: inherit; font-size: 0.88rem; font-weight: 800;
       letter-spacing: -0.01em;
       box-shadow: 0 10px 35px rgba(245, 158, 11, 0.55), 0 0 0 4px rgba(245, 158, 11, 0.15);
       cursor: pointer;
       transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
       opacity: 0;
     }
-
-    .floating-edit-content-btn.show {
-      display: inline-flex;
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
+    .floating-edit-content-btn.show { display: inline-flex; opacity: 1; transform: translateX(-50%) translateY(0); }
     .floating-edit-content-btn:hover {
       transform: translateX(-50%) translateY(-3px) scale(1.04);
       box-shadow: 0 14px 40px rgba(245, 158, 11, 0.7), 0 0 0 6px rgba(245, 158, 11, 0.2);
     }
-
-    .floating-edit-content-btn:active {
-      transform: translateX(-50%) translateY(-1px) scale(1.01);
-    }
-
     .floating-edit-content-btn::before {
-      content: '';
-      position: absolute;
-      inset: -6px;
-      border-radius: 999px;
-      background: rgba(245, 158, 11, 0.25);
-      animation: fabPulse 2s ease-in-out infinite;
-      z-index: -1;
+      content: ''; position: absolute; inset: -6px;
+      border-radius: 999px; background: rgba(245, 158, 11, 0.25);
+      animation: fabPulse 2s ease-in-out infinite; z-index: -1;
     }
-
     @keyframes fabPulse {
-
-      0%,
-      100% {
-        transform: scale(1);
-        opacity: 0.6;
-      }
-
-      50% {
-        transform: scale(1.08);
-        opacity: 0.15;
-      }
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.08); opacity: 0.15; }
     }
 
     .upload-dropzone {
-      border: 2px dashed #3b4260;
-      border-radius: 14px;
-      padding: 1.75rem 1rem;
-      text-align: center;
+      border: 2px dashed #3b4260; border-radius: 14px;
+      padding: 1.75rem 1rem; text-align: center;
       background: rgba(99, 102, 241, 0.03);
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: 1rem;
+      cursor: pointer; transition: all 0.2s; margin-bottom: 1rem;
     }
-
-    .upload-dropzone:hover,
-    .upload-dropzone.dragover {
-      border-color: #6366f1;
-      background: rgba(99, 102, 241, 0.1);
+    .upload-dropzone:hover, .upload-dropzone.dragover {
+      border-color: #6366f1; background: rgba(99, 102, 241, 0.1);
     }
-
-    .upload-dropzone .u-icon {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .upload-dropzone .u-text {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #cbd5e1;
-    }
-
-    .upload-dropzone .u-sub {
-      font-size: 0.72rem;
-      color: #64748b;
-      margin-top: 0.25rem;
-    }
+    .upload-dropzone .u-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .upload-dropzone .u-text { font-size: 0.82rem; font-weight: 700; color: #cbd5e1; }
+    .upload-dropzone .u-sub { font-size: 0.72rem; color: #64748b; margin-top: 0.25rem; }
 
     .stock-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.6rem;
-      max-height: 420px;
-      overflow-y: auto;
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 0.6rem; max-height: 420px; overflow-y: auto;
     }
-
     .stock-thumb {
-      position: relative;
-      border-radius: 8px;
-      overflow: hidden;
-      aspect-ratio: 4/3;
-      cursor: pointer;
-      border: 1.5px solid #283347;
-      transition: all 0.2s;
+      position: relative; border-radius: 8px; overflow: hidden;
+      aspect-ratio: 4/3; cursor: pointer;
+      border: 1.5px solid #283347; transition: all 0.2s;
     }
-
-    .stock-thumb img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
+    .stock-thumb img { width: 100%; height: 100%; object-fit: cover; }
     .stock-thumb:hover {
-      transform: scale(1.03);
-      border-color: #6366f1;
+      transform: scale(1.03); border-color: #6366f1;
       box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
     }
-
     .stock-thumb-caption {
-      position: absolute;
-      bottom: 0;
-      inset-inline: 0;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 0.2rem 0.4rem;
-      font-size: 0.65rem;
-      color: #fff;
-      font-weight: 600;
-      text-align: center;
+      position: absolute; bottom: 0; inset-inline: 0;
+      background: rgba(0, 0, 0, 0.7); padding: 0.2rem 0.4rem;
+      font-size: 0.65rem; color: #fff; font-weight: 600; text-align: center;
     }
 
     .upload-card {
-      position: relative;
-      border-radius: 8px;
-      overflow: hidden;
-      aspect-ratio: 4/3;
-      cursor: grab;
-      border: 1.5px solid #283347;
-      transition: all 0.2s;
+      position: relative; border-radius: 8px; overflow: hidden;
+      aspect-ratio: 4/3; cursor: grab;
+      border: 1.5px solid #283347; transition: all 0.2s;
       background: #080c14;
     }
-
-    .upload-card img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      pointer-events: none;
-    }
-
-    .upload-card:hover {
-      transform: scale(1.03);
-      border-color: #6366f1;
-    }
-
+    .upload-card img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+    .upload-card:hover { transform: scale(1.03); border-color: #6366f1; }
     .upload-card-badge {
-      position: absolute;
-      top: 4px;
-      left: 4px;
-      background: rgba(0, 0, 0, 0.75);
-      font-size: 0.6rem;
-      color: #a5b4fc;
-      padding: 0.1rem 0.35rem;
-      border-radius: 4px;
-      font-weight: 700;
+      position: absolute; top: 4px; left: 4px;
+      background: rgba(0, 0, 0, 0.75); font-size: 0.6rem;
+      color: #a5b4fc; padding: 0.1rem 0.35rem;
+      border-radius: 4px; font-weight: 700;
     }
-
     .upload-card-del {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 22px;
-      height: 22px;
-      border-radius: 4px;
-      background: rgba(239, 68, 68, 0.85);
-      color: #fff;
-      border: none;
-      font-size: 0.7rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.15s;
-      z-index: 5;
+      position: absolute; top: 4px; right: 4px;
+      width: 22px; height: 22px; border-radius: 4px;
+      background: rgba(239, 68, 68, 0.85); color: #fff;
+      border: none; font-size: 0.7rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; opacity: 0; transition: opacity 0.15s; z-index: 5;
     }
-
-    .upload-card:hover .upload-card-del {
-      opacity: 1;
-    }
-
+    .upload-card:hover .upload-card-del { opacity: 1; }
     .upload-card-caption {
-      position: absolute;
-      bottom: 0;
-      inset-inline: 0;
-      background: rgba(0, 0, 0, 0.75);
-      padding: 0.2rem 0.4rem;
-      font-size: 0.62rem;
-      color: #fff;
-      font-weight: 600;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      position: absolute; bottom: 0; inset-inline: 0;
+      background: rgba(0, 0, 0, 0.75); padding: 0.2rem 0.4rem;
+      font-size: 0.62rem; color: #fff; font-weight: 600;
+      text-align: center; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
     }
 
     .layer-tabs {
-      display: flex;
-      gap: 0.3rem;
-      margin-bottom: 0.75rem;
-      border-bottom: 1px solid #1e293b;
-      padding-bottom: 0.5rem;
+      display: flex; gap: 0.3rem; margin-bottom: 0.75rem;
+      border-bottom: 1px solid #1e293b; padding-bottom: 0.5rem;
       flex-wrap: wrap;
     }
-
     .ltab {
-      padding: 0.25rem 0.65rem;
-      border-radius: 6px;
-      border: none;
-      background: transparent;
-      color: #94a3b8;
-      font-size: 0.72rem;
-      font-weight: 700;
-      cursor: pointer;
+      padding: 0.25rem 0.65rem; border-radius: 6px;
+      border: none; background: transparent; color: #94a3b8;
+      font-size: 0.72rem; font-weight: 700; cursor: pointer;
       transition: all 0.15s;
     }
-
-    .ltab.active {
-      background: #1e1b4b;
-      color: #a5b4fc;
-      border: 1px solid #6366f1;
-    }
+    .ltab.active { background: #1e1b4b; color: #a5b4fc; border: 1px solid #6366f1; }
 
     .layer-tree-container {
-      display: flex;
-      flex-direction: column;
-      gap: 0.45rem;
-      max-height: 520px;
-      overflow-y: auto;
-      padding-right: 2px;
+      display: flex; flex-direction: column; gap: 0.45rem;
+      max-height: 520px; overflow-y: auto; padding-right: 2px;
     }
-
     .layer-item-card {
-      background: #0a0e1a;
-      border: 1px solid #1e293b;
-      border-radius: 8px;
-      padding: 0.5rem 0.65rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      transition: all 0.15s;
-      cursor: pointer;
+      background: #0a0e1a; border: 1px solid #1e293b;
+      border-radius: 8px; padding: 0.5rem 0.65rem;
+      display: flex; flex-direction: column; gap: 0.35rem;
+      transition: all 0.15s; cursor: pointer;
     }
-
-    .layer-item-card:hover {
-      border-color: #3b4260;
-      background: #0f172a;
-    }
-
+    .layer-item-card:hover { border-color: #3b4260; background: #0f172a; }
     .layer-item-card.selected {
-      border-color: #6366f1;
-      background: #13172e;
+      border-color: #6366f1; background: #13172e;
       box-shadow: 0 0 0 1px #6366f1;
     }
-
     .layer-card-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 0.72rem;
-      gap: 0.35rem;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.72rem; gap: 0.35rem;
     }
-
     .layer-tag-badge {
-      font-size: 0.64rem;
-      font-weight: 800;
-      padding: 0.12rem 0.45rem;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      flex-shrink: 0;
+      font-size: 0.64rem; font-weight: 800;
+      padding: 0.12rem 0.45rem; border-radius: 4px;
+      text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0;
     }
-
-    .layer-tag-badge.h {
-      background: #312e81;
-      color: #c7d2fe;
-    }
-
-    .layer-tag-badge.p {
-      background: #064e3b;
-      color: #a7f3d0;
-    }
-
-    .layer-tag-badge.btn {
-      background: #701a75;
-      color: #fbcfe8;
-    }
-
-    .layer-tag-badge.img {
-      background: #1e3a8a;
-      color: #bfdbfe;
-    }
-
-    .layer-tag-badge.sec {
-      background: #374151;
-      color: #d1d5db;
-    }
+    .layer-tag-badge.h { background: #312e81; color: #c7d2fe; }
+    .layer-tag-badge.p { background: #064e3b; color: #a7f3d0; }
+    .layer-tag-badge.btn { background: #701a75; color: #fbcfe8; }
+    .layer-tag-badge.img { background: #1e3a8a; color: #bfdbfe; }
+    .layer-tag-badge.sec { background: #374151; color: #d1d5db; }
 
     .layer-text-input {
-      width: 100%;
-      background: #080c14;
-      border: 1px solid #283347;
-      border-radius: 6px;
-      color: #fff;
-      font-family: inherit;
-      font-size: 0.76rem;
-      padding: 0.32rem 0.55rem;
-      transition: border-color 0.15s;
+      width: 100%; background: #080c14;
+      border: 1px solid #283347; border-radius: 6px;
+      color: #fff; font-family: inherit; font-size: 0.76rem;
+      padding: 0.32rem 0.55rem; transition: border-color 0.15s;
     }
-
     .layer-text-input:focus {
-      outline: none;
-      border-color: #6366f1;
+      outline: none; border-color: #6366f1;
       background: #0e1424;
       box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
     }
 
     .studio-canvas-wrap {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background: #06090e;
-      position: relative;
-      overflow: hidden;
-      min-width: 0;
+      flex: 1; display: flex; flex-direction: column;
+      background: #06090e; position: relative;
+      overflow: hidden; min-width: 0;
     }
-
     #gjs {
-      width: 100% !important;
-      height: 100% !important;
+      width: 100% !important; height: 100% !important;
+      flex: 1 1 auto !important; min-height: 0 !important;
+      display: block !important;
     }
-
-    .gjs-cv-canvas {
-      background-color: transparent !important;
-    }
+    .gjs-cv-canvas { background-color: transparent !important; }
 
     .webcraft-section-handle {
-      position: absolute;
-      z-index: 99990;
-      display: flex;
-      align-items: center;
-      gap: .35rem;
+      position: absolute; z-index: 99990;
+      display: flex; align-items: center; gap: .35rem;
       padding: .32rem .55rem;
       border: 1px solid rgba(99, 102, 241, .65);
       border-radius: 8px;
@@ -1510,30 +665,16 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       color: #c7d2fe;
       font: 700 11px/1.1 Arial, sans-serif;
       box-shadow: 0 8px 20px rgba(0, 0, 0, .25);
-      cursor: grab;
-      user-select: none;
+      cursor: grab; user-select: none;
     }
-
-    .webcraft-section-handle:hover {
-      background: rgba(30, 27, 75, .98);
-    }
-
-    .webcraft-section-handle.dragging {
-      cursor: grabbing;
-      opacity: 1;
-    }
-
+    .webcraft-section-handle:hover { background: rgba(30, 27, 75, .98); }
+    .webcraft-section-handle.dragging { cursor: grabbing; opacity: 1; }
     .webcraft-drop-line {
-      position: absolute;
-      z-index: 99989;
-      height: 3px;
-      border-radius: 999px;
-      background: #818cf8;
+      position: absolute; z-index: 99989; height: 3px;
+      border-radius: 999px; background: #818cf8;
       box-shadow: 0 0 14px rgba(129, 140, 248, .75);
-      pointer-events: none;
-      display: none;
+      pointer-events: none; display: none;
     }
-
     .webcraft-section-dragging {
       outline: 2px dashed rgba(99, 102, 241, .75) !important;
       outline-offset: -2px !important;
@@ -1549,692 +690,308 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       min-height: 68px !important;
       transition: all 0.15s !important;
     }
-
     .gjs-block:hover {
-      border-color: #6366f1 !important;
-      color: #a5b4fc !important;
+      border-color: #6366f1 !important; color: #a5b4fc !important;
       background: #1e1b4b !important;
       transform: translateY(-2px) !important;
     }
-
-    .gjs-block-label {
-      font-size: 0.75rem !important;
-      font-weight: 600 !important;
-    }
-
+    .gjs-block-label { font-size: 0.75rem !important; font-weight: 600 !important; }
     .gjs-block-category .gjs-title {
-      background: #090d16 !important;
-      color: #818cf8 !important;
-      font-size: 0.74rem !important;
-      font-weight: 700 !important;
+      background: #090d16 !important; color: #818cf8 !important;
+      font-size: 0.74rem !important; font-weight: 700 !important;
       text-transform: uppercase !important;
       letter-spacing: 0.08em !important;
       padding: 0.45rem 0.65rem !important;
       border-radius: 6px !important;
       margin: 0.5rem 0 0.3rem !important;
     }
-
     .gjs-sm-sector .gjs-sm-sector-title {
-      background: #0a0e1a !important;
-      color: #cbd5e1 !important;
-      font-size: 0.76rem !important;
-      font-weight: 700 !important;
+      background: #0a0e1a !important; color: #cbd5e1 !important;
+      font-size: 0.76rem !important; font-weight: 700 !important;
       border-bottom: 1px solid #1e293b !important;
       padding: 0.45rem 0.65rem !important;
     }
-
     .gjs-field {
       background: #090d16 !important;
       border: 1px solid #283347 !important;
       border-radius: 6px !important;
-      color: #fff !important;
-      font-size: 0.75rem !important;
+      color: #fff !important; font-size: 0.75rem !important;
     }
-
-    .gjs-field input,
-    .gjs-field select {
-      color: #fff !important;
-    }
-
-    .gjs-trt-traits {
-      padding: 0.25rem 0 !important;
-    }
-
-    .gjs-trt-trait {
-      padding: 0.5rem 0 !important;
-      border-bottom: 1px solid #1e293b !important;
-    }
+    .gjs-field input, .gjs-field select { color: #fff !important; }
+    .gjs-trt-traits { padding: 0.25rem 0 !important; }
+    .gjs-trt-trait { padding: 0.5rem 0 !important; border-bottom: 1px solid #1e293b !important; }
 
     .ctx-menu {
-      position: fixed;
-      z-index: 100000;
-      background: #131a2b;
-      border: 1.5px solid #283347;
-      border-radius: 10px;
-      padding: 0.35rem;
+      position: fixed; z-index: 100000;
+      background: #131a2b; border: 1.5px solid #283347;
+      border-radius: 10px; padding: 0.35rem;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-      min-width: 190px;
-      display: none;
-      flex-direction: column;
-      gap: 0.1rem;
-      font-size: 0.82rem;
+      min-width: 190px; display: none; flex-direction: column;
+      gap: 0.1rem; font-size: 0.82rem;
       font-family: 'Plus Jakarta Sans', sans-serif;
       animation: ctxIn 0.12s ease;
     }
-
     @keyframes ctxIn {
-      from {
-        opacity: 0;
-        transform: scale(0.96);
-      }
-
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
     }
-
     .ctx-item {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      padding: 0.5rem 0.75rem;
-      border-radius: 6px;
-      color: #cbd5e1;
-      cursor: pointer;
-      transition: all 0.1s;
-      font-weight: 600;
-      border: none;
-      background: transparent;
-      font-family: inherit;
-      font-size: 0.82rem;
-      text-align: left;
-      width: 100%;
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.5rem 0.75rem; border-radius: 6px;
+      color: #cbd5e1; cursor: pointer;
+      transition: all 0.1s; font-weight: 600;
+      border: none; background: transparent;
+      font-family: inherit; font-size: 0.82rem;
+      text-align: left; width: 100%;
     }
-
-    .ctx-item:hover {
-      background: #1e293b;
-      color: #fff;
-    }
-
-    .ctx-item.danger:hover {
-      background: #7f1d1d;
-      color: #fecaca;
-    }
-
-    .ctx-item .ctx-icon {
-      width: 18px;
-      text-align: center;
-      font-size: 0.95rem;
-    }
-
-    .ctx-sep {
-      height: 1px;
-      background: #1e293b;
-      margin: 0.25rem 0.5rem;
-    }
+    .ctx-item:hover { background: #1e293b; color: #fff; }
+    .ctx-item.danger:hover { background: #7f1d1d; color: #fecaca; }
+    .ctx-item .ctx-icon { width: 18px; text-align: center; font-size: 0.95rem; }
+    .ctx-sep { height: 1px; background: #1e293b; margin: 0.25rem 0.5rem; }
 
     .floating-gemini-btn {
-      position: fixed;
-      bottom: 1.5rem;
-      right: 1.5rem;
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
       z-index: 1000;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.55rem;
+      display: inline-flex; align-items: center; gap: 0.55rem;
       padding: 0.68rem 1.25rem 0.68rem 0.9rem;
       border-radius: 999px;
       border: 1px solid rgba(129, 140, 248, 0.35);
       background: linear-gradient(135deg, #4f46e5 0%, #6d5ce8 55%, #8b5cf6 100%);
-      color: #fff;
-      font-family: inherit;
-      font-size: 0.85rem;
-      font-weight: 700;
-      letter-spacing: -0.005em;
-      box-shadow:
-        0 10px 28px rgba(79, 70, 229, 0.45),
-        0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+      color: #fff; font-family: inherit; font-size: 0.85rem;
+      font-weight: 700; letter-spacing: -0.005em;
+      box-shadow: 0 10px 28px rgba(79, 70, 229, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
       cursor: pointer;
       transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s;
     }
-
     .floating-gemini-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
+      content: ''; position: absolute; inset: 0;
       border-radius: inherit;
       background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 55%);
       pointer-events: none;
     }
-
     .floating-gemini-btn:hover {
       transform: translateY(-2px);
-      box-shadow:
-        0 14px 36px rgba(79, 70, 229, 0.6),
-        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+      box-shadow: 0 14px 36px rgba(79, 70, 229, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
     }
-
-    .floating-gemini-btn:active {
-      transform: translateY(0) scale(0.98);
-    }
-
+    .floating-gemini-btn:active { transform: translateY(0) scale(0.98); }
     .floating-gemini-btn .fg-orb {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; border-radius: 50%;
       background: rgba(255, 255, 255, 0.18);
-      font-size: 0.82rem;
-      line-height: 1;
+      font-size: 0.82rem; line-height: 1;
     }
 
     .magic-ai-panel {
-      position: fixed;
-      bottom: 5.5rem;
-      right: 1.5rem;
+      position: fixed; bottom: 5.5rem; right: 1.5rem;
       width: min(420px, calc(100vw - 2rem));
       height: min(620px, calc(100vh - 8rem));
-      background: #0c1220;
-      border: 1px solid #1e293b;
+      background: #0c1220; border: 1px solid #1e293b;
       border-radius: 20px;
-      box-shadow:
-        0 24px 70px rgba(0, 0, 0, 0.7),
-        0 0 0 1px rgba(255, 255, 255, 0.03) inset;
-      z-index: 1001;
-      display: none;
-      flex-direction: column;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+      z-index: 1001; display: none; flex-direction: column;
       overflow: hidden;
       font-family: 'Plus Jakarta Sans', sans-serif;
     }
-
-    .magic-ai-panel.active {
-      display: flex;
-      animation: magicPanelIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-
+    .magic-ai-panel.active { display: flex; animation: magicPanelIn 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
     @keyframes magicPanelIn {
-      from {
-        opacity: 0;
-        transform: translateY(14px) scale(0.97);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
+      from { opacity: 0; transform: translateY(14px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
-
     .magic-header {
       padding: 0.85rem 0.9rem 0.85rem 1rem;
       background: linear-gradient(180deg, #121a2e 0%, #0d1424 100%);
       border-bottom: 1px solid #1c2740;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      flex-shrink: 0;
-      position: relative;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.75rem; flex-shrink: 0; position: relative;
     }
-
     .magic-header::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: -1px;
-      height: 1px;
+      content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
       background: linear-gradient(90deg, transparent, rgba(129, 140, 248, 0.45), transparent);
     }
-
-    .magic-brand {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      min-width: 0;
-    }
-
+    .magic-brand { display: flex; align-items: center; gap: 0.65rem; min-width: 0; }
     .magic-avatar {
-      position: relative;
-      width: 34px;
-      height: 34px;
-      border-radius: 11px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position: relative; width: 34px; height: 34px;
+      border-radius: 11px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
       background: linear-gradient(135deg, #4f46e5, #7c3aed 55%, #a855f7);
       box-shadow: 0 4px 14px rgba(124, 58, 237, 0.45);
-      font-size: 1rem;
-      color: #fff;
+      font-size: 1rem; color: #fff;
     }
-
     .magic-avatar::after {
-      content: '';
-      position: absolute;
-      right: -2px;
-      bottom: -2px;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #10b981;
-      border: 2px solid #0d1424;
+      content: ''; position: absolute; right: -2px; bottom: -2px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #10b981; border: 2px solid #0d1424;
       box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
     }
-
-    .magic-brand-text {
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-
+    .magic-brand-text { display: flex; flex-direction: column; min-width: 0; }
     .magic-brand-name {
-      font-size: 0.86rem;
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -0.01em;
-      line-height: 1.15;
+      font-size: 0.86rem; font-weight: 800; color: #fff;
+      letter-spacing: -0.01em; line-height: 1.15;
     }
-
     .magic-brand-sub {
-      font-size: 0.68rem;
-      color: #94a3b8;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      margin-top: 1px;
+      font-size: 0.68rem; color: #94a3b8; font-weight: 600;
+      display: flex; align-items: center; gap: 0.3rem; margin-top: 1px;
     }
-
     .magic-brand-sub .dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: #10b981;
-      box-shadow: 0 0 6px #10b981;
+      width: 5px; height: 5px; border-radius: 50%;
+      background: #10b981; box-shadow: 0 0 6px #10b981;
     }
-
-    .magic-header-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      flex-shrink: 0;
-    }
-
+    .magic-header-actions { display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0; }
     .magic-icon-btn {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      border: none;
-      background: transparent;
-      color: #64748b;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: all 0.15s;
-      font-family: inherit;
-      line-height: 1;
+      width: 28px; height: 28px; border-radius: 8px;
+      border: none; background: transparent; color: #64748b;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; cursor: pointer;
+      transition: all 0.15s; font-family: inherit; line-height: 1;
     }
-
-    .magic-icon-btn:hover {
-      background: #1a2338;
-      color: #fff;
-    }
+    .magic-icon-btn:hover { background: #1a2338; color: #fff; }
 
     .magic-chat-log {
-      flex: 1;
-      overflow-y: auto;
+      flex: 1; overflow-y: auto;
       padding: 1rem 0.9rem 1.1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.9rem;
+      display: flex; flex-direction: column; gap: 0.9rem;
       scroll-behavior: smooth;
       background: radial-gradient(120% 60% at 50% 0%, rgba(79, 70, 229, 0.06), transparent 60%);
     }
+    .magic-chat-log::-webkit-scrollbar { width: 6px; }
+    .magic-chat-log::-webkit-scrollbar-track { background: transparent; }
+    .magic-chat-log::-webkit-scrollbar-thumb { background: #243049; border-radius: 999px; }
+    .magic-chat-log::-webkit-scrollbar-thumb:hover { background: #334155; }
 
-    .magic-chat-log::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .magic-chat-log::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .magic-chat-log::-webkit-scrollbar-thumb {
-      background: #243049;
-      border-radius: 999px;
-    }
-
-    .magic-chat-log::-webkit-scrollbar-thumb:hover {
-      background: #334155;
-    }
-
-    .msg {
-      display: flex;
-      gap: 0.55rem;
-      align-items: flex-end;
-      max-width: 100%;
-      animation: msgIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-
+    .msg { display: flex; gap: 0.55rem; align-items: flex-end; max-width: 100%; animation: msgIn 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
     @keyframes msgIn {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-
-    .msg.user {
-      flex-direction: row-reverse;
-    }
-
+    .msg.user { flex-direction: row-reverse; }
     .msg-avatar {
-      width: 26px;
-      height: 26px;
-      border-radius: 8px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.68rem;
-      font-weight: 800;
-      line-height: 1;
+      width: 26px; height: 26px; border-radius: 8px;
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem; font-weight: 800; line-height: 1;
     }
-
     .msg.ai .msg-avatar {
       background: linear-gradient(135deg, #4f46e5, #a855f7);
-      color: #fff;
-      box-shadow: 0 3px 10px rgba(124, 58, 237, 0.35);
+      color: #fff; box-shadow: 0 3px 10px rgba(124, 58, 237, 0.35);
     }
-
     .msg.user .msg-avatar {
-      background: #1e293b;
-      color: #c7d2fe;
-      border: 1px solid #334155;
+      background: #1e293b; color: #c7d2fe; border: 1px solid #334155;
     }
-
-    .msg-body {
-      display: flex;
-      flex-direction: column;
-      gap: 0.2rem;
-      min-width: 0;
-      max-width: calc(100% - 42px);
-    }
-
-    .msg.user .msg-body {
-      align-items: flex-end;
-    }
-
+    .msg-body { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; max-width: calc(100% - 42px); }
+    .msg.user .msg-body { align-items: flex-end; }
     .msg-bubble {
-      position: relative;
-      padding: 0.6rem 0.85rem;
-      border-radius: 14px;
-      font-size: 0.82rem;
-      line-height: 1.55;
-      color: #e2e8f0;
-      word-wrap: break-word;
-      overflow-wrap: anywhere;
+      position: relative; padding: 0.6rem 0.85rem;
+      border-radius: 14px; font-size: 0.82rem; line-height: 1.55;
+      color: #e2e8f0; word-wrap: break-word; overflow-wrap: anywhere;
     }
-
     .msg.ai .msg-bubble {
-      background: #141c2f;
-      border: 1px solid #1e293b;
+      background: #141c2f; border: 1px solid #1e293b;
       border-bottom-left-radius: 5px;
     }
-
     .msg.user .msg-bubble {
       background: linear-gradient(135deg, #4f46e5, #6d5ce8);
-      color: #fff;
-      border-bottom-right-radius: 5px;
+      color: #fff; border-bottom-right-radius: 5px;
       box-shadow: 0 4px 14px rgba(79, 70, 229, 0.32);
     }
-
-    .msg-bubble strong {
-      color: #fff;
-      font-weight: 800;
-    }
-
-    .msg-bubble em {
-      color: #c7d2fe;
-      font-style: italic;
-    }
-
-    .msg-bubble a {
-      color: #a5b4fc;
-    }
-
+    .msg-bubble strong { color: #fff; font-weight: 800; }
+    .msg-bubble em { color: #c7d2fe; font-style: italic; }
+    .msg-bubble a { color: #a5b4fc; }
     .msg-meta {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      font-size: 0.62rem;
-      color: #64748b;
-      font-weight: 600;
-      padding: 0 0.25rem;
-      letter-spacing: 0.01em;
+      display: flex; align-items: center; gap: 0.35rem;
+      font-size: 0.62rem; color: #64748b; font-weight: 600;
+      padding: 0 0.25rem; letter-spacing: 0.01em;
     }
-
     .msg-copy {
-      opacity: 0;
-      background: transparent;
-      border: none;
-      color: #64748b;
-      font-size: 0.62rem;
-      font-weight: 700;
-      cursor: pointer;
-      padding: 0.1rem 0.35rem;
-      border-radius: 4px;
-      transition: all 0.15s;
-      font-family: inherit;
+      opacity: 0; background: transparent; border: none;
+      color: #64748b; font-size: 0.62rem; font-weight: 700;
+      cursor: pointer; padding: 0.1rem 0.35rem;
+      border-radius: 4px; transition: all 0.15s; font-family: inherit;
     }
+    .msg:hover .msg-copy { opacity: 1; }
+    .msg-copy:hover { background: #1e293b; color: #c7d2fe; }
 
-    .msg:hover .msg-copy {
-      opacity: 1;
-    }
-
-    .msg-copy:hover {
-      background: #1e293b;
-      color: #c7d2fe;
-    }
-
-    .typing-dots {
-      display: inline-flex;
-      gap: 0.28rem;
-      align-items: center;
-      padding: 0.1rem 0;
-    }
-
+    .typing-dots { display: inline-flex; gap: 0.28rem; align-items: center; padding: 0.1rem 0; }
     .typing-dots i {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #818cf8;
-      display: block;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #818cf8; display: block;
       animation: tdWave 1.2s infinite ease-in-out;
     }
-
-    .typing-dots i:nth-child(2) {
-      animation-delay: 0.15s;
-    }
-
-    .typing-dots i:nth-child(3) {
-      animation-delay: 0.3s;
-    }
-
+    .typing-dots i:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dots i:nth-child(3) { animation-delay: 0.3s; }
     @keyframes tdWave {
-
-      0%,
-      60%,
-      100% {
-        transform: translateY(0);
-        opacity: 0.4;
-      }
-
-      30% {
-        transform: translateY(-5px);
-        opacity: 1;
-      }
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-5px); opacity: 1; }
     }
 
     .m-chip-row {
-      display: flex;
-      gap: 0.4rem;
-      overflow-x: auto;
-      padding: 0.65rem 0.9rem;
-      border-top: 1px solid #1c2740;
-      background: #0a0f1c;
-      flex-shrink: 0;
-      scrollbar-width: none;
+      display: flex; gap: 0.4rem; overflow-x: auto;
+      padding: 0.65rem 0.9rem; border-top: 1px solid #1c2740;
+      background: #0a0f1c; flex-shrink: 0; scrollbar-width: none;
     }
-
-    .m-chip-row::-webkit-scrollbar {
-      display: none;
-    }
-
+    .m-chip-row::-webkit-scrollbar { display: none; }
     .m-chip {
-      padding: 0.36rem 0.75rem;
-      border-radius: 999px;
-      border: 1px solid #243049;
-      background: #0f1729;
-      color: #cbd5e1;
-      font-size: 0.72rem;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.16s;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
+      padding: 0.36rem 0.75rem; border-radius: 999px;
+      border: 1px solid #243049; background: #0f1729;
+      color: #cbd5e1; font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; white-space: nowrap; transition: all 0.16s;
+      display: inline-flex; align-items: center; gap: 0.3rem;
     }
-
     .m-chip:hover {
-      border-color: #6366f1;
-      color: #fff;
-      background: #1a2140;
+      border-color: #6366f1; color: #fff; background: #1a2140;
       transform: translateY(-1px);
     }
 
     .magic-input-row {
-      display: flex;
-      gap: 0.5rem;
+      display: flex; gap: 0.5rem;
       padding: 0.7rem 0.9rem 0.5rem;
-      background: #0a0f1c;
-      flex-shrink: 0;
-      align-items: flex-end;
+      background: #0a0f1c; flex-shrink: 0; align-items: flex-end;
     }
-
     .magic-input-wrap {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: #080c14;
-      border: 1.5px solid #243049;
+      flex: 1; min-width: 0;
+      display: flex; align-items: center; gap: 0.5rem;
+      background: #080c14; border: 1.5px solid #243049;
       border-radius: 12px;
       padding: 0.05rem 0.2rem 0.05rem 0.75rem;
       transition: border-color 0.18s, box-shadow 0.18s;
     }
-
     .magic-input-wrap:focus-within {
       border-color: #6366f1;
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
     }
-
-    .magic-input-icon {
-      color: #64748b;
-      font-size: 0.85rem;
-      flex-shrink: 0;
-      line-height: 1;
-    }
-
+    .magic-input-icon { color: #64748b; font-size: 0.85rem; flex-shrink: 0; line-height: 1; }
     .magic-input {
-      flex: 1;
-      min-width: 0;
-      padding: 0.62rem 0;
-      border: none;
-      background: transparent;
-      color: #fff;
-      font-family: inherit;
-      font-size: 0.84rem;
-      outline: none;
+      flex: 1; min-width: 0; padding: 0.62rem 0;
+      border: none; background: transparent; color: #fff;
+      font-family: inherit; font-size: 0.84rem; outline: none;
     }
-
-    .magic-input::placeholder {
-      color: #475569;
-    }
-
+    .magic-input::placeholder { color: #475569; }
     .magic-btn {
-      width: 38px;
-      height: 38px;
-      border-radius: 11px;
+      width: 38px; height: 38px; border-radius: 11px;
       border: none;
       background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      color: #fff;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      cursor: pointer;
-      flex-shrink: 0;
+      color: #fff; display: inline-flex; align-items: center; justify-content: center;
+      font-size: 1rem; cursor: pointer; flex-shrink: 0;
       box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
-      transition: all 0.18s;
-      line-height: 1;
+      transition: all 0.18s; line-height: 1;
     }
-
-    .magic-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(79, 70, 229, 0.6);
-    }
-
-    .magic-btn:active {
-      transform: scale(0.95);
-    }
-
-    .magic-btn:disabled {
-      opacity: 0.55;
-      cursor: wait;
-      transform: none;
-    }
+    .magic-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79, 70, 229, 0.6); }
+    .magic-btn:active { transform: scale(0.95); }
+    .magic-btn:disabled { opacity: 0.55; cursor: wait; transform: none; }
 
     .magic-hint {
-      font-size: 0.65rem;
-      color: #475569;
-      text-align: center;
-      padding: 0 0.9rem 0.7rem;
-      background: #0a0f1c;
-      font-weight: 600;
+      font-size: 0.65rem; color: #475569; text-align: center;
+      padding: 0 0.9rem 0.7rem; background: #0a0f1c; font-weight: 600;
     }
-
     .magic-hint kbd {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 4px;
-      padding: 0.05rem 0.32rem;
-      font-family: inherit;
-      font-size: 0.62rem;
-      color: #cbd5e1;
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 4px; padding: 0.05rem 0.32rem;
+      font-family: inherit; font-size: 0.62rem; color: #cbd5e1;
     }
 
-    /* ── Puter AI & Target Selection Styles ── */
     .ai-target-banner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-      padding: 0.5rem 0.85rem;
-      background: #0b101d;
-      border-bottom: 1px solid #1e293b;
-      font-size: 0.74rem;
-      color: #94a3b8;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.5rem; padding: 0.5rem 0.85rem;
+      background: #0b101d; border-bottom: 1px solid #1e293b;
+      font-size: 0.74rem; color: #94a3b8;
       transition: all 0.2s ease;
     }
     .ai-target-banner.has-selection {
@@ -2243,548 +1000,244 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       color: #c7d2fe;
     }
     .ai-target-info {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      flex: 1;
+      display: flex; align-items: center; gap: 0.45rem;
+      overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; flex: 1;
     }
     .ai-target-tag {
-      background: #312e81;
-      color: #a5b4fc;
-      font-size: 0.65rem;
-      font-weight: 800;
-      padding: 0.1rem 0.45rem;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      background: #312e81; color: #a5b4fc;
+      font-size: 0.65rem; font-weight: 800;
+      padding: 0.1rem 0.45rem; border-radius: 4px;
+      text-transform: uppercase; letter-spacing: 0.05em;
     }
     .ai-target-preview {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      color: #f1f5f9;
-      font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; color: #f1f5f9; font-weight: 600;
     }
     .ai-target-clear {
-      background: none;
-      border: none;
-      color: #f43f5e;
-      cursor: pointer;
-      font-size: 0.68rem;
-      font-weight: 700;
-      padding: 0.1rem 0.35rem;
-      border-radius: 4px;
-      flex-shrink: 0;
+      background: none; border: none; color: #f43f5e;
+      cursor: pointer; font-size: 0.68rem; font-weight: 700;
+      padding: 0.1rem 0.35rem; border-radius: 4px; flex-shrink: 0;
     }
-    .ai-target-clear:hover {
-      background: rgba(244, 63, 94, 0.15);
-    }
+    .ai-target-clear:hover { background: rgba(244, 63, 94, 0.15); }
+
     .puter-model-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.35rem 0.85rem;
-      background: #080c14;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.35rem 0.85rem; background: #080c14;
       border-bottom: 1px solid #162032;
-      font-size: 0.7rem;
-      gap: 0.5rem;
+      font-size: 0.7rem; gap: 0.5rem;
     }
     .puter-model-select {
-      background: #111726;
-      border: 1px solid #283347;
-      color: #e2e8f0;
-      border-radius: 6px;
-      font-size: 0.7rem;
-      padding: 0.2rem 0.45rem;
-      font-family: inherit;
-      outline: none;
+      background: #111726; border: 1px solid #283347;
+      color: #e2e8f0; border-radius: 6px;
+      font-size: 0.7rem; padding: 0.2rem 0.45rem;
+      font-family: inherit; outline: none;
     }
     .puter-acc-link {
-      color: #818cf8;
-      cursor: pointer;
-      font-weight: 700;
-      text-decoration: none;
+      color: #818cf8; cursor: pointer;
+      font-weight: 700; text-decoration: none;
     }
-    .puter-acc-link:hover {
-      text-decoration: underline;
-    }
+    .puter-acc-link:hover { text-decoration: underline; }
 
     @media (max-width: 480px) {
-      .magic-ai-panel {
-        right: 0.75rem;
-        left: 0.75rem;
-        width: auto;
-        bottom: 5rem;
-      }
-
-      .floating-gemini-btn span:not(.fg-orb) {
-        display: none;
-      }
-
-      .floating-gemini-btn {
-        padding: 0.7rem;
-      }
+      .magic-ai-panel { right: 0.75rem; left: 0.75rem; width: auto; bottom: 5rem; }
+      .floating-gemini-btn span:not(.fg-orb) { display: none; }
+      .floating-gemini-btn { padding: 0.7rem; }
     }
 
     .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background: rgba(0, 0, 0, 0.85);
+      display: none; position: fixed; inset: 0;
+      z-index: 9999; background: rgba(0, 0, 0, 0.85);
       backdrop-filter: blur(10px);
-      align-items: center;
-      justify-content: center;
+      align-items: center; justify-content: center;
       padding: 1.5rem;
     }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
+    .modal-overlay.active { display: flex; }
     .modal-box {
-      background: #111726;
-      border: 1.5px solid #283347;
-      border-radius: 20px;
-      width: 90%;
-      max-width: 640px;
-      padding: 2rem;
-      max-height: 90vh;
-      overflow-y: auto;
+      background: #111726; border: 1.5px solid #283347;
+      border-radius: 20px; width: 90%; max-width: 640px;
+      padding: 2rem; max-height: 90vh; overflow-y: auto;
       box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
     }
 
     .btn-editor-tabs {
-      display: flex;
-      gap: 0.35rem;
-      margin-bottom: 1.25rem;
+      display: flex; gap: 0.35rem; margin-bottom: 1.25rem;
       border-bottom: 1.5px solid #1e293b;
-      padding-bottom: 0.5rem;
-      flex-wrap: wrap;
+      padding-bottom: 0.5rem; flex-wrap: wrap;
     }
-
     .be-tab {
-      padding: 0.4rem 0.9rem;
-      border-radius: 8px;
-      border: 1.5px solid transparent;
-      background: #0a0f1c;
-      color: #94a3b8;
-      font-family: inherit;
-      font-size: 0.78rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.15s;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
+      padding: 0.4rem 0.9rem; border-radius: 8px;
+      border: 1.5px solid transparent; background: #0a0f1c;
+      color: #94a3b8; font-family: inherit; font-size: 0.78rem;
+      font-weight: 700; cursor: pointer; transition: all 0.15s;
+      display: inline-flex; align-items: center; gap: 0.3rem;
     }
-
-    .be-tab:hover {
-      border-color: #334155;
-      color: #cbd5e1;
-    }
-
+    .be-tab:hover { border-color: #334155; color: #cbd5e1; }
     .be-tab.active {
-      background: #1e1b4b;
-      border-color: #6366f1;
-      color: #a5b4fc;
+      background: #1e1b4b; border-color: #6366f1; color: #a5b4fc;
       box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
     }
-
-    .be-panel {
-      display: none;
-    }
-
-    .be-panel.active {
-      display: block;
-      animation: bePanelIn 0.2s ease;
-    }
-
+    .be-panel { display: none; }
+    .be-panel.active { display: block; animation: bePanelIn 0.2s ease; }
     @keyframes bePanelIn {
-      from {
-        opacity: 0;
-        transform: translateY(4px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-
-    .be-field {
-      margin-bottom: 1rem;
-    }
-
+    .be-field { margin-bottom: 1rem; }
     .be-label {
-      display: block;
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: #cbd5e1;
-      margin-bottom: 0.4rem;
+      display: block; font-size: 0.78rem; font-weight: 700;
+      color: #cbd5e1; margin-bottom: 0.4rem;
     }
-
     .be-input {
-      width: 100%;
-      padding: 0.7rem 1rem;
-      border: 1.5px solid #283347;
-      border-radius: 10px;
-      background: #080c14;
-      color: #fff;
-      font-family: inherit;
-      font-size: 0.86rem;
+      width: 100%; padding: 0.7rem 1rem;
+      border: 1.5px solid #283347; border-radius: 10px;
+      background: #080c14; color: #fff;
+      font-family: inherit; font-size: 0.86rem;
       transition: border-color 0.2s;
     }
-
     .be-input:focus {
-      outline: none;
-      border-color: #6366f1;
+      outline: none; border-color: #6366f1;
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
     }
-
-    .be-preset-row {
-      display: flex;
-      gap: 0.35rem;
-      flex-wrap: wrap;
-      margin-bottom: 0.85rem;
-    }
-
+    .be-preset-row { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
     .be-preset-btn {
-      padding: 0.35rem 0.7rem;
-      border-radius: 7px;
-      border: 1.5px solid #334155;
-      background: #0a0f1c;
-      color: #cbd5e1;
-      font-family: inherit;
-      font-size: 0.72rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.15s;
+      padding: 0.35rem 0.7rem; border-radius: 7px;
+      border: 1.5px solid #334155; background: #0a0f1c;
+      color: #cbd5e1; font-family: inherit; font-size: 0.72rem;
+      font-weight: 700; cursor: pointer; transition: all 0.15s;
     }
-
-    .be-preset-btn:hover {
-      border-color: #6366f1;
-      color: #fff;
-    }
-
-    .be-row-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.7rem;
-    }
-
-    .be-color-row {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-    }
-
+    .be-preset-btn:hover { border-color: #6366f1; color: #fff; }
+    .be-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+    .be-color-row { display: flex; align-items: center; gap: 0.6rem; }
     .be-color-input {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      border: 1.5px solid #334155;
-      background: transparent;
-      cursor: pointer;
-      padding: 2px;
+      width: 44px; height: 44px; border-radius: 10px;
+      border: 1.5px solid #334155; background: transparent;
+      cursor: pointer; padding: 2px;
     }
-
     .be-color-hex {
-      flex: 1;
-      padding: 0.6rem 0.75rem;
-      border: 1.5px solid #283347;
-      border-radius: 8px;
-      background: #080c14;
-      color: #fff;
+      flex: 1; padding: 0.6rem 0.75rem;
+      border: 1.5px solid #283347; border-radius: 8px;
+      background: #080c14; color: #fff;
       font-family: 'Fira Code', monospace;
-      font-size: 0.78rem;
-      text-transform: uppercase;
+      font-size: 0.78rem; text-transform: uppercase;
     }
-
     .be-style-preview-wrap {
-      background: #080c14;
-      border: 1.5px solid #1e293b;
-      border-radius: 12px;
-      padding: 1.5rem;
-      text-align: center;
-      margin-bottom: 1.25rem;
+      background: #080c14; border: 1.5px solid #1e293b;
+      border-radius: 12px; padding: 1.5rem;
+      text-align: center; margin-bottom: 1.25rem;
     }
-
     .be-style-preview {
-      display: inline-block;
-      padding: 0.9rem 2rem;
-      border-radius: 999px;
-      font-weight: 700;
-      font-size: 0.95rem;
+      display: inline-block; padding: 0.9rem 2rem;
+      border-radius: 999px; font-weight: 700; font-size: 0.95rem;
       transition: all 0.2s;
     }
-
-    .be-range-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .be-range-row input[type=range] {
-      flex: 1;
-      accent-color: #6366f1;
-    }
-
+    .be-range-row { display: flex; align-items: center; gap: 0.75rem; }
+    .be-range-row input[type=range] { flex: 1; accent-color: #6366f1; }
     .be-range-val {
-      font-size: 0.75rem;
-      color: #cbd5e1;
-      font-weight: 700;
-      min-width: 40px;
-      text-align: right;
+      font-size: 0.75rem; color: #cbd5e1; font-weight: 700;
+      min-width: 40px; text-align: right;
       font-family: 'Fira Code', monospace;
     }
 
     .section-picker-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 0.85rem;
-      margin-top: 0.5rem;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.85rem; margin-top: 0.5rem;
     }
-
     .section-picker-card {
-      background: #0a0f1c;
-      border: 1.5px solid #243049;
-      border-radius: 12px;
-      padding: 1rem 0.85rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
+      background: #0a0f1c; border: 1.5px solid #243049;
+      border-radius: 12px; padding: 1rem 0.85rem;
+      cursor: pointer; transition: all 0.2s; text-align: center;
     }
-
     .section-picker-card:hover {
-      border-color: #6366f1;
-      background: #131a2b;
+      border-color: #6366f1; background: #131a2b;
       transform: translateY(-2px);
       box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
     }
-
-    .section-picker-card .sp-icon {
-      font-size: 1.8rem;
-      margin-bottom: 0.4rem;
-      display: block;
-    }
-
-    .section-picker-card .sp-name {
-      font-size: 0.85rem;
-      font-weight: 800;
-      color: #fff;
-      margin-bottom: 0.25rem;
-    }
-
-    .section-picker-card .sp-desc {
-      font-size: 0.7rem;
-      color: #94a3b8;
-      line-height: 1.4;
-    }
-
+    .section-picker-card .sp-icon { font-size: 1.8rem; margin-bottom: 0.4rem; display: block; }
+    .section-picker-card .sp-name { font-size: 0.85rem; font-weight: 800; color: #fff; margin-bottom: 0.25rem; }
+    .section-picker-card .sp-desc { font-size: 0.7rem; color: #94a3b8; line-height: 1.4; }
     .section-picker-actions {
-      display: flex;
-      gap: 0.4rem;
-      justify-content: center;
-      margin-top: 0.7rem;
+      display: flex; gap: 0.4rem; justify-content: center; margin-top: 0.7rem;
     }
-
     .section-picker-actions button {
-      flex: 1;
-      padding: 0.42rem 0.5rem;
-      border-radius: 7px;
-      border: 1px solid #334155;
-      background: #0e1424;
-      color: #cbd5e1;
-      font: 700 0.68rem/1.2 'Plus Jakarta Sans', sans-serif;
-      cursor: pointer;
+      flex: 1; padding: 0.42rem 0.5rem; border-radius: 7px;
+      border: 1px solid #334155; background: #0e1424; color: #cbd5e1;
+      font: 700 0.68rem/1.2 'Plus Jakarta Sans', sans-serif; cursor: pointer;
     }
+    .section-picker-actions button:hover { border-color: #6366f1; color: #fff; background: #1e1b4b; }
+    .section-picker-actions .sp-add { background: #4f46e5; border-color: #6366f1; color: #fff; }
+    .section-picker-actions .sp-add:hover { background: #6366f1; }
+    .section-picker-actions .sp-cust { background: #78350f; border-color: #f59e0b; color: #fde68a; }
+    .section-picker-actions .sp-cust:hover { background: #92400e; }
 
-    .section-picker-actions button:hover {
-      border-color: #6366f1;
-      color: #fff;
-      background: #1e1b4b;
-    }
-
-    .section-picker-actions .sp-add {
-      background: #4f46e5;
-      border-color: #6366f1;
-      color: #fff;
-    }
-
-    .section-picker-actions .sp-add:hover {
-      background: #6366f1;
-    }
-
-    .section-picker-actions .sp-cust {
-      background: #78350f;
-      border-color: #f59e0b;
-      color: #fde68a;
-    }
-
-    .section-picker-actions .sp-cust:hover {
-      background: #92400e;
-    }
-
-    .section-editor-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.8rem;
-    }
-
-    .section-editor-field {
-      margin-bottom: 0.85rem;
-    }
-
+    .section-editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+    .section-editor-field { margin-bottom: 0.85rem; }
     .section-editor-field label {
-      display: block;
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: #cbd5e1;
-      margin-bottom: 0.35rem;
+      display: block; font-size: 0.75rem; font-weight: 700;
+      color: #cbd5e1; margin-bottom: 0.35rem;
     }
-
     .section-editor-field input,
     .section-editor-field select,
     .section-editor-field textarea {
-      width: 100%;
-      padding: 0.62rem 0.75rem;
-      border: 1px solid #283347;
-      border-radius: 8px;
-      background: #080c14;
-      color: #fff;
+      width: 100%; padding: 0.62rem 0.75rem;
+      border: 1px solid #283347; border-radius: 8px;
+      background: #080c14; color: #fff;
       font: 0.8rem 'Plus Jakarta Sans', sans-serif;
     }
-
     .section-editor-field input[type=color] {
-      height: 42px;
-      padding: 3px;
-      cursor: pointer;
+      height: 42px; padding: 3px; cursor: pointer;
     }
+    .section-editor-note { font-size: 0.7rem; color: #64748b; line-height: 1.45; margin-top: 0.2rem; }
+    .section-editor-wide { grid-column: 1 / -1; }
 
-    .section-editor-note {
-      font-size: 0.7rem;
-      color: #64748b;
-      line-height: 1.45;
-      margin-top: 0.2rem;
-    }
-
-    .section-editor-wide {
-      grid-column: 1 / -1;
-    }
-
-    .be-size-row {
-      display: grid;
-      grid-template-columns: 1fr 86px;
-      gap: .45rem;
-      align-items: stretch;
-    }
-
-    .be-unit-select {
-      padding-right: .35rem;
-    }
-
-    .be-size-help {
-      font-size: .65rem;
-      color: #64748b;
-      margin-top: .35rem;
-      line-height: 1.35;
-    }
+    .be-size-row { display: grid; grid-template-columns: 1fr 86px; gap: .45rem; align-items: stretch; }
+    .be-unit-select { padding-right: .35rem; }
+    .be-size-help { font-size: .65rem; color: #64748b; margin-top: .35rem; line-height: 1.35; }
 
     .dim-group-title {
-      font-size: 0.72rem;
-      color: #a5b4fc;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      font-weight: 800;
-      margin-bottom: 0.55rem;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
+      font-size: 0.72rem; color: #a5b4fc;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      font-weight: 800; margin-bottom: 0.55rem;
+      display: flex; align-items: center; gap: 0.4rem;
     }
-
     .dim-group {
       background: linear-gradient(180deg, #0d1424 0%, #0a0f1c 100%);
-      border: 1.5px solid #243049;
-      border-radius: 12px;
-      padding: 0.9rem 0.9rem 0.5rem;
-      margin-bottom: 0.85rem;
+      border: 1.5px solid #243049; border-radius: 12px;
+      padding: 0.9rem 0.9rem 0.5rem; margin-bottom: 0.85rem;
     }
+    .dim-group .be-size-row { grid-template-columns: 1fr 82px; }
+    .dim-group .section-editor-field { margin-bottom: 0.65rem; }
 
-    .dim-group .be-size-row {
-      grid-template-columns: 1fr 82px;
-    }
+    @media (max-width:620px) { .section-editor-grid { grid-template-columns: 1fr; } }
 
-    .dim-group .section-editor-field {
-      margin-bottom: 0.65rem;
-    }
-
-    @media (max-width:620px) {
-      .section-editor-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .shortcut-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 0.5rem;
-    }
-
+    .shortcut-grid { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
     .shortcut-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.55rem 0.85rem;
-      background: #0a0f1c;
-      border: 1px solid #1e293b;
-      border-radius: 8px;
-      font-size: 0.82rem;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 1rem; padding: 0.55rem 0.85rem;
+      background: #0a0f1c; border: 1px solid #1e293b;
+      border-radius: 8px; font-size: 0.82rem;
     }
-
     .shortcut-key {
       font-family: 'Fira Code', monospace;
-      background: #1e293b;
-      color: #c7d2fe;
-      padding: 0.25rem 0.65rem;
-      border-radius: 6px;
-      font-size: 0.72rem;
-      font-weight: 800;
+      background: #1e293b; color: #c7d2fe;
+      padding: 0.25rem 0.65rem; border-radius: 6px;
+      font-size: 0.72rem; font-weight: 800;
       border-bottom: 2px solid #0f172a;
     }
-
-    .shortcut-label {
-      color: #cbd5e1;
-      font-weight: 600;
-    }
+    .shortcut-label { color: #cbd5e1; font-weight: 600; }
 
     .toast {
-      position: fixed;
-      bottom: 1.5rem;
-      left: 1.5rem;
-      z-index: 10000;
-      background: #111726;
-      border: 1.5px solid #283347;
-      border-radius: 12px;
-      padding: 0.75rem 1.25rem;
-      color: #fff;
-      font-size: 0.85rem;
-      font-weight: 600;
+      position: fixed; bottom: 1.5rem; left: 1.5rem;
+      z-index: 10000; background: #111726;
+      border: 1.5px solid #283347; border-radius: 12px;
+      padding: 0.75rem 1.25rem; color: #fff;
+      font-size: 0.85rem; font-weight: 600;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-      transform: translateY(100px);
-      opacity: 0;
+      transform: translateY(100px); opacity: 0;
       transition: all 0.3s ease;
       max-width: calc(100vw - 3rem);
     }
-
-    .toast.show {
-      transform: translateY(0);
-      opacity: 1;
-    }
+    .toast.show { transform: translateY(0); opacity: 1; }
   </style>
 </head>
 
@@ -3184,7 +1637,6 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       </div>
     </div>
 
-    <!-- Puter Model Selector & Account Row -->
     <div class="puter-model-row">
       <div style="display:flex; align-items:center; gap:0.4rem;">
         <span style="color:#818cf8; font-weight:700;">Model:</span>
@@ -3198,7 +1650,6 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       <a class="puter-acc-link" onclick="togglePuterAccountMenu(event)" id="panel-puter-account-link">Sign In / Switch</a>
     </div>
 
-    <!-- Target Element Selection Banner -->
     <div class="ai-target-banner" id="ai-target-banner">
       <div class="ai-target-info">
         <span class="ai-target-icon" id="ai-target-icon">🌐</span>
@@ -3866,9 +2317,26 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
     let themeLocked = false;
     let userUploadedImages = [];
     let activeDraggedImage = null;
+    let lastStudioStyleInjector = null;
 
     /* ══════════════════════════════════════════════════
-       ANIMATION RUNTIME
+       FALLBACK HTML
+    ══════════════════════════════════════════════════ */
+    const WC_FALLBACK_HTML = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:4rem 1.5rem;text-align:center;background:#f8fafc;color:#0f172a;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+h1{font-size:2.5rem;margin:0 0 1rem;color:#4f46e5}
+p{color:#64748b;max-width:520px;line-height:1.6}
+</style></head>
+<body>
+<h1>✨ Studio Ready</h1>
+<p>No design data was found. Go back to the builder, select a variation and click <strong>"Edit in Studio"</strong> again.</p>
+</body></html>`;
+
+    /* ══════════════════════════════════════════════════
+       ANIMATION RUNTIME (for exported/published HTML only)
     ══════════════════════════════════════════════════ */
     const WC_ANIMATION_RUNTIME = `<script id="wc-animation-runtime">
 (function(){
@@ -3928,21 +2396,22 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       blur: { name: 'Blur In', icon: '💨' },
       lightSpeed: { name: 'Light Speed', icon: '⚡' }
     };
+
     const ANIM_KEYFRAMES = {
-      fadeIn: [{opacity:0},{opacity:1}],
-      slideUp: [{opacity:0,transform:'translateY(50px)'},{opacity:1,transform:'translateY(0)'}],
-      slideDown: [{opacity:0,transform:'translateY(-50px)'},{opacity:1,transform:'translateY(0)'}],
-      slideLeft: [{opacity:0,transform:'translateX(50px)'},{opacity:1,transform:'translateX(0)'}],
-      slideRight: [{opacity:0,transform:'translateX(-50px)'},{opacity:1,transform:'translateX(0)'}],
-      zoomIn: [{opacity:0,transform:'scale(0.7)'},{opacity:1,transform:'scale(1)'}],
-      zoomOut: [{opacity:0,transform:'scale(1.3)'},{opacity:1,transform:'scale(1)'}],
-      bounce: [{transform:'translateY(0)'},{transform:'translateY(-30px)'},{transform:'translateY(0)'},{transform:'translateY(-15px)'},{transform:'translateY(0)'}],
-      rotate: [{opacity:0,transform:'rotate(-180deg) scale(0.7)'},{opacity:1,transform:'rotate(0deg) scale(1)'}],
-      flip: [{opacity:0,transform:'perspective(400px) rotateY(90deg)'},{opacity:1,transform:'perspective(400px) rotateY(0deg)'}],
-      pulse: [{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}],
-      shake: [{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],
-      blur: [{opacity:0,filter:'blur(12px)'},{opacity:1,filter:'blur(0)'}],
-      lightSpeed: [{opacity:0,transform:'translateX(80px) skewX(-25deg)'},{opacity:1,transform:'translateX(0) skewX(0)'}]
+      fadeIn: [{ opacity: 0 }, { opacity: 1 }],
+      slideUp: [{ opacity: 0, transform: 'translateY(50px)' }, { opacity: 1, transform: 'translateY(0)' }],
+      slideDown: [{ opacity: 0, transform: 'translateY(-50px)' }, { opacity: 1, transform: 'translateY(0)' }],
+      slideLeft: [{ opacity: 0, transform: 'translateX(50px)' }, { opacity: 1, transform: 'translateX(0)' }],
+      slideRight: [{ opacity: 0, transform: 'translateX(-50px)' }, { opacity: 1, transform: 'translateX(0)' }],
+      zoomIn: [{ opacity: 0, transform: 'scale(0.7)' }, { opacity: 1, transform: 'scale(1)' }],
+      zoomOut: [{ opacity: 0, transform: 'scale(1.3)' }, { opacity: 1, transform: 'scale(1)' }],
+      bounce: [{ transform: 'translateY(0)' }, { transform: 'translateY(-30px)' }, { transform: 'translateY(0)' }, { transform: 'translateY(-15px)' }, { transform: 'translateY(0)' }],
+      rotate: [{ opacity: 0, transform: 'rotate(-180deg) scale(0.7)' }, { opacity: 1, transform: 'rotate(0deg) scale(1)' }],
+      flip: [{ opacity: 0, transform: 'perspective(400px) rotateY(90deg)' }, { opacity: 1, transform: 'perspective(400px) rotateY(0deg)' }],
+      pulse: [{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }],
+      shake: [{ transform: 'translateX(0)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }],
+      blur: [{ opacity: 0, filter: 'blur(12px)' }, { opacity: 1, filter: 'blur(0)' }],
+      lightSpeed: [{ opacity: 0, transform: 'translateX(80px) skewX(-25deg)' }, { opacity: 1, transform: 'translateX(0) skewX(0)' }]
     };
 
     function wcPlayAnimOnElement(el) {
@@ -3959,7 +2428,13 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       try {
         el.style.animation = 'none';
         el.getBoundingClientRect();
-        el.animate(kf, { duration: dur, delay: delay, easing: easing, fill: 'both', iterations: iterations });
+        el.animate(kf, {
+          duration: dur,
+          delay: delay,
+          easing: easing,
+          fill: 'both',
+          iterations: iterations
+        });
       } catch (e) {}
     }
 
@@ -3967,10 +2442,15 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       try {
         const canvasDoc = grapesEditor?.Canvas?.getDocument();
         if (!canvasDoc) return;
-        if (canvasDoc.__wcAnimObserver) { try { canvasDoc.__wcAnimObserver.disconnect(); } catch (e) {} }
+        if (canvasDoc.__wcAnimObserver) {
+          try { canvasDoc.__wcAnimObserver.disconnect(); } catch (e) {}
+        }
         const observer = new canvasDoc.defaultView.IntersectionObserver((entries) => {
           entries.forEach(e => {
-            if (e.isIntersecting) { wcPlayAnimOnElement(e.target); observer.unobserve(e.target); }
+            if (e.isIntersecting) {
+              wcPlayAnimOnElement(e.target);
+              observer.unobserve(e.target);
+            }
           });
         }, { threshold: 0.15 });
         canvasDoc.__wcAnimObserver = observer;
@@ -3979,9 +2459,103 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
           if (trig === 'scroll') observer.observe(el);
           else if (trig === 'load') wcPlayAnimOnElement(el);
           else if (trig === 'hover') el.addEventListener('mouseenter', () => wcPlayAnimOnElement(el));
-          else if (trig === 'click') el.addEventListener('click', (ev) => { ev.preventDefault(); wcPlayAnimOnElement(el); });
+          else if (trig === 'click') el.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            wcPlayAnimOnElement(el);
+          });
         });
       } catch (e) {}
+    }
+
+    /* ══════════════════════════════════════════════════
+       ★ FORCE-CANVAS-REVEAL — Fixes "invisible letters / sections"
+       In the studio editor, generated page scripts are NOT executed,
+       so elements that depend on scroll-triggered animations (AOS,
+       WOW.js, IntersectionObserver-based reveals, [data-anim], etc.)
+       remain stuck at opacity:0. This walker force-reveals them so
+       editing is possible. Published sites keep the runtime above.
+    ══════════════════════════════════════════════════ */
+    function forceCanvasReveal() {
+      try {
+        const cd = grapesEditor?.Canvas?.getDocument?.();
+        if (!cd || !cd.body) return;
+        const win = cd.defaultView;
+        if (!win) return;
+
+        // Force-reveal class-based animation libs first
+        const revealSelectors = [
+          '[class*="aos"]', '[class*="wow"]', '[class*="sal-"]',
+          '[class*="reveal"]', '[class*="fade-in"]', '[class*="fadeIn"]',
+          '[class*="fade-up"]', '[class*="fadeUp"]', '[class*="fade-down"]',
+          '[class*="fade-left"]', '[class*="fade-right"]',
+          '[class*="slide-in"]', '[class*="slideIn"]', '[class*="slide-up"]',
+          '[class*="slideUp"]', '[class*="slide-down"]', '[class*="slideDown"]',
+          '[class*="zoom-in"]', '[class*="zoomIn"]', '[class*="zoom-out"]',
+          '[class*="animate-"]', '[class*="animate_"]',
+          '[data-aos]', '[data-wow]', '[data-sal]',
+          '[data-scroll]', '[data-animate]', '[data-anim]'
+        ].join(',');
+
+        try {
+          cd.body.querySelectorAll(revealSelectors).forEach(el => {
+            // Skip our own editor injections
+            const id = el.id || '';
+            if (id.startsWith('wc-') || id.startsWith('webcraft-')) return;
+            if (el.classList.contains('webcraft-section-handle')) return;
+            if (el.classList.contains('webcraft-drop-line')) return;
+            if (el.classList.contains('webcraft-canvas-body')) return;
+
+            el.style.setProperty('opacity', '1', 'important');
+            el.style.setProperty('visibility', 'visible', 'important');
+            el.style.setProperty('transform', 'none', 'important');
+            el.style.setProperty('animation-play-state', 'paused', 'important');
+            el.style.setProperty('animation-fill-mode', 'forwards', 'important');
+          });
+        } catch (e) {}
+
+        // Then walk ALL elements and check computed opacity/visibility
+        try {
+          cd.body.querySelectorAll('*').forEach(el => {
+            const id = el.id || '';
+            if (id.startsWith('wc-') || id.startsWith('webcraft-')) return;
+            if (el.classList.contains('webcraft-section-handle')) return;
+            if (el.classList.contains('webcraft-drop-line')) return;
+
+            try {
+              const rect = el.getBoundingClientRect();
+              // Skip zero-size wrappers (they may legitimately be invisible)
+              if (rect.width < 2 && rect.height < 2) return;
+
+              const cs = win.getComputedStyle(el);
+              const opacity = parseFloat(cs.opacity);
+
+              if (opacity === 0) {
+                el.style.setProperty('opacity', '1', 'important');
+                el.setAttribute('data-wc-revealed', '1');
+              }
+              if (cs.visibility === 'hidden') {
+                el.style.setProperty('visibility', 'visible', 'important');
+              }
+              // Kill transform-based hiding (translateX/Y off-screen, scale 0)
+              const t = cs.transform;
+              if (t && t !== 'none') {
+                const m = t.match(/matrix\(([^)]+)\)/);
+                if (m) {
+                  const parts = m[1].split(',').map(x => parseFloat(x.trim()));
+                  const scaleX = parts[0], scaleY = parts[3];
+                  if ((Math.abs(scaleX) < 0.02 || Math.abs(scaleY) < 0.02)) {
+                    el.style.setProperty('transform', 'none', 'important');
+                  }
+                }
+              }
+            } catch (e) {}
+          });
+        } catch (e) {}
+
+        console.log('[studio] forceCanvasReveal: revealed hidden elements');
+      } catch (e) {
+        console.warn('[studio] forceCanvasReveal error', e);
+      }
     }
 
     function renderAnimationPresets() {
@@ -4037,13 +2611,23 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
     }
 
     function applyAnimationToSelected(silent) {
-      if (!selectedComponent) { if (!silent) showToast('👉 Select an element first'); return; }
-      const type = getSelectedAnimation(), trigger = document.getElementById('anim-trigger').value;
-      const duration = document.getElementById('anim-duration').value, delay = document.getElementById('anim-delay').value;
-      const easing = document.getElementById('anim-easing').value, repeat = document.getElementById('anim-repeat').value;
+      if (!selectedComponent) {
+        if (!silent) showToast('👉 Select an element first');
+        return;
+      }
+      const type = getSelectedAnimation(),
+        trigger = document.getElementById('anim-trigger').value;
+      const duration = document.getElementById('anim-duration').value,
+        delay = document.getElementById('anim-delay').value;
+      const easing = document.getElementById('anim-easing').value,
+        repeat = document.getElementById('anim-repeat').value;
       const attrs = Object.assign({}, selectedComponent.getAttributes() || {}, {
-        'data-anim': type, 'data-anim-trigger': trigger, 'data-anim-duration': duration,
-        'data-anim-delay': delay, 'data-anim-easing': easing, 'data-anim-repeat': repeat
+        'data-anim': type,
+        'data-anim-trigger': trigger,
+        'data-anim-duration': duration,
+        'data-anim-delay': delay,
+        'data-anim-easing': easing,
+        'data-anim-repeat': repeat
       });
       selectedComponent.setAttributes(attrs);
       setTimeout(setupAnimationsInCanvas, 60);
@@ -4051,13 +2635,21 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
     }
 
     function removeAnimationFromSelected() {
-      if (!selectedComponent) { showToast('👉 Select an element first'); return; }
+      if (!selectedComponent) {
+        showToast('👉 Select an element first');
+        return;
+      }
       const attrs = Object.assign({}, selectedComponent.getAttributes() || {});
       ['data-anim', 'data-anim-trigger', 'data-anim-duration', 'data-anim-delay', 'data-anim-easing', 'data-anim-repeat'].forEach(k => delete attrs[k]);
       selectedComponent.setAttributes(attrs);
       try {
         const el = selectedComponent.getEl();
-        if (el) { el.style.animation = ''; el.style.opacity = ''; el.style.transform = ''; el.style.filter = ''; }
+        if (el) {
+          el.style.animation = '';
+          el.style.opacity = '';
+          el.style.transform = '';
+          el.style.filter = '';
+        }
       } catch (e) {}
       setTimeout(setupAnimationsInCanvas, 60);
       showToast('🎬 Animation removed');
@@ -4071,10 +2663,15 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         const tag = (c.get('tagName') || '').toLowerCase();
         if (['section', 'header', 'footer'].includes(tag)) {
           const attrs = Object.assign({}, c.getAttributes() || {}, {
-            'data-anim': type, 'data-anim-trigger': trigger, 'data-anim-duration': '700',
-            'data-anim-delay': String(count * 80), 'data-anim-easing': 'cubic-bezier(0.22,1,0.36,1)', 'data-anim-repeat': '1'
+            'data-anim': type,
+            'data-anim-trigger': trigger,
+            'data-anim-duration': '700',
+            'data-anim-delay': String(count * 80),
+            'data-anim-easing': 'cubic-bezier(0.22,1,0.36,1)',
+            'data-anim-repeat': '1'
           });
-          c.setAttributes(attrs); count++;
+          c.setAttributes(attrs);
+          count++;
         }
         const kids = c.components();
         if (kids && kids.length) kids.forEach(walk);
@@ -4093,8 +2690,13 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       const banner = document.getElementById('mobile-mode-banner');
       if (btn) btn.classList.toggle('active', mobileEditMode);
       if (banner) banner.classList.toggle('on', mobileEditMode);
-      if (mobileEditMode) { setStudioDevice('Mobile'); showToast('📱 Mobile-only editing ON'); }
-      else { setStudioDevice('Desktop'); showToast('↩️ Back to desktop editing'); }
+      if (mobileEditMode) {
+        setStudioDevice('Mobile');
+        showToast('📱 Mobile-only editing ON');
+      } else {
+        setStudioDevice('Desktop');
+        showToast('↩️ Back to desktop editing');
+      }
     }
 
     function applyMobileOverride(comp, prop, value) {
@@ -4112,7 +2714,11 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         const canvasDoc = grapesEditor?.Canvas?.getDocument();
         if (!canvasDoc || !canvasDoc.head) return;
         let tag = canvasDoc.getElementById('webcraft-mobile-css');
-        if (!tag) { tag = canvasDoc.createElement('style'); tag.id = 'webcraft-mobile-css'; canvasDoc.head.appendChild(tag); }
+        if (!tag) {
+          tag = canvasDoc.createElement('style');
+          tag.id = 'webcraft-mobile-css';
+          canvasDoc.head.appendChild(tag);
+        }
         tag.innerHTML = generateMobileCss();
       } catch (e) {}
     }
@@ -4145,17 +2751,34 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         const clearProps = ['padding', 'background', 'background-color', 'color', 'font-size', 'text-align', 'display', 'width', 'height', 'min-height', 'max-width', 'margin', 'border-radius'];
         canvasDoc.querySelectorAll('[data-mobile-id]').forEach(el => {
           el.style.removeProperty('--mb-p');
-          if (!isMobile) { clearProps.forEach(p => el.style.removeProperty(p)); return; }
-          const pad = el.getAttribute('data-mobile-padding'), bg = el.getAttribute('data-mobile-bg'), col = el.getAttribute('data-mobile-color');
-          const fs = el.getAttribute('data-mobile-font-size'), ta = el.getAttribute('data-mobile-text-align');
-          const disp = el.getAttribute('data-mobile-display'), w = el.getAttribute('data-mobile-width');
-          const h = el.getAttribute('data-mobile-height'), mh = el.getAttribute('data-mobile-min-height');
+          if (!isMobile) {
+            clearProps.forEach(p => el.style.removeProperty(p));
+            return;
+          }
+          const pad = el.getAttribute('data-mobile-padding'),
+            bg = el.getAttribute('data-mobile-bg'),
+            col = el.getAttribute('data-mobile-color');
+          const fs = el.getAttribute('data-mobile-font-size'),
+            ta = el.getAttribute('data-mobile-text-align');
+          const disp = el.getAttribute('data-mobile-display'),
+            w = el.getAttribute('data-mobile-width');
+          const h = el.getAttribute('data-mobile-height'),
+            mh = el.getAttribute('data-mobile-min-height');
           const mw = el.getAttribute('data-mobile-max-width');
-          const m = el.getAttribute('data-mobile-margin'), r = el.getAttribute('data-mobile-border-radius');
-          if (pad) el.style.padding = pad; if (bg) el.style.background = bg; if (col) el.style.color = col;
-          if (fs) el.style.fontSize = fs; if (ta) el.style.textAlign = ta; if (disp) el.style.display = disp;
-          if (w) el.style.width = w; if (h) el.style.height = h; if (mh) el.style.minHeight = mh;
-          if (mw) el.style.maxWidth = mw; if (m) el.style.margin = m; if (r) el.style.borderRadius = r;
+          const m = el.getAttribute('data-mobile-margin'),
+            r = el.getAttribute('data-mobile-border-radius');
+          if (pad) el.style.padding = pad;
+          if (bg) el.style.background = bg;
+          if (col) el.style.color = col;
+          if (fs) el.style.fontSize = fs;
+          if (ta) el.style.textAlign = ta;
+          if (disp) el.style.display = disp;
+          if (w) el.style.width = w;
+          if (h) el.style.height = h;
+          if (mh) el.style.minHeight = mh;
+          if (mw) el.style.maxWidth = mw;
+          if (m) el.style.margin = m;
+          if (r) el.style.borderRadius = r;
         });
       } catch (e) {}
     }
@@ -4166,7 +2789,10 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
     function updateFloatingContentBtn(model) {
       const btn = document.getElementById('floating-edit-content-btn');
       if (!btn) return;
-      if (!model) { btn.classList.remove('show'); return; }
+      if (!model) {
+        btn.classList.remove('show');
+        return;
+      }
       const tag = (model.get('tagName') || '').toLowerCase();
       if (['section', 'header', 'footer'].includes(tag)) {
         const name = getSectionDisplayName(model);
@@ -4178,43 +2804,87 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
     /* ══════════════════════════════════════════════════
        IMAGE CROP
     ══════════════════════════════════════════════════ */
-    let cropState = { img: null, rect: null, aspect: 'free', startBox: null, dragging: null, imageNatural: { w: 0, h: 0 }, originalComp: null };
+    let cropState = {
+      img: null,
+      rect: null,
+      aspect: 'free',
+      startBox: null,
+      dragging: null,
+      imageNatural: { w: 0, h: 0 },
+      originalComp: null
+    };
 
     function openCropTool(comp) {
       if (!comp) comp = selectedComponent;
-      if (!comp || (comp.get('tagName') || '').toLowerCase() !== 'img') { showToast('👉 Select an image first'); return; }
+      if (!comp || (comp.get('tagName') || '').toLowerCase() !== 'img') {
+        showToast('👉 Select an image first');
+        return;
+      }
       cropState.originalComp = comp;
-      const attrs = comp.getAttributes() || {}, src = attrs.src || '';
-      if (!src) { showToast('⚠️ Image has no source'); return; }
-      const imgEl = document.getElementById('crop-image'), rectEl = document.getElementById('crop-rect');
+      const attrs = comp.getAttributes() || {},
+        src = attrs.src || '';
+      if (!src) {
+        showToast('⚠️ Image has no source');
+        return;
+      }
+      const imgEl = document.getElementById('crop-image'),
+        rectEl = document.getElementById('crop-rect');
       imgEl.src = src;
       imgEl.onload = () => {
-        cropState.imageNatural = { w: imgEl.naturalWidth || 1, h: imgEl.naturalHeight || 1 };
-        const w = imgEl.clientWidth, h = imgEl.clientHeight;
-        rectEl.style.left = (w * 0.1) + 'px'; rectEl.style.top = (h * 0.1) + 'px';
-        rectEl.style.width = (w * 0.8) + 'px'; rectEl.style.height = (h * 0.8) + 'px';
-        cropState.rect = rectEl; cropState.aspect = 'free';
-        document.querySelectorAll('.crop-ratio-row .be-preset-btn').forEach(b => { b.style.borderColor = ''; b.style.color = ''; });
+        cropState.imageNatural = {
+          w: imgEl.naturalWidth || 1,
+          h: imgEl.naturalHeight || 1
+        };
+        const w = imgEl.clientWidth,
+          h = imgEl.clientHeight;
+        rectEl.style.left = (w * 0.1) + 'px';
+        rectEl.style.top = (h * 0.1) + 'px';
+        rectEl.style.width = (w * 0.8) + 'px';
+        rectEl.style.height = (h * 0.8) + 'px';
+        cropState.rect = rectEl;
+        cropState.aspect = 'free';
+        document.querySelectorAll('.crop-ratio-row .be-preset-btn').forEach(b => {
+          b.style.borderColor = '';
+          b.style.color = '';
+        });
       };
       document.getElementById('crop-modal').classList.add('active');
       setTimeout(setupCropDrag, 50);
     }
 
     function setupCropDrag() {
-      const rect = document.getElementById('crop-rect'), stage = document.getElementById('crop-stage');
+      const rect = document.getElementById('crop-rect'),
+        stage = document.getElementById('crop-stage');
       if (!rect || !stage || rect.__wcBound) return;
       rect.__wcBound = true;
       const startDrag = (e, mode) => {
-        e.preventDefault(); e.stopPropagation();
-        cropState.dragging = { mode, startX: e.clientX, startY: e.clientY, left: rect.offsetLeft, top: rect.offsetTop, width: rect.offsetWidth, height: rect.offsetHeight, stageW: stage.clientWidth, stageH: stage.clientHeight };
+        e.preventDefault();
+        e.stopPropagation();
+        cropState.dragging = {
+          mode,
+          startX: e.clientX,
+          startY: e.clientY,
+          left: rect.offsetLeft,
+          top: rect.offsetTop,
+          width: rect.offsetWidth,
+          height: rect.offsetHeight,
+          stageW: stage.clientWidth,
+          stageH: stage.clientHeight
+        };
         document.addEventListener('pointermove', onDragMove);
         document.addEventListener('pointerup', onDragEnd);
       };
       const onDragMove = (e) => {
-        const d = cropState.dragging; if (!d) return;
-        const dx = e.clientX - d.startX, dy = e.clientY - d.startY;
-        let nl = d.left, nt = d.top, nw = d.width, nh = d.height;
-        const minW = 30, minH = 20;
+        const d = cropState.dragging;
+        if (!d) return;
+        const dx = e.clientX - d.startX,
+          dy = e.clientY - d.startY;
+        let nl = d.left,
+          nt = d.top,
+          nw = d.width,
+          nh = d.height;
+        const minW = 30,
+          minH = 20;
         const ar = cropState.aspect === 'free' ? null : parseFloat(cropState.aspect.split(':')[0]) / parseFloat(cropState.aspect.split(':')[1]);
         if (d.mode === 'move') {
           nl = Math.max(0, Math.min(d.stageW - d.width, d.left + dx));
@@ -4222,12 +2892,27 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         } else {
           if (d.mode.includes('e')) nw = Math.max(minW, Math.min(d.stageW - d.left, d.width + dx));
           if (d.mode.includes('s')) nh = Math.max(minH, Math.min(d.stageH - d.top, d.height + dy));
-          if (d.mode.includes('w')) { const newW = Math.max(minW, Math.min(d.left + d.width, d.width - dx)); nl = d.left + (d.width - newW); nw = newW; }
-          if (d.mode.includes('n')) { const newH = Math.max(minH, Math.min(d.top + d.height, d.height - dy)); nt = d.top + (d.height - newH); nh = newH; }
-          if (ar) { if (d.mode.includes('e') || d.mode.includes('w')) nh = nw / ar; else nw = nh * ar; if (nl + nw > d.stageW) nw = d.stageW - nl; if (nt + nh > d.stageH) nh = d.stageH - nt; }
+          if (d.mode.includes('w')) {
+            const newW = Math.max(minW, Math.min(d.left + d.width, d.width - dx));
+            nl = d.left + (d.width - newW);
+            nw = newW;
+          }
+          if (d.mode.includes('n')) {
+            const newH = Math.max(minH, Math.min(d.top + d.height, d.height - dy));
+            nt = d.top + (d.height - newH);
+            nh = newH;
+          }
+          if (ar) {
+            if (d.mode.includes('e') || d.mode.includes('w')) nh = nw / ar;
+            else nw = nh * ar;
+            if (nl + nw > d.stageW) nw = d.stageW - nl;
+            if (nt + nh > d.stageH) nh = d.stageH - nt;
+          }
         }
-        rect.style.left = nl + 'px'; rect.style.top = nt + 'px';
-        rect.style.width = nw + 'px'; rect.style.height = nh + 'px';
+        rect.style.left = nl + 'px';
+        rect.style.top = nt + 'px';
+        rect.style.width = nw + 'px';
+        rect.style.height = nh + 'px';
       };
       const onDragEnd = () => {
         cropState.dragging = null;
@@ -4243,63 +2928,114 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
 
     function setCropRatio(ratio, btn) {
       cropState.aspect = ratio;
-      document.querySelectorAll('.crop-ratio-row .be-preset-btn').forEach(b => { b.style.borderColor = ''; b.style.color = ''; b.style.background = ''; });
-      if (btn) { btn.style.borderColor = '#6366f1'; btn.style.color = '#fff'; btn.style.background = '#1e1b4b'; }
-      const rect = document.getElementById('crop-rect'), img = document.getElementById('crop-image');
+      document.querySelectorAll('.crop-ratio-row .be-preset-btn').forEach(b => {
+        b.style.borderColor = '';
+        b.style.color = '';
+        b.style.background = '';
+      });
+      if (btn) {
+        btn.style.borderColor = '#6366f1';
+        btn.style.color = '#fff';
+        btn.style.background = '#1e1b4b';
+      }
+      const rect = document.getElementById('crop-rect'),
+        img = document.getElementById('crop-image');
       if (!rect || !img || ratio === 'free') return;
-      const w = img.clientWidth, h = img.clientHeight;
+      const w = img.clientWidth,
+        h = img.clientHeight;
       const parts = ratio.split(':');
       const ar = parseFloat(parts[0]) / parseFloat(parts[1]);
-      let nw = w * 0.8, nh = nw / ar;
-      if (nh > h * 0.9) { nh = h * 0.9; nw = nh * ar; }
-      rect.style.width = nw + 'px'; rect.style.height = nh + 'px';
-      rect.style.left = ((w - nw) / 2) + 'px'; rect.style.top = ((h - nh) / 2) + 'px';
+      let nw = w * 0.8,
+        nh = nw / ar;
+      if (nh > h * 0.9) {
+        nh = h * 0.9;
+        nw = nh * ar;
+      }
+      rect.style.width = nw + 'px';
+      rect.style.height = nh + 'px';
+      rect.style.left = ((w - nw) / 2) + 'px';
+      rect.style.top = ((h - nh) / 2) + 'px';
     }
 
     function resetCropBox() {
-      const img = document.getElementById('crop-image'), rect = document.getElementById('crop-rect');
+      const img = document.getElementById('crop-image'),
+        rect = document.getElementById('crop-rect');
       if (!img || !rect) return;
-      const w = img.clientWidth, h = img.clientHeight;
-      rect.style.left = (w * 0.1) + 'px'; rect.style.top = (h * 0.1) + 'px';
-      rect.style.width = (w * 0.8) + 'px'; rect.style.height = (h * 0.8) + 'px';
+      const w = img.clientWidth,
+        h = img.clientHeight;
+      rect.style.left = (w * 0.1) + 'px';
+      rect.style.top = (h * 0.1) + 'px';
+      rect.style.width = (w * 0.8) + 'px';
+      rect.style.height = (h * 0.8) + 'px';
     }
 
-    function closeCropTool() { document.getElementById('crop-modal').classList.remove('active'); }
+    function closeCropTool() {
+      document.getElementById('crop-modal').classList.remove('active');
+    }
 
     function applyCropToImage() {
-      const imgEl = document.getElementById('crop-image'), rectEl = document.getElementById('crop-rect'), comp = cropState.originalComp;
-      if (!imgEl || !rectEl || !comp) { closeCropTool(); return; }
-      const dispW = imgEl.clientWidth, dispH = imgEl.clientHeight;
-      const natW = imgEl.naturalWidth, natH = imgEl.naturalHeight;
-      const sx = natW / dispW, sy = natH / dispH;
-      const cropX = rectEl.offsetLeft * sx, cropY = rectEl.offsetTop * sy;
-      const cropW = rectEl.offsetWidth * sx, cropH = rectEl.offsetHeight * sy;
+      const imgEl = document.getElementById('crop-image'),
+        rectEl = document.getElementById('crop-rect'),
+        comp = cropState.originalComp;
+      if (!imgEl || !rectEl || !comp) {
+        closeCropTool();
+        return;
+      }
+      const dispW = imgEl.clientWidth,
+        dispH = imgEl.clientHeight;
+      const natW = imgEl.naturalWidth,
+        natH = imgEl.naturalHeight;
+      const sx = natW / dispW,
+        sy = natH / dispH;
+      const cropX = rectEl.offsetLeft * sx,
+        cropY = rectEl.offsetTop * sy;
+      const cropW = rectEl.offsetWidth * sx,
+        cropH = rectEl.offsetHeight * sy;
       const outW = parseInt(document.getElementById('crop-out-w').value) || Math.round(cropW);
       const outH = parseInt(document.getElementById('crop-out-h').value) || Math.round(cropH);
       const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, outW); canvas.height = Math.max(1, outH);
+      canvas.width = Math.max(1, outW);
+      canvas.height = Math.max(1, outH);
       const ctx = canvas.getContext('2d');
-      const tmp = new Image(); tmp.crossOrigin = 'anonymous';
+      const tmp = new Image();
+      tmp.crossOrigin = 'anonymous';
       tmp.onload = () => {
         try {
           ctx.drawImage(tmp, cropX, cropY, cropW, cropH, 0, 0, outW, outH);
           const dataUrl = canvas.toDataURL('image/png');
           comp.setAttributes(Object.assign({}, comp.getAttributes() || {}, { src: dataUrl }));
           if (document.getElementById('crop-replace-orig')?.checked) {
-            userUploadedImages.unshift({ id: 'img_' + Date.now(), name: 'cropped.png', url: dataUrl });
+            userUploadedImages.unshift({
+              id: 'img_' + Date.now(),
+              name: 'cropped.png',
+              url: dataUrl
+            });
             saveUserUploads();
           }
-          renderSmartLayers(); showToast('✂️ Image cropped!'); closeCropTool();
-        } catch (e) { showToast('⚠️ Crop failed.'); }
+          renderSmartLayers();
+          showToast('✂️ Image cropped!');
+          closeCropTool();
+        } catch (e) {
+          showToast('⚠️ Crop failed.');
+        }
       };
-      tmp.onerror = () => { showToast('⚠️ Could not load image'); };
+      tmp.onerror = () => {
+        showToast('⚠️ Could not load image');
+      };
       tmp.src = imgEl.src;
     }
 
     /* ══════════════════════════════════════════════════
        GALLERY BUILDER
     ══════════════════════════════════════════════════ */
-    const GAL_LAYOUTS = { grid: { name: 'Grid' }, masonry: { name: 'Masonry' }, twoCol: { name: 'Two Col' }, fourCol: { name: 'Four Col' }, carousel: { name: 'Carousel' }, mosaic: { name: 'Mosaic' } };
+    const GAL_LAYOUTS = {
+      grid: { name: 'Grid' },
+      masonry: { name: 'Masonry' },
+      twoCol: { name: 'Two Col' },
+      fourCol: { name: 'Four Col' },
+      carousel: { name: 'Carousel' },
+      mosaic: { name: 'Mosaic' }
+    };
     let galState = { layout: 'grid', selected: [] };
 
     function openGalleryBuilder() {
@@ -4309,10 +3045,14 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       document.getElementById('gal-selected-count').textContent = '0';
       document.getElementById('gallery-modal').classList.add('active');
     }
-    function closeGalleryBuilder() { document.getElementById('gallery-modal').classList.remove('active'); }
+
+    function closeGalleryBuilder() {
+      document.getElementById('gallery-modal').classList.remove('active');
+    }
 
     function renderGalleryLayouts() {
-      const grid = document.getElementById('gal-layouts'); if (!grid) return;
+      const grid = document.getElementById('gal-layouts');
+      if (!grid) return;
       grid.innerHTML = '';
       const demoGrids = {
         grid: 'grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);',
@@ -4328,24 +3068,30 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         card.className = 'gal-layout' + (key === galState.layout ? ' active' : '');
         card.dataset.layout = key;
         card.innerHTML = `<div class="gl-demo" style="${demoGrids[key]}"><div></div><div></div><div></div><div></div><div></div><div></div></div><div class="gl-name">${L.name}</div>`;
-        card.onclick = () => { galState.layout = key; document.querySelectorAll('#gal-layouts .gal-layout').forEach(c => c.classList.toggle('active', c.dataset.layout === key)); };
+        card.onclick = () => {
+          galState.layout = key;
+          document.querySelectorAll('#gal-layouts .gal-layout').forEach(c => c.classList.toggle('active', c.dataset.layout === key));
+        };
         grid.appendChild(card);
       });
     }
 
     function renderGalleryPicker() {
-      const picker = document.getElementById('gal-picker'); if (!picker) return;
+      const picker = document.getElementById('gal-picker');
+      if (!picker) return;
       picker.innerHTML = '';
       const all = [];
       userUploadedImages.forEach(u => all.push({ url: u.url, caption: u.name }));
       Object.keys(stockPhotos).forEach(k => stockPhotos[k].forEach(p => all.push({ url: p.url, caption: p.caption })));
-      all.forEach((item, i) => {
+      all.forEach((item) => {
         const d = document.createElement('div');
         d.className = 'gp-item' + (galState.selected.includes(item.url) ? ' on' : '');
-        d.innerHTML = `<img src="${item.url}" loading="lazy">`; d.title = item.caption;
+        d.innerHTML = `<img src="${item.url}" loading="lazy">`;
+        d.title = item.caption;
         d.onclick = () => {
           const idx = galState.selected.indexOf(item.url);
-          if (idx > -1) galState.selected.splice(idx, 1); else galState.selected.push(item.url);
+          if (idx > -1) galState.selected.splice(idx, 1);
+          else galState.selected.push(item.url);
           d.classList.toggle('on', galState.selected.includes(item.url));
           document.getElementById('gal-selected-count').textContent = String(galState.selected.length);
         };
@@ -4355,7 +3101,10 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
 
     function insertGallerySection() {
       if (!grapesEditor) return;
-      if (galState.selected.length === 0) { showToast('👉 Pick at least one image'); return; }
+      if (galState.selected.length === 0) {
+        showToast('👉 Pick at least one image');
+        return;
+      }
       const title = document.getElementById('gal-title').value.trim() || 'Our Gallery';
       const name = document.getElementById('gal-name').value.trim() || 'Gallery';
       const gap = parseInt(document.getElementById('gal-gap').value) || 16;
@@ -4375,9 +3124,18 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       const html = `<section id="gallery" data-section-name="${escapeHtml(name)}" style="padding:5rem 1.5rem;background:#f8fafc;"><div style="max-width:1150px;margin:0 auto;"><h2 style="font-size:2.2rem;font-weight:800;text-align:center;margin-bottom:2.5rem;color:#0f172a;">${escapeHtml(title)}</h2><div style="${innerStyle}">${imgs}</div></div></section>`;
       const added = grapesEditor.addComponents(html);
       const comp = Array.isArray(added) ? added[0] : added;
-      if (comp) { configureEditorComponent(comp); grapesEditor.select(comp); }
+      if (comp) {
+        configureEditorComponent(comp);
+        grapesEditor.select(comp);
+      }
       closeGalleryBuilder();
-      setTimeout(() => { renderFriendlySections(); renderSmartLayers(); refreshSectionDragHandles(); syncCanvasToHtml(); saveProjectData(); }, 150);
+      setTimeout(() => {
+        renderFriendlySections();
+        renderSmartLayers();
+        refreshSectionDragHandles();
+        syncCanvasToHtml();
+        saveProjectData();
+      }, 150);
       showToast(`🖼️ ${layout} gallery added`);
     }
 
@@ -4385,18 +3143,35 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
        MULTI-LANGUAGE
     ══════════════════════════════════════════════════ */
     const LANGUAGES = [
-      { code: 'en', name: 'English', flag: '🇬🇧' }, { code: 'ta', name: 'Tamil', flag: '🇮🇳' },
-      { code: 'hi', name: 'Hindi', flag: '🇮🇳' }, { code: 'te', name: 'Telugu', flag: '🇮🇳' },
-      { code: 'ml', name: 'Malayalam', flag: '🇮🇳' }, { code: 'kn', name: 'Kannada', flag: '🇮🇳' },
-      { code: 'es', name: 'Spanish', flag: '🇪🇸' }, { code: 'fr', name: 'French', flag: '🇫🇷' },
-      { code: 'de', name: 'German', flag: '🇩🇪' }, { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
-      { code: 'zh', name: 'Chinese', flag: '🇨🇳' }, { code: 'ja', name: 'Japanese', flag: '🇯🇵' }
+      { code: 'en', name: 'English', flag: '🇬🇧' },
+      { code: 'ta', name: 'Tamil', flag: '🇮🇳' },
+      { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
+      { code: 'te', name: 'Telugu', flag: '🇮🇳' },
+      { code: 'ml', name: 'Malayalam', flag: '🇮🇳' },
+      { code: 'kn', name: 'Kannada', flag: '🇮🇳' },
+      { code: 'es', name: 'Spanish', flag: '🇪🇸' },
+      { code: 'fr', name: 'French', flag: '🇫🇷' },
+      { code: 'de', name: 'German', flag: '🇩🇪' },
+      { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
+      { code: 'zh', name: 'Chinese', flag: '🇨🇳' },
+      { code: 'ja', name: 'Japanese', flag: '🇯🇵' }
     ];
     const RTL_LANGS = ['ar', 'he', 'fa', 'ur'];
-    let langState = { active: ['en'], primary: 'en', previewing: 'en', switcherVisible: true, switcherPos: 'bottom-right', switcherStyle: 'pill', autodetect: true, remember: true, translations: {} };
+    let langState = {
+      active: ['en'],
+      primary: 'en',
+      previewing: 'en',
+      switcherVisible: true,
+      switcherPos: 'bottom-right',
+      switcherStyle: 'pill',
+      autodetect: true,
+      remember: true,
+      translations: {}
+    };
 
     function renderLangChips() {
-      const row = document.getElementById('lang-chip-row'); if (!row) return;
+      const row = document.getElementById('lang-chip-row');
+      if (!row) return;
       row.innerHTML = '';
       LANGUAGES.forEach(L => {
         const chip = document.createElement('button');
@@ -4404,37 +3179,57 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         chip.textContent = `${L.flag} ${L.name}`;
         chip.onclick = () => {
           const idx = langState.active.indexOf(L.code);
-          if (idx > -1) { if (langState.active.length === 1) { showToast('Keep at least one language'); return; } langState.active.splice(idx, 1); }
-          else langState.active.push(L.code);
-          renderLangChips(); renderHeaderLangSelect();
+          if (idx > -1) {
+            if (langState.active.length === 1) {
+              showToast('Keep at least one language');
+              return;
+            }
+            langState.active.splice(idx, 1);
+          } else langState.active.push(L.code);
+          renderLangChips();
+          renderHeaderLangSelect();
         };
         row.appendChild(chip);
       });
     }
 
     function renderHeaderLangSelect() {
-      const sel = document.getElementById('header-lang-select'); if (!sel) return;
+      const sel = document.getElementById('header-lang-select');
+      if (!sel) return;
       sel.innerHTML = '';
       langState.active.forEach(code => {
-        const L = LANGUAGES.find(x => x.code === code); if (!L) return;
-        const opt = document.createElement('option'); opt.value = code; opt.textContent = `${L.flag} ${L.name}`; sel.appendChild(opt);
+        const L = LANGUAGES.find(x => x.code === code);
+        if (!L) return;
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = `${L.flag} ${L.name}`;
+        sel.appendChild(opt);
       });
       sel.value = langState.previewing;
     }
 
-    function switchCanvasLanguage(code) { langState.previewing = code; applyLanguageToCanvas(code); showToast(`🌐 Previewing ${LANGUAGES.find(x=>x.code===code)?.name||code}`); }
+    function switchCanvasLanguage(code) {
+      langState.previewing = code;
+      applyLanguageToCanvas(code);
+      showToast(`🌐 Previewing ${LANGUAGES.find(x=>x.code===code)?.name||code}`);
+    }
 
     function applyLanguageToCanvas(code) {
       try {
-        const canvasDoc = grapesEditor?.Canvas?.getDocument(); if (!canvasDoc) return;
+        const canvasDoc = grapesEditor?.Canvas?.getDocument();
+        if (!canvasDoc) return;
         canvasDoc.documentElement.lang = code;
         canvasDoc.documentElement.dir = RTL_LANGS.includes(code) ? 'rtl' : 'ltr';
-        canvasDoc.querySelectorAll('[data-i18n-' + code + ']').forEach(el => { const val = el.getAttribute('data-i18n-' + code); if (val) el.textContent = val; });
+        canvasDoc.querySelectorAll('[data-i18n-' + code + ']').forEach(el => {
+          const val = el.getAttribute('data-i18n-' + code);
+          if (val) el.textContent = val;
+        });
       } catch (e) {}
     }
 
     function collectTextNodes() {
-      const out = []; if (!grapesEditor) return out;
+      const out = [];
+      if (!grapesEditor) return out;
       const seen = new Set();
       const walk = (c) => {
         const tag = (c.get('tagName') || '').toLowerCase();
@@ -4442,19 +3237,27 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
           const el = c.getEl && c.getEl();
           if (el) {
             const direct = Array.from(el.childNodes).filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
-            if (direct && direct.length > 0 && !seen.has(direct)) { seen.add(direct); out.push({ key: direct, comp: c, el }); }
+            if (direct && direct.length > 0 && !seen.has(direct)) {
+              seen.add(direct);
+              out.push({ key: direct, comp: c, el });
+            }
           }
         }
-        const kids = c.components && c.components(); if (kids && kids.length) kids.forEach(walk);
+        const kids = c.components && c.components();
+        if (kids && kids.length) kids.forEach(walk);
       };
       walk(grapesEditor.DomComponents.getWrapper());
       return out;
     }
 
     function openLanguageManager() {
-      if (langState.active.length === 0) { showToast('Add a language first'); return; }
+      if (langState.active.length === 0) {
+        showToast('Add a language first');
+        return;
+      }
       const nodes = collectTextNodes();
-      const body = document.getElementById('language-manager-body'); if (!body) return;
+      const body = document.getElementById('language-manager-body');
+      if (!body) return;
       const activeLangs = LANGUAGES.filter(L => langState.active.includes(L.code));
       const headerCells = activeLangs.map(L => `<th style="padding:0.5rem;font-size:0.72rem;color:#a5b4fc;border-bottom:1px solid #1e293b;">${L.flag} ${L.name}${L.code==='en'?' (primary)':''}</th>`).join('');
       const rows = nodes.map((n, i) => {
@@ -4468,13 +3271,17 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       document.getElementById('language-manager-modal').classList.add('active');
     }
 
-    function closeLanguageManager() { document.getElementById('language-manager-modal').classList.remove('active'); }
+    function closeLanguageManager() {
+      document.getElementById('language-manager-modal').classList.remove('active');
+    }
 
     function applyLanguageTranslations() {
       const inputs = document.querySelectorAll('#language-manager-body [data-i18n-key]');
       const translations = {};
       inputs.forEach(inp => {
-        const k = inp.dataset.i18nKey, lang = inp.dataset.i18nLang, v = inp.value.trim();
+        const k = inp.dataset.i18nKey,
+          lang = inp.dataset.i18nLang,
+          v = inp.value.trim();
         if (!v) return;
         if (!translations[lang]) translations[lang] = {};
         translations[lang][k] = v;
@@ -4496,8 +3303,18 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       showToast('🌐 Translations saved');
     }
 
-    function saveLanguageState() { try { localStorage.setItem('webcraft_lang_state', JSON.stringify(langState)); } catch (e) {} }
-    function loadLanguageState() { try { const raw = localStorage.getItem('webcraft_lang_state'); if (raw) Object.assign(langState, JSON.parse(raw)); } catch (e) {} }
+    function saveLanguageState() {
+      try {
+        localStorage.setItem('webcraft_lang_state', JSON.stringify(langState));
+      } catch (e) {}
+    }
+
+    function loadLanguageState() {
+      try {
+        const raw = localStorage.getItem('webcraft_lang_state');
+        if (raw) Object.assign(langState, JSON.parse(raw));
+      } catch (e) {}
+    }
 
     function autoTranslateAll() {
       showToast('✨ Use Magic AI to auto-translate');
@@ -4525,7 +3342,12 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       if (!langState.switcherVisible) return '';
       const langs = LANGUAGES.filter(L => langState.active.includes(L.code));
       if (langs.length < 2) return '';
-      const pos = { 'bottom-right': 'bottom:1rem;right:1rem;', 'bottom-left': 'bottom:1rem;left:1rem;', 'top-right': 'top:1rem;right:1rem;', 'top-left': 'top:1rem;left:1rem;' }[langState.switcherPos] || 'bottom:1rem;right:1rem;';
+      const pos = {
+        'bottom-right': 'bottom:1rem;right:1rem;',
+        'bottom-left': 'bottom:1rem;left:1rem;',
+        'top-right': 'top:1rem;right:1rem;',
+        'top-left': 'top:1rem;left:1rem;'
+      } [langState.switcherPos] || 'bottom:1rem;right:1rem;';
       const styles = 'position:fixed;z-index:9998;background:rgba(15,23,42,0.95);backdrop-filter:blur(10px);border:1.5px solid #334155;border-radius:999px;padding:0.35rem 0.5rem;box-shadow:0 10px 30px rgba(0,0,0,0.35);display:flex;gap:0.3rem;align-items:center;font-family:inherit;';
       if (langState.switcherStyle === 'dropdown') {
         return `<div id="wc-lang-switcher" style="${styles}${pos}"><select onchange="wcSetLang(this.value)" style="background:transparent;border:none;color:#fff;font-weight:700;font-size:0.82rem;padding:0.25rem 0.4rem;cursor:pointer;outline:none;">${langs.map(L=>`<option value="${L.code}" ${L.code===langState.previewing?'selected':''}>${L.flag} ${L.name}</option>`).join('')}</select></div><script>function wcSetLang(c){document.querySelectorAll('[data-i18n-'+c+']').forEach(function(e){e.textContent=e.getAttribute('data-i18n-'+c);});document.documentElement.lang=c;document.documentElement.dir=${JSON.stringify(RTL_LANGS)}.indexOf(c)>-1?'rtl':'ltr';${langState.remember?`localStorage.setItem('wc_lang',c);`:''}}<\/script>`;
@@ -4540,9 +3362,12 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       try {
         const canvasDoc = grapesEditor?.Canvas?.getDocument();
         if (!canvasDoc || !canvasDoc.body) return;
-        const existing = canvasDoc.getElementById('wc-lang-switcher'); if (existing) existing.remove();
-        const html = generateLangSwitcherHtml(); if (!html) return;
-        const wrapper = canvasDoc.createElement('div'); wrapper.innerHTML = html;
+        const existing = canvasDoc.getElementById('wc-lang-switcher');
+        if (existing) existing.remove();
+        const html = generateLangSwitcherHtml();
+        if (!html) return;
+        const wrapper = canvasDoc.createElement('div');
+        wrapper.innerHTML = html;
         Array.from(wrapper.children).forEach(child => canvasDoc.body.appendChild(child));
       } catch (e) {}
     }
@@ -4550,12 +3375,24 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
     /* ══════════════════════════════════════════════════
        THEME LOCK
     ══════════════════════════════════════════════════ */
-    function extractRootCSS(html) { const m = html.match(/:root\s*\{[^}]+\}/); return m ? m[0] : ''; }
-    function extractBodyCSS(html) { const m = html.match(/(?:^|[\s;}])(?:body\s*(?:,\s*html)?|html\s*,\s*body)\s*\{[^}]+\}/); return m ? m[0].trim().replace(/^[\s;}]+/, '') : ''; }
+    function extractRootCSS(html) {
+      const m = html.match(/:root\s*\{[^}]+\}/);
+      return m ? m[0] : '';
+    }
+
+    function extractBodyCSS(html) {
+      const m = html.match(/(?:^|[\s;}])(?:body\s*(?:,\s*html)?|html\s*,\s*body)\s*\{[^}]+\}/);
+      return m ? m[0].trim().replace(/^[\s;}]+/, '') : '';
+    }
 
     function lockTheme(html, resetFirst) {
-      if (resetFirst === true) { lockedThemeCSS = ''; lockedBodyCSS = ''; themeLocked = false; }
-      const r = extractRootCSS(html), b = extractBodyCSS(html);
+      if (resetFirst === true) {
+        lockedThemeCSS = '';
+        lockedBodyCSS = '';
+        themeLocked = false;
+      }
+      const r = extractRootCSS(html),
+        b = extractBodyCSS(html);
       if (r) lockedThemeCSS = r;
       if (b) lockedBodyCSS = b;
       themeLocked = true;
@@ -4575,27 +3412,40 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       return out;
     }
 
+    /* ══════════════════════════════════════════════════
+       ★ BACKGROUND DETECTION (FIX: allow black backgrounds)
+    ══════════════════════════════════════════════════ */
     function detectConceptBackground(html) {
       return new Promise(resolve => {
         const iframe = document.createElement('iframe');
         iframe.style.cssText = 'position:absolute;width:1200px;height:900px;left:-99999px;top:-99999px;border:0;visibility:hidden;';
-        iframe.setAttribute('aria-hidden', 'true'); iframe.srcdoc = html;
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.srcdoc = html;
         let done = false;
-        const finish = (v) => { if (done) return; done = true; try { iframe.remove(); } catch (e) {} resolve(v || ''); };
+        const finish = (v) => {
+          if (done) return;
+          done = true;
+          try { iframe.remove(); } catch (e) {}
+          resolve(v || '');
+        };
         iframe.onload = () => {
           setTimeout(() => {
             try {
               const w = iframe.contentWindow, d = w.document;
               if (!w || !d) return finish('');
-              const csBody = w.getComputedStyle(d.body), csHtml = w.getComputedStyle(d.documentElement);
-              const isReal = (v) => v && v !== 'none' && v !== 'transparent' && v !== 'rgba(0, 0, 0, 0)' && v !== 'rgb(0, 0, 0)';
+              const csBody = w.getComputedStyle(d.body),
+                csHtml = w.getComputedStyle(d.documentElement);
+              /* FIX: Only reject fully-transparent / none — allow rgb(0,0,0) */
+              const isReal = (v) => v && v !== 'none' && v !== 'transparent' && v !== 'rgba(0, 0, 0, 0)';
               let bg = '';
               if (isReal(csBody.backgroundImage)) bg = csBody.backgroundImage;
               else if (isReal(csBody.backgroundColor)) bg = csBody.backgroundColor;
               else if (isReal(csHtml.backgroundImage)) bg = csHtml.backgroundImage;
               else if (isReal(csHtml.backgroundColor)) bg = csHtml.backgroundColor;
               finish(bg);
-            } catch (e) { finish(''); }
+            } catch (e) {
+              finish('');
+            }
           }, 300);
         };
         iframe.onerror = () => finish('');
@@ -4645,53 +3495,109 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       renderHeaderLangSelect();
       initGrapesStudio();
       setupContextMenu();
-      const posSel = document.getElementById('lang-switcher-pos'); if (posSel) posSel.value = langState.switcherPos;
-      const stSel = document.getElementById('lang-switcher-style'); if (stSel) stSel.value = langState.switcherStyle;
-      const adChk = document.getElementById('lang-autodetect'); if (adChk) adChk.checked = langState.autodetect;
-      const rmChk = document.getElementById('lang-remember'); if (rmChk) rmChk.checked = langState.remember;
-      const toggleBtn = document.getElementById('lang-switcher-toggle'); if (toggleBtn) toggleBtn.textContent = langState.switcherVisible ? '👁️ Hide Switcher' : '👁️ Show Switcher';
+      const posSel = document.getElementById('lang-switcher-pos');
+      if (posSel) posSel.value = langState.switcherPos;
+      const stSel = document.getElementById('lang-switcher-style');
+      if (stSel) stSel.value = langState.switcherStyle;
+      const adChk = document.getElementById('lang-autodetect');
+      if (adChk) adChk.checked = langState.autodetect;
+      const rmChk = document.getElementById('lang-remember');
+      if (rmChk) rmChk.checked = langState.remember;
+      const toggleBtn = document.getElementById('lang-switcher-toggle');
+      if (toggleBtn) toggleBtn.textContent = langState.switcherVisible ? '👁️ Hide Switcher' : '👁️ Show Switcher';
     });
 
     function loadProjectData() {
       const urlParams = new URLSearchParams(window.location.search);
       const p = parseInt(urlParams.get('concept') || '0', 10);
       activeConceptIndex = isNaN(p) ? 0 : p;
-      try { const raw = localStorage.getItem('webcraft_saved_project'); if (raw) projectData = JSON.parse(raw); } catch (e) {}
-      if (!projectData || !projectData.designs || projectData.designs.length === 0) {
+
+      try {
+        const raw = localStorage.getItem('webcraft_saved_project');
+        if (raw) projectData = JSON.parse(raw);
+      } catch (e) {
+        console.warn('[studio] localStorage parse failed:', e);
+        projectData = null;
+      }
+
+      if (!projectData || !Array.isArray(projectData.designs) || projectData.designs.length === 0) {
+        console.warn('[studio] No project data in localStorage — using fallback.');
         projectData = {
           bizName: 'Apex Studio',
           activeDesignIndex: 0,
-          designs: [{ name: 'Concept 1', html: '<!DOCTYPE html><html><head><style>body{font-family:sans-serif;margin:0;padding:4rem;text-align:center;background:#090d16;color:#fff}h1{font-size:3rem}</style></head><body><h1>Welcome</h1></body></html>' }]
+          designs: [{
+            name: 'Concept 1',
+            html: WC_FALLBACK_HTML
+          }]
         };
       }
+
+      if (activeConceptIndex < 0 || activeConceptIndex >= projectData.designs.length) {
+        console.warn('[studio] concept index out of bounds, resetting to 0');
+        activeConceptIndex = 0;
+      }
+
       document.getElementById('project-name-input').value = projectData.bizName || 'My Website';
-      currentHtml = projectData.designs[activeConceptIndex]?.html || projectData.designs[0].html;
+
+      const design = projectData.designs[activeConceptIndex] || projectData.designs[0];
+      const rawHtml = (design && typeof design.html === 'string') ? design.html.trim() : '';
+      currentHtml = rawHtml || (projectData.designs[0] && projectData.designs[0].html) || WC_FALLBACK_HTML;
+
+      if (!currentHtml || !currentHtml.trim()) {
+        console.warn('[studio] empty HTML, using fallback');
+        currentHtml = WC_FALLBACK_HTML;
+      }
+
       lockTheme(currentHtml, true);
+
       [0, 1, 2].forEach(i => {
         const btn = document.getElementById(`tab-c${i}`);
-        if (btn) { btn.style.display = projectData.designs[i] ? 'inline-block' : 'none'; btn.classList.toggle('active', i === activeConceptIndex); }
+        if (btn) {
+          btn.style.display = projectData.designs[i] ? 'inline-block' : 'none';
+          btn.classList.toggle('active', i === activeConceptIndex);
+        }
       });
+
+      console.log('[studio] Project loaded. concept=' + activeConceptIndex + ', html length=' + currentHtml.length);
     }
 
     function updateProjectName(val) {
-      if (projectData) { projectData.bizName = val.trim() || 'Website'; saveProjectData(); showToast(`Renamed to ${projectData.bizName}`); }
+      if (projectData) {
+        projectData.bizName = val.trim() || 'Website';
+        saveProjectData();
+        showToast(`Renamed to ${projectData.bizName}`);
+      }
     }
 
-    function saveProjectData() { if (projectData) localStorage.setItem('webcraft_saved_project', JSON.stringify(projectData)); }
+    function saveProjectData() {
+      if (projectData) localStorage.setItem('webcraft_saved_project', JSON.stringify(projectData));
+    }
 
     function switchStudioConcept(index) {
       if (!projectData.designs[index]) return;
       syncCanvasToHtml();
       activeConceptIndex = index;
-      currentHtml = projectData.designs[index].html;
+      currentHtml = projectData.designs[index].html || WC_FALLBACK_HTML;
       lockTheme(currentHtml, true);
       [0, 1, 2].forEach(i => document.getElementById(`tab-c${i}`).classList.toggle('active', i === index));
       loadHtmlIntoStudioCanvas();
       showToast(`Switched to Concept ${index + 1}`);
     }
 
-    function loadUserUploads() { try { const r = localStorage.getItem('webcraft_user_uploads'); if (r) userUploadedImages = JSON.parse(r); } catch (e) {} renderUserUploads(); }
-    function saveUserUploads() { try { localStorage.setItem('webcraft_user_uploads', JSON.stringify(userUploadedImages)); } catch (e) {} renderUserUploads(); }
+    function loadUserUploads() {
+      try {
+        const r = localStorage.getItem('webcraft_user_uploads');
+        if (r) userUploadedImages = JSON.parse(r);
+      } catch (e) {}
+      renderUserUploads();
+    }
+
+    function saveUserUploads() {
+      try {
+        localStorage.setItem('webcraft_user_uploads', JSON.stringify(userUploadedImages));
+      } catch (e) {}
+      renderUserUploads();
+    }
 
     function handleFileInput(files) {
       if (!files || !files.length) return;
@@ -4699,9 +3605,16 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       Array.from(files).forEach(file => {
         const r = new FileReader();
         r.onload = (e) => {
-          userUploadedImages.unshift({ id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6), name: file.name, url: e.target.result });
+          userUploadedImages.unshift({
+            id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+            name: file.name,
+            url: e.target.result
+          });
           loaded++;
-          if (loaded === files.length) { saveUserUploads(); showToast(`🖼️ Uploaded ${files.length}`); }
+          if (loaded === files.length) {
+            saveUserUploads();
+            showToast(`🖼️ Uploaded ${files.length}`);
+          }
         };
         r.readAsDataURL(file);
       });
@@ -4717,7 +3630,8 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       c.innerHTML = '';
       userUploadedImages.forEach(img => {
         const card = document.createElement('div');
-        card.className = 'upload-card'; card.setAttribute('draggable', 'true');
+        card.className = 'upload-card';
+        card.setAttribute('draggable', 'true');
         card.innerHTML = `<span class="upload-card-badge">Upload</span><button class="upload-card-del" onclick="event.stopPropagation(); deleteUserUpload('${img.id}')">✕</button><img src="${img.url}" loading="lazy"><div class="upload-card-caption">${img.name}</div>`;
         card.ondragstart = (e) => handleImageDragStart(e, img.url, img.name);
         card.onclick = () => handleImageClick(img.url, img.name);
@@ -4725,21 +3639,42 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       });
     }
 
-    function deleteUserUpload(id) { userUploadedImages = userUploadedImages.filter(i => i.id !== id); saveUserUploads(); }
-    function clearAllUploads() { if (confirm('Clear all?')) { userUploadedImages = []; saveUserUploads(); } }
+    function deleteUserUpload(id) {
+      userUploadedImages = userUploadedImages.filter(i => i.id !== id);
+      saveUserUploads();
+    }
 
-    function handleImageDragStart(e, url, alt) { activeDraggedImage = { url, alt }; if (e.dataTransfer) { e.dataTransfer.setData('text/plain', url); e.dataTransfer.effectAllowed = 'copy'; } }
+    function clearAllUploads() {
+      if (confirm('Clear all?')) {
+        userUploadedImages = [];
+        saveUserUploads();
+      }
+    }
+
+    function handleImageDragStart(e, url, alt) {
+      activeDraggedImage = { url, alt };
+      if (e.dataTransfer) {
+        e.dataTransfer.setData('text/plain', url);
+        e.dataTransfer.effectAllowed = 'copy';
+      }
+    }
 
     function handleImageClick(url, alt) {
       if (!grapesEditor) return;
       if (selectedComponent && (selectedComponent.get('tagName') || '').toLowerCase() === 'img') {
-        selectedComponent.setAttributes(Object.assign({}, selectedComponent.getAttributes(), { src: url, alt: alt || '' }));
+        selectedComponent.setAttributes(Object.assign({}, selectedComponent.getAttributes(), {
+          src: url,
+          alt: alt || ''
+        }));
         selectedComponent.set({ draggable: true, resizable: true });
       } else {
         const root = grapesEditor.DomComponents.getWrapper();
         const added = root.append(`<img src="${escapeHtml(url)}" alt="${escapeHtml(alt || '')}" style="width:100%;max-width:850px;height:auto;border-radius:16px;margin:2rem auto;display:block;object-fit:cover;"/>`, { at: 0 });
         const comp = Array.isArray(added) ? added[0] : added;
-        if (comp) { comp.set({ draggable: true, resizable: true, stylable: true }); grapesEditor.select(comp); }
+        if (comp) {
+          comp.set({ draggable: true, resizable: true, stylable: true });
+          grapesEditor.select(comp);
+        }
       }
       renderSmartLayers();
     }
@@ -4749,7 +3684,12 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         const canvasDoc = grapesEditor.Canvas?.getDocument();
         if (!canvasDoc || canvasDoc.__webcraftImageDnDBound) return;
         canvasDoc.__webcraftImageDnDBound = true;
-        canvasDoc.addEventListener('dragover', e => { if (activeDraggedImage) { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; } });
+        canvasDoc.addEventListener('dragover', e => {
+          if (activeDraggedImage) {
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+          }
+        });
         canvasDoc.addEventListener('drop', (e) => {
           const url = activeDraggedImage?.url || e.dataTransfer?.getData('text/plain');
           if (!url) return;
@@ -4765,8 +3705,13 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
 
     function initGrapesStudio() {
       grapesEditor = grapesjs.init({
-        container: '#gjs', fromElement: false, height: '100%', width: 'auto',
-        storageManager: false, noticeOnUnload: false, showOffsets: 1,
+        container: '#gjs',
+        fromElement: false,
+        height: '100%',
+        width: 'auto',
+        storageManager: false,
+        noticeOnUnload: false,
+        showOffsets: 1,
         blockManager: {
           appendTo: '#gjs-blocks',
           blocks: [
@@ -4804,7 +3749,13 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         },
         traitManager: { appendTo: '#gjs-traits' },
         layerManager: { appendTo: '#gjs-layers' },
-        deviceManager: { devices: [{ name: 'Desktop', width: '' }, { name: 'Tablet', width: '768px' }, { name: 'Mobile', width: '375px' }] }
+        deviceManager: {
+          devices: [
+            { name: 'Desktop', width: '' },
+            { name: 'Tablet', width: '768px' },
+            { name: 'Mobile', width: '375px' }
+          ]
+        }
       });
 
       grapesEditor.on('component:selected', (model) => {
@@ -4815,7 +3766,9 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         updateAiSelectedTarget(model);
         if (isButtonLike(model) && !suppressEditorOpen && !activeFreeDrag) openButtonEditor(model);
       });
-      grapesEditor.on('component:dblclick', (model) => { if ((model.get('tagName') || '').toLowerCase() === 'img') openImageEditor(model); });
+      grapesEditor.on('component:dblclick', (model) => {
+        if ((model.get('tagName') || '').toLowerCase() === 'img') openImageEditor(model);
+      });
       grapesEditor.on('component:deselected', () => {
         selectedComponent = null;
         renderSmartLayers();
@@ -4833,10 +3786,18 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
           else showToast('✨ New element added');
         }, 300);
       });
-      grapesEditor.on('load', () => { setupContextMenu(); });
-      grapesEditor.on('device:set', () => { setTimeout(applyMobileStylesInCanvas, 50); });
-      grapesEditor.on('canvas:frame:load', () => { setTimeout(applyMobileStylesInCanvas, 100); });
-      loadHtmlIntoStudioCanvas();
+      grapesEditor.on('load', () => {
+        setupContextMenu();
+        loadHtmlIntoStudioCanvas();
+      });
+      grapesEditor.on('device:set', () => {
+        setTimeout(applyMobileStylesInCanvas, 50);
+      });
+      grapesEditor.on('canvas:frame:load', (evt) => {
+        if (lastStudioStyleInjector) lastStudioStyleInjector(evt);
+        else loadHtmlIntoStudioCanvas(evt);
+        applyMobileStylesInCanvas();
+      });
     }
 
     function isButtonLike(comp) {
@@ -4845,11 +3806,21 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       if (tag === 'button') return true;
       if (tag !== 'a') return false;
       let classAttr = '';
-      try { const el = comp.getEl && comp.getEl(); if (el) classAttr = (typeof el.className === 'string') ? el.className : ''; } catch (e) {}
-      if (!classAttr) { const attrs = comp.getAttributes?.() || {}; classAttr = attrs.class || ''; }
+      try {
+        const el = comp.getEl && comp.getEl();
+        if (el) classAttr = (typeof el.className === 'string') ? el.className : '';
+      } catch (e) {}
+      if (!classAttr) {
+        const attrs = comp.getAttributes?.() || {};
+        classAttr = attrs.class || '';
+      }
       if (/\bbtn\b|button/i.test(classAttr)) return true;
-      try { const el = comp.getEl && comp.getEl(); if (el && el.classList && el.classList.contains('webcraft-free-button')) return true; } catch (e) {}
-      const attrs = comp.getAttributes?.() || {}; const href = attrs.href || '';
+      try {
+        const el = comp.getEl && comp.getEl();
+        if (el && el.classList && el.classList.contains('webcraft-free-button')) return true;
+      } catch (e) {}
+      const attrs = comp.getAttributes?.() || {};
+      const href = attrs.href || '';
       const looksLikeLink = href && href !== '#' && !href.startsWith('#');
       if (!looksLikeLink) return true;
       const style = comp.getStyle?.() || {};
@@ -4859,24 +3830,45 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
 
     function findButtons(root) {
       const found = [];
-      const walk = (c) => { if (!c) return; if (isButtonLike(c)) found.push(c); const k = c.components && c.components(); if (k && k.length) k.forEach(walk); };
-      walk(root); return found;
+      const walk = (c) => {
+        if (!c) return;
+        if (isButtonLike(c)) found.push(c);
+        const k = c.components && c.components();
+        if (k && k.length) k.forEach(walk);
+      };
+      walk(root);
+      return found;
     }
 
     function componentFromElement(element) {
       if (!element || !grapesEditor) return null;
-      const wrapper = grapesEditor.DomComponents?.getWrapper?.(); if (!wrapper) return null;
+      const wrapper = grapesEditor.DomComponents?.getWrapper?.();
+      if (!wrapper) return null;
       let found = null;
-      const walk = (c) => { if (found || !c) return; try { if (c.getEl && c.getEl() === element) { found = c; return; } } catch (e) {} const kids = c.components && c.components(); if (kids && kids.length) kids.forEach(walk); };
-      walk(wrapper); return found;
+      const walk = (c) => {
+        if (found || !c) return;
+        try {
+          if (c.getEl && c.getEl() === element) {
+            found = c;
+            return;
+          }
+        } catch (e) {}
+        const kids = c.components && c.components();
+        if (kids && kids.length) kids.forEach(walk);
+      };
+      walk(wrapper);
+      return found;
     }
 
     function configureEditorComponent(comp) {
       if (!comp) return;
       const tag = (comp.get('tagName') || '').toLowerCase();
       if (tag === 'img') comp.set({ draggable: true, resizable: true, stylable: true, selectable: true });
-      else if (tag === 'a' || tag === 'button') { comp.set({ draggable: false, stylable: true, selectable: true, droppable: false }); ensureFreeButtonSetup(comp); return; }
-      else if (['section', 'header', 'footer', 'form'].includes(tag)) comp.set({ draggable: false, droppable: true, stylable: true, selectable: true });
+      else if (tag === 'a' || tag === 'button') {
+        comp.set({ draggable: false, stylable: true, selectable: true, droppable: false });
+        ensureFreeButtonSetup(comp);
+        return;
+      } else if (['section', 'header', 'footer', 'form'].includes(tag)) comp.set({ draggable: false, droppable: true, stylable: true, selectable: true });
       const kids = comp.components && comp.components();
       if (kids && kids.length) kids.forEach(configureEditorComponent);
     }
@@ -4884,8 +3876,10 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
     function ensureFreeButtonSetup(comp, retries = 0) {
       if (retries > 10) return;
       const el = comp.getEl && comp.getEl();
-      if (el) { el.classList.add('webcraft-free-button'); el.setAttribute('draggable', 'false'); }
-      else setTimeout(() => ensureFreeButtonSetup(comp, retries + 1), 50);
+      if (el) {
+        el.classList.add('webcraft-free-button');
+        el.setAttribute('draggable', 'false');
+      } else setTimeout(() => ensureFreeButtonSetup(comp, retries + 1), 50);
     }
 
     function configureEditorComponents() {
@@ -4894,12 +3888,33 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       if (wrapper) configureEditorComponent(wrapper);
     }
 
-    function getCanvasBody() { return grapesEditor?.Canvas?.getDocument?.()?.body || null; }
+    function getStudioCanvasDocument(evt) {
+      try {
+        const fromEvt = evt?.window?.document || evt?.document;
+        if (fromEvt && fromEvt.head && fromEvt.body) return fromEvt;
+      } catch (e) {}
+      try {
+        const fromApi = grapesEditor?.Canvas?.getDocument?.();
+        if (fromApi && fromApi.head && fromApi.body) return fromApi;
+      } catch (e) {}
+      try {
+        const fromFrame = grapesEditor?.Canvas?.getFrameEl?.()?.contentDocument;
+        if (fromFrame && fromFrame.head && fromFrame.body) return fromFrame;
+      } catch (e) {}
+      return null;
+    }
+
+    function getCanvasBody() {
+      return getStudioCanvasDocument()?.body || grapesEditor?.Canvas?.getDocument?.()?.body || null;
+    }
 
     function getCanvasPagePoint(e) {
-      const body = getCanvasBody(); if (!body) return { x: e.clientX, y: e.clientY };
-      const rect = body.getBoundingClientRect(); const win = body.ownerDocument?.defaultView;
-      const sx = body.scrollLeft || win?.scrollX || 0, sy = body.scrollTop || win?.scrollY || 0;
+      const body = getCanvasBody();
+      if (!body) return { x: e.clientX, y: e.clientY };
+      const rect = body.getBoundingClientRect();
+      const win = body.ownerDocument?.defaultView;
+      const sx = body.scrollLeft || win?.scrollX || 0,
+        sy = body.scrollTop || win?.scrollY || 0;
       return { x: e.clientX - rect.left + sx, y: e.clientY - rect.top + sy };
     }
 
@@ -4908,46 +3923,76 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         const canvasDoc = grapesEditor?.Canvas?.getDocument(), body = canvasDoc?.body;
         if (!canvasDoc || !body || canvasDoc.__freeButtonDragBound) return;
         canvasDoc.__freeButtonDragBound = true;
-        canvasDoc.addEventListener('dragstart', (e) => { const el = e.target?.closest?.('a,button'); if (el) e.preventDefault(); }, true);
+        canvasDoc.addEventListener('dragstart', (e) => {
+          const el = e.target?.closest?.('a,button');
+          if (el) e.preventDefault();
+        }, true);
         const down = (e) => {
           if (e.button !== 0) return;
-          const target = e.target?.closest?.('a,button'); if (!target) return;
-          const comp = componentFromElement(target); if (!comp || !isButtonLike(comp)) return;
-          const wrapper = grapesEditor.DomComponents.getWrapper(); if (!wrapper) return;
+          const target = e.target?.closest?.('a,button');
+          if (!target) return;
+          const comp = componentFromElement(target);
+          if (!comp || !isButtonLike(comp)) return;
+          const wrapper = grapesEditor.DomComponents.getWrapper();
+          if (!wrapper) return;
           const rect = target.getBoundingClientRect();
-          activeFreeDrag = { comp, target, startX: e.clientX, startY: e.clientY, moved: false, wrapper, pointerId: e.pointerId, grabX: e.clientX - rect.left, grabY: e.clientY - rect.top };
+          activeFreeDrag = {
+            comp, target, startX: e.clientX, startY: e.clientY, moved: false,
+            wrapper, pointerId: e.pointerId, grabX: e.clientX - rect.left, grabY: e.clientY - rect.top
+          };
           try { target.setPointerCapture?.(e.pointerId); } catch (err) {}
           grapesEditor.select(comp);
         };
         const move = (e) => {
-          const d = activeFreeDrag; if (!d || e.pointerId !== d.pointerId) return;
+          const d = activeFreeDrag;
+          if (!d || e.pointerId !== d.pointerId) return;
           const dx = e.clientX - d.startX, dy = e.clientY - d.startY;
           if (!d.moved && Math.hypot(dx, dy) < 5) return;
           if (!d.moved) {
             d.moved = true;
             try { d.comp.move(d.wrapper, { at: d.wrapper.components().length }); } catch (err) {}
-            try { const fresh = d.comp.getEl && d.comp.getEl(); if (fresh) d.target = fresh; } catch (err) {}
+            try {
+              const fresh = d.comp.getEl && d.comp.getEl();
+              if (fresh) d.target = fresh;
+            } catch (err) {}
             const st = d.target.style;
-            st.setProperty('position', 'absolute', 'important'); st.setProperty('margin', '0', 'important');
-            st.setProperty('z-index', '1000', 'important'); st.setProperty('max-width', 'none', 'important');
+            st.setProperty('position', 'absolute', 'important');
+            st.setProperty('margin', '0', 'important');
+            st.setProperty('z-index', '1000', 'important');
+            st.setProperty('max-width', 'none', 'important');
             d.target.classList.add('webcraft-free-button-dragging');
           }
           e.preventDefault();
           const page = getCanvasPagePoint(e);
-          const left = Math.max(0, Math.round(page.x - d.grabX)), top = Math.max(0, Math.round(page.y - d.grabY));
-          d.target.style.setProperty('left', left + 'px', 'important'); d.target.style.setProperty('top', top + 'px', 'important');
-          d.lastLeft = left; d.lastTop = top;
+          const left = Math.max(0, Math.round(page.x - d.grabX)),
+            top = Math.max(0, Math.round(page.y - d.grabY));
+          d.target.style.setProperty('left', left + 'px', 'important');
+          d.target.style.setProperty('top', top + 'px', 'important');
+          d.lastLeft = left;
+          d.lastTop = top;
         };
         const finish = (e) => {
-          const d = activeFreeDrag; if (!d || (e.pointerId != null && e.pointerId !== d.pointerId)) return;
+          const d = activeFreeDrag;
+          if (!d || (e.pointerId != null && e.pointerId !== d.pointerId)) return;
           d.target?.classList.remove('webcraft-free-button-dragging');
           if (d.moved) {
             try { e.preventDefault(); } catch (err) {}
-            d.comp.addStyle({ position: 'absolute', margin: '0', 'z-index': '1000', 'max-width': 'none', left: (d.lastLeft ?? 0) + 'px', top: (d.lastTop ?? 0) + 'px' });
-            suppressEditorOpen = true; setTimeout(() => suppressEditorOpen = false, 120);
-            const swallowClick = (ce) => { ce.preventDefault(); ce.stopPropagation(); d.target?.removeEventListener('click', swallowClick, true); };
+            d.comp.addStyle({
+              position: 'absolute', margin: '0', 'z-index': '1000',
+              'max-width': 'none',
+              left: (d.lastLeft ?? 0) + 'px',
+              top: (d.lastTop ?? 0) + 'px'
+            });
+            suppressEditorOpen = true;
+            setTimeout(() => suppressEditorOpen = false, 120);
+            const swallowClick = (ce) => {
+              ce.preventDefault();
+              ce.stopPropagation();
+              d.target?.removeEventListener('click', swallowClick, true);
+            };
             d.target?.addEventListener('click', swallowClick, true);
-            showToast('🔘 Button dropped'); renderSmartLayers();
+            showToast('🔘 Button dropped');
+            renderSmartLayers();
           } else if (isButtonLike(d.comp)) openButtonEditor(d.comp);
           activeFreeDrag = null;
         };
@@ -4959,15 +4004,21 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
     }
 
     function getTopLevelSections() {
-      const wrapper = grapesEditor?.DomComponents?.getWrapper?.(); if (!wrapper) return [];
+      const wrapper = grapesEditor?.DomComponents?.getWrapper?.();
+      if (!wrapper) return [];
       const out = [];
       const walk = (c) => {
         if (!c) return;
         const t = (c.get('tagName') || '').toLowerCase();
-        if (['section', 'header', 'footer'].includes(t)) { out.push(c); return; }
-        const kids = c.components?.(); if (kids && kids.length) kids.forEach(walk);
+        if (['section', 'header', 'footer'].includes(t)) {
+          out.push(c);
+          return;
+        }
+        const kids = c.components?.();
+        if (kids && kids.length) kids.forEach(walk);
       };
-      const kids = wrapper.components?.(); if (kids && kids.length) kids.forEach(walk);
+      const kids = wrapper.components?.();
+      if (kids && kids.length) kids.forEach(walk);
       return out;
     }
 
@@ -4984,19 +4035,24 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         body.querySelectorAll('.webcraft-section-handle,.webcraft-drop-line').forEach(el => el.remove());
         const sections = getTopLevelSections();
         sections.forEach((comp, i) => {
-          const el = comp.getEl?.(); if (!el) return;
-          const r = el.getBoundingClientRect(), sy = body.scrollTop || doc.defaultView?.scrollY || 0;
+          const el = comp.getEl?.();
+          if (!el) return;
+          const r = el.getBoundingClientRect(),
+            sy = body.scrollTop || doc.defaultView?.scrollY || 0;
           const h = doc.createElement('div');
           h.className = 'webcraft-section-handle';
           h.innerHTML = `↕ <span>${escapeHtml(getSectionDisplayName(comp,i))}</span>`;
           h.title = 'Drag this handle to move the whole section';
-          h.style.top = Math.max(2, r.top + sy + 6) + 'px'; h.style.right = '10px';
+          h.style.top = Math.max(2, r.top + sy + 6) + 'px';
+          h.style.right = '10px';
           h.addEventListener('pointerdown', (e) => beginSectionDrag(e, comp, h), true);
           body.appendChild(h);
         });
         const line = doc.createElement('div');
-        line.className = 'webcraft-drop-line'; line.id = 'webcraft-section-drop-line';
-        line.style.left = '8px'; line.style.right = '8px';
+        line.className = 'webcraft-drop-line';
+        line.id = 'webcraft-section-drop-line';
+        line.style.left = '8px';
+        line.style.right = '8px';
         body.appendChild(line);
       } catch (e) {}
     }
@@ -5005,10 +4061,13 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       try {
         const doc = grapesEditor?.Canvas?.getDocument(), body = doc?.body;
         if (!doc || !body) return;
-        const hs = body.querySelectorAll('.webcraft-section-handle'), secs = getTopLevelSections();
+        const hs = body.querySelectorAll('.webcraft-section-handle'),
+          secs = getTopLevelSections();
         hs.forEach((h, i) => {
-          const el = secs[i]?.getEl?.(); if (!el) return;
-          const r = el.getBoundingClientRect(), sy = body.scrollTop || doc.defaultView?.scrollY || 0;
+          const el = secs[i]?.getEl?.();
+          if (!el) return;
+          const r = el.getBoundingClientRect(),
+            sy = body.scrollTop || doc.defaultView?.scrollY || 0;
           h.style.top = Math.max(2, r.top + sy + 6) + 'px';
         });
       } catch (e) {}
@@ -5016,12 +4075,17 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
 
     function beginSectionDrag(e, comp, handle) {
       if (e.button !== 0 || !comp) return;
-      e.preventDefault(); e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
       const doc = grapesEditor?.Canvas?.getDocument(), body = doc?.body, el = comp.getEl?.();
       if (!doc || !body || !el) return;
-      activeSectionDrag = { comp, handle, body, startY: e.clientY, startX: e.clientX, moved: false, pointerId: e.pointerId, pendingIndex: getSectionPeers(comp).indexOf(comp) };
+      activeSectionDrag = {
+        comp, handle, body, startY: e.clientY, startX: e.clientX, moved: false,
+        pointerId: e.pointerId, pendingIndex: getSectionPeers(comp).indexOf(comp)
+      };
       try { handle.setPointerCapture?.(e.pointerId); } catch (err) {}
-      handle.classList.add('dragging'); grapesEditor.select(comp);
+      handle.classList.add('dragging');
+      grapesEditor.select(comp);
     }
 
     function setupSectionDragging() {
@@ -5030,17 +4094,27 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         if (!doc || doc.__sectionDragBound) return;
         doc.__sectionDragBound = true;
         const move = (e) => {
-          const d = activeSectionDrag; if (!d || e.pointerId !== d.pointerId) return;
+          const d = activeSectionDrag;
+          if (!d || e.pointerId !== d.pointerId) return;
           if (!d.moved && Math.abs(e.clientY - d.startY) < 6) return;
-          if (!d.moved) { d.moved = true; d.comp.getEl()?.classList.add('webcraft-section-dragging'); }
+          if (!d.moved) {
+            d.moved = true;
+            d.comp.getEl()?.classList.add('webcraft-section-dragging');
+          }
           e.preventDefault();
           const secs = getSectionPeers(d.comp).filter(c => c !== d.comp), y = e.clientY;
           let idx = secs.length, anchor = null, anchorComp = null;
           for (let i = 0; i < secs.length; i++) {
             const r = secs[i].getEl?.()?.getBoundingClientRect();
-            if (r && y < r.top + r.height / 2) { idx = i; anchor = r; anchorComp = secs[i]; break; }
+            if (r && y < r.top + r.height / 2) {
+              idx = i;
+              anchor = r;
+              anchorComp = secs[i];
+              break;
+            }
           }
-          d.pendingIndex = idx; d.pendingAnchor = anchorComp;
+          d.pendingIndex = idx;
+          d.pendingAnchor = anchorComp;
           const line = doc.getElementById('webcraft-section-drop-line');
           if (line) {
             line.style.display = 'block';
@@ -5050,7 +4124,8 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
           }
         };
         const end = (e) => {
-          const d = activeSectionDrag; if (!d || (e.pointerId != null && e.pointerId !== d.pointerId)) return;
+          const d = activeSectionDrag;
+          if (!d || (e.pointerId != null && e.pointerId !== d.pointerId)) return;
           d.comp.getEl()?.classList.remove('webcraft-section-dragging');
           d.handle?.classList.remove('dragging');
           const line = doc.getElementById('webcraft-section-drop-line');
@@ -5070,7 +4145,8 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
                 d.comp.move(parent, { at });
               }
             } catch (err) {}
-            renderFriendlySections(); renderSmartLayers();
+            renderFriendlySections();
+            renderSmartLayers();
             setTimeout(refreshSectionDragHandles, 70);
             showToast('📑 Section moved');
           }
@@ -5090,7 +4166,8 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       let target = componentFromElement(targetEl);
       if (target && (target.get('tagName') || '').toLowerCase() === 'img') {
         target.setAttributes(Object.assign({}, target.getAttributes(), { src: url, alt: alt || '' }));
-        target.set({ draggable: true, resizable: true }); return target;
+        target.set({ draggable: true, resizable: true });
+        return target;
       }
       const imageHtml = `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt || '')}" style="width:100%;max-width:850px;height:auto;border-radius:16px;margin:2rem auto;display:block;object-fit:cover;"/>`;
       let destination = wrapper, insertAt = wrapper.components().length;
@@ -5098,55 +4175,203 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         const targetTag = (target.get('tagName') || '').toLowerCase();
         const structuralContainer = ['body', 'main', 'section', 'header', 'footer', 'article', 'aside', 'form', 'div'].includes(targetTag);
         const parent = target.parent && target.parent();
-        if (structuralContainer && target.components) { destination = target; insertAt = target.components().length; }
-        else if (parent && parent.components) {
-          destination = parent; const idx = target.index();
+        if (structuralContainer && target.components) {
+          destination = target;
+          insertAt = target.components().length;
+        } else if (parent && parent.components) {
+          destination = parent;
+          const idx = target.index();
           insertAt = clientY != null && target.getEl ? (clientY > (target.getEl().getBoundingClientRect().top + target.getEl().getBoundingClientRect().height / 2) ? idx + 1 : idx) : idx;
         }
       }
       const added = destination.append(imageHtml, { at: Math.max(0, insertAt) });
       const comp = Array.isArray(added) ? added[0] : added;
-      if (comp) { comp.set({ draggable: true, resizable: true, stylable: true }); grapesEditor.select(comp); }
+      if (comp) {
+        comp.set({ draggable: true, resizable: true, stylable: true });
+        grapesEditor.select(comp);
+      }
       return comp;
     }
 
-    function loadHtmlIntoStudioCanvas() {
-      if (!grapesEditor || !currentHtml) return;
+    /* ══════════════════════════════════════════════════
+       ★ CANVAS LOADER — Fully patched
+       - Does NOT force body background to transparent
+       - Allows black / dark backgrounds
+       - Auto-retries when content fails to render
+       - Adds forceCanvasReveal + scroll-anim visibility overrides
+    ══════════════════════════════════════════════════ */
+    function loadHtmlIntoStudioCanvas(frameEvt) {
+      if (!grapesEditor) return;
+
+      if (!currentHtml || !currentHtml.trim()) {
+        console.warn('[studio] currentHtml empty, using fallback');
+        currentHtml = WC_FALLBACK_HTML;
+      }
+
+      const sourceHtml = String(currentHtml).trim();
       const parser = new DOMParser();
-      const doc = parser.parseFromString(currentHtml, 'text/html');
+      const doc = parser.parseFromString(sourceHtml, 'text/html');
+
+      let bodyHtml = doc.body ? doc.body.innerHTML : '';
+      if (!bodyHtml.trim()) {
+        const fragment = document.createElement('template');
+        fragment.innerHTML = sourceHtml;
+        bodyHtml = fragment.innerHTML;
+      }
+
+      const cleanTemplate = document.createElement('template');
+      cleanTemplate.innerHTML = bodyHtml;
+      cleanTemplate.content.querySelectorAll('script').forEach(s => s.remove());
+      const finalBodyHtml = cleanTemplate.innerHTML.trim();
+
+      if (!finalBodyHtml) {
+        console.warn('[studio] Generated HTML has no body content; using fallback.');
+        currentHtml = WC_FALLBACK_HTML;
+        return loadHtmlIntoStudioCanvas(frameEvt);
+      }
+
       let combinedCss = '';
-      doc.querySelectorAll('style').forEach(s => { combinedCss += s.innerHTML + '\n'; });
-      const bodyClone = doc.body.cloneNode(true);
-      bodyClone.querySelectorAll('script').forEach(s => s.remove());
+      doc.querySelectorAll('style').forEach(style => {
+        if (style.textContent) combinedCss += style.textContent + '\n';
+      });
+
       const sourceBodyAttrs = {};
-      Array.from(doc.body.attributes).forEach(a => { sourceBodyAttrs[a.name] = a.value; });
+      if (doc.body) {
+        Array.from(doc.body.attributes).forEach(attr => {
+          sourceBodyAttrs[attr.name] = attr.value;
+        });
+      }
       const bodyInlineStyle = sourceBodyAttrs.style || '';
-      grapesEditor.setComponents(bodyClone.innerHTML);
-      const injectStyles = () => {
+
+      try {
+        grapesEditor.setComponents(finalBodyHtml);
+      } catch (err) {
+        console.error('[studio] setComponents failed:', err);
         try {
-          const canvasDoc = grapesEditor.Canvas?.getDocument();
-          if (!canvasDoc || !canvasDoc.head || !canvasDoc.body) { setTimeout(injectStyles, 30); return; }
-          doc.querySelectorAll('link').forEach(l => {
-            const href = l.getAttribute('href');
-            if (href && !canvasDoc.head.querySelector(`link[href="${href}"]`)) canvasDoc.head.appendChild(l.cloneNode(true));
+          grapesEditor.DomComponents.clear();
+          grapesEditor.setComponents(finalBodyHtml);
+        } catch (retryErr) {
+          console.error('[studio] second setComponents failed:', retryErr);
+          return;
+        }
+      }
+
+      const injectStyles = (evt) => {
+        try {
+          const canvasDoc = getStudioCanvasDocument(evt) || grapesEditor.Canvas?.getDocument?.();
+          if (!canvasDoc || !canvasDoc.head || !canvasDoc.body) {
+            lastStudioStyleInjector = injectStyles;
+            return;
+          }
+
+          doc.querySelectorAll('link[rel="stylesheet"], link[href]').forEach(link => {
+            const href = link.getAttribute('href');
+            if (!href) return;
+            const exists = Array.from(canvasDoc.head.querySelectorAll('link'))
+              .some(existing => existing.getAttribute('href') === href);
+            if (!exists) canvasDoc.head.appendChild(link.cloneNode(true));
           });
-          const canvasBody = canvasDoc.body;
+
           Object.keys(sourceBodyAttrs).forEach(name => {
             if (name.startsWith('data-gjs')) return;
-            try { canvasBody.setAttribute(name, sourceBodyAttrs[name]); } catch (e) {}
+            try { canvasDoc.body.setAttribute(name, sourceBodyAttrs[name]); } catch (e) {}
           });
-          canvasBody.classList.add('webcraft-canvas-body');
+
+          canvasDoc.body.classList.add('webcraft-canvas-body');
+
           let masterCss = combinedCss;
-          if (bodyInlineStyle) masterCss += `\nbody { ${bodyInlineStyle} }`;
+          if (bodyInlineStyle) {
+            masterCss += `\nbody { ${bodyInlineStyle} }`;
+          }
+
           let styleTag = canvasDoc.getElementById('webcraft-master-css');
-          if (!styleTag) { styleTag = canvasDoc.createElement('style'); styleTag.id = 'webcraft-master-css'; canvasDoc.head.appendChild(styleTag); }
-          styleTag.innerHTML = `${masterCss}\nhtml { min-height: 100%; }\nbody { min-height: 100vh !important; position: relative !important; margin: 0; }\n#wrapper { min-height: 100vh; box-sizing: border-box; position: relative !important; }\n.webcraft-free-button { cursor: move !important; touch-action: none; -webkit-user-drag: none !important; user-select: none !important; -webkit-user-select: none !important; }\na, button { -webkit-user-drag: none; }`;
+          if (!styleTag) {
+            styleTag = canvasDoc.createElement('style');
+            styleTag.id = 'webcraft-master-css';
+            canvasDoc.head.appendChild(styleTag);
+          }
+
+          /* ★ CRITICAL FIXES APPLIED HERE ★ */
+          styleTag.innerHTML = `${masterCss}
+/* ── Studio canvas reset ── */
+html {
+  min-height: 100% !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+html, body { width: 100% !important; }
+body {
+  min-height: 100vh !important;
+  height: auto !important;
+  position: relative !important;
+  margin: 0 !important;
+  overflow: visible !important;
+}
+body.webcraft-canvas-body {
+  display: block !important;
+  visibility: visible !important;
+}
+/* NOTE: We intentionally DO NOT force background-color:transparent
+   on html/body here — the original site background (including black
+   dark-theme backgrounds) must be preserved so text remains visible. */
+#wrapper {
+  min-height: 100vh;
+  height: auto !important;
+  box-sizing: border-box;
+  position: relative !important;
+}
+/* ★ Force-reveal generated scroll-animation elements in EDITOR mode.
+      Generated page scripts are stripped, so AOS/WOW/[data-anim]/etc.
+      would remain stuck at opacity:0 without this override. */
+body.webcraft-canvas-body [data-anim],
+body.webcraft-canvas-body [class*="aos"],
+body.webcraft-canvas-body [class*="wow"],
+body.webcraft-canvas-body [class*="sal-"],
+body.webcraft-canvas-body [class*="reveal"],
+body.webcraft-canvas-body [class*="fade-in"],
+body.webcraft-canvas-body [class*="fadeIn"],
+body.webcraft-canvas-body [class*="fade-up"],
+body.webcraft-canvas-body [class*="fadeUp"],
+body.webcraft-canvas-body [class*="fade-down"],
+body.webcraft-canvas-body [class*="slide-in"],
+body.webcraft-canvas-body [class*="slideIn"],
+body.webcraft-canvas-body [class*="slide-up"],
+body.webcraft-canvas-body [class*="slideUp"],
+body.webcraft-canvas-body [class*="zoom-in"],
+body.webcraft-canvas-body [class*="zoomIn"],
+body.webcraft-canvas-body [class*="animate-"],
+body.webcraft-canvas-body [class*="animate_"],
+body.webcraft-canvas-body [data-aos],
+body.webcraft-canvas-body [data-wow],
+body.webcraft-canvas-body [data-sal],
+body.webcraft-canvas-body [data-scroll],
+body.webcraft-canvas-body [data-animate] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  animation-play-state: paused !important;
+  animation-fill-mode: forwards !important;
+}
+.webcraft-free-button {
+  cursor: move !important;
+  touch-action: none;
+  -webkit-user-drag: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+a, button { -webkit-user-drag: none; }`;
+
+          try {
+            canvasDoc.documentElement.classList.add('webcraft-canvas-html');
+          } catch (e) {}
+
           ensureMobileCssBlock();
           configureEditorComponents();
           setupCanvasDragAndDrop();
           setupContextMenu();
           setupFreeButtonDragging();
           setupSectionDragging();
+
           setTimeout(() => {
             setupAnimationsInCanvas();
             applyMobileStylesInCanvas();
@@ -5154,22 +4379,74 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
             renderSmartLayers();
             renderFriendlySections();
             refreshSectionDragHandles();
+            /* ★ Run reveal walker multiple times to catch late-rendering nodes */
+            forceCanvasReveal();
+            setTimeout(forceCanvasReveal, 400);
+            setTimeout(forceCanvasReveal, 1200);
           }, 120);
+
+          /* ★ Only apply detected background if the canvas body currently
+              has NO background — never override an existing site bg. */
           detectConceptBackground(currentHtml).then(bg => {
             if (!bg) return;
             try {
-              const cd = grapesEditor.Canvas?.getDocument?.();
-              if (cd) { cd.documentElement.style.setProperty('background', bg); cd.body.style.setProperty('background', bg); }
+              const cd = getStudioCanvasDocument() || grapesEditor.Canvas?.getDocument?.();
+              if (!cd) return;
+              const win = cd.defaultView;
+              const bodyBg = win.getComputedStyle(cd.body).backgroundColor;
+              const htmlBg = win.getComputedStyle(cd.documentElement).backgroundColor;
+              const isTransparent = (v) => !v || v === 'transparent' || v === 'rgba(0, 0, 0, 0)';
+              if (isTransparent(bodyBg) && isTransparent(htmlBg)) {
+                cd.body.style.setProperty('background', bg);
+                cd.documentElement.style.setProperty('background', bg);
+              }
             } catch (e) {}
           });
-        } catch (e) { console.error('[studio] injectStyles', e); }
+        } catch (e) {
+          console.error('[studio] injectStyles', e);
+        }
       };
-      injectStyles();
+
+      lastStudioStyleInjector = injectStyles;
+      injectStyles(frameEvt);
+
+      (function scheduleCanvasCheck(attempt) {
+        setTimeout(() => {
+          try {
+            const canvasDoc = grapesEditor.Canvas?.getDocument?.();
+            if (!canvasDoc || !canvasDoc.body) {
+              if (attempt < 8) scheduleCanvasCheck(attempt + 1);
+              return;
+            }
+            const contentNodes = canvasDoc.body.querySelectorAll(
+              'header, nav, main, section, article, aside, footer, form, div, h1, h2, h3, p, img, a, button'
+            );
+            if (!contentNodes.length && attempt < 8) {
+              console.warn('[studio] canvas has no rendered content; retrying…', attempt + 1);
+              try { grapesEditor.setComponents(finalBodyHtml); } catch (e) {}
+              injectStyles();
+              scheduleCanvasCheck(attempt + 1);
+              return;
+            }
+            if (contentNodes.length) {
+              configureEditorComponents();
+              renderSmartLayers();
+              renderFriendlySections();
+              /* ★ Final reveal pass after content is confirmed present */
+              forceCanvasReveal();
+            }
+          } catch (e) {
+            if (attempt < 8) scheduleCanvasCheck(attempt + 1);
+          }
+        }, 120 + (attempt * 100));
+      })(0);
     }
 
     function syncCanvasToHtml() {
       if (!grapesEditor) return;
-      try { getCanvasBody()?.querySelectorAll('.webcraft-section-handle,.webcraft-drop-line,#wc-lang-switcher').forEach(el => el.remove()); } catch (e) {}
+      try {
+        getCanvasBody()?.querySelectorAll('.webcraft-section-handle,.webcraft-drop-line,#wc-lang-switcher').forEach(el => el.remove());
+      } catch (e) {}
       const gjsHtml = grapesEditor.getHtml();
       const gjsCss = grapesEditor.getCss() || '';
       const parser = new DOMParser();
@@ -5192,7 +4469,9 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         }
       } catch (e) {}
       let masterCss = '';
-      doc.querySelectorAll('style').forEach(s => { if (s.id !== 'webcraft-master-css' && s.id !== 'webcraft-mobile-css') masterCss += s.innerHTML + '\n'; });
+      doc.querySelectorAll('style').forEach(s => {
+        if (s.id !== 'webcraft-master-css' && s.id !== 'webcraft-mobile-css') masterCss += s.innerHTML + '\n';
+      });
       let finalCss = masterCss.trim();
       if (gjsCss && gjsCss.trim()) {
         const cleaned = gjsCss.replace(/:root\s*\{[^}]*\}/gi, '').trim();
@@ -5202,8 +4481,11 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       finalCss += '\n\n/* Mobile Overrides */\n' + generateMobileCss();
       const langSwitcherHtml = generateLangSwitcherHtml();
       const scripts = [];
-      doc.querySelectorAll('script').forEach(s => { if (s.id !== 'wc-animation-runtime') scripts.push(s.outerHTML); });
-      const links = []; doc.querySelectorAll('link').forEach(l => links.push(l.outerHTML));
+      doc.querySelectorAll('script').forEach(s => {
+        if (s.id !== 'wc-animation-runtime') scripts.push(s.outerHTML);
+      });
+      const links = [];
+      doc.querySelectorAll('link').forEach(l => links.push(l.outerHTML));
       const title = doc.querySelector('title')?.innerText || (projectData?.bizName || 'Website');
       currentHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -5243,50 +4525,95 @@ ${WC_ANIMATION_RUNTIME}
           let target = e.target;
           let comp = componentFromElement(target);
           if (!comp) {
-            while (!comp && target && target.parentElement) { target = target.parentElement; comp = componentFromElement(target); }
+            while (!comp && target && target.parentElement) {
+              target = target.parentElement;
+              comp = componentFromElement(target);
+            }
           }
-          if (comp) { ctxTargetComponent = comp; grapesEditor.select(comp); showContextMenu(e.clientX, e.clientY, comp); }
-          else hideContextMenu();
+          if (comp) {
+            ctxTargetComponent = comp;
+            grapesEditor.select(comp);
+            showContextMenu(e.clientX, e.clientY, comp);
+          } else hideContextMenu();
         });
       } catch (e) {}
     }
 
     function showContextMenu(x, y, comp) {
-      const menu = document.getElementById('custom-context-menu'); if (!menu) return;
-      const linkItem = document.getElementById('ctx-link-item'), imageItem = document.getElementById('ctx-image-item'), cropItem = document.getElementById('ctx-crop-item');
+      const menu = document.getElementById('custom-context-menu');
+      if (!menu) return;
+      const linkItem = document.getElementById('ctx-link-item'),
+        imageItem = document.getElementById('ctx-image-item'),
+        cropItem = document.getElementById('ctx-crop-item');
       const tag = (comp.get('tagName') || '').toLowerCase();
       if (linkItem) linkItem.style.display = (tag === 'a' || tag === 'button') ? 'flex' : 'none';
       if (imageItem) imageItem.style.display = tag === 'img' ? 'flex' : 'none';
       if (cropItem) cropItem.style.display = tag === 'img' ? 'flex' : 'none';
-      menu.style.display = 'flex'; menu.style.left = x + 'px'; menu.style.top = y + 'px';
+      menu.style.display = 'flex';
+      menu.style.left = x + 'px';
+      menu.style.top = y + 'px';
       const rect = menu.getBoundingClientRect();
       if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
       if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
     }
 
-    function hideContextMenu() { const menu = document.getElementById('custom-context-menu'); if (menu) menu.style.display = 'none'; }
+    function hideContextMenu() {
+      const menu = document.getElementById('custom-context-menu');
+      if (menu) menu.style.display = 'none';
+    }
     window.addEventListener('click', hideContextMenu);
     window.addEventListener('scroll', hideContextMenu);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideContextMenu(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') hideContextMenu();
+    });
 
     function ctxEditSelected() {
       hideContextMenu();
       if (ctxTargetComponent && isButtonLike(ctxTargetComponent)) openButtonEditor(ctxTargetComponent);
-      else if (selectedComponent) { switchDrawerTab('styles'); showToast('Use the Styles panel to edit'); }
+      else if (selectedComponent) {
+        switchDrawerTab('styles');
+        showToast('Use the Styles panel to edit');
+      }
     }
 
     function ctxEditText() {
-      hideContextMenu(); if (!ctxTargetComponent) return;
-      const el = ctxTargetComponent.getEl && ctxTargetComponent.getEl(); if (!el) return;
-      el.setAttribute('contenteditable', 'true'); el.focus();
+      hideContextMenu();
+      if (!ctxTargetComponent) return;
+      const el = ctxTargetComponent.getEl && ctxTargetComponent.getEl();
+      if (!el) return;
+      el.setAttribute('contenteditable', 'true');
+      el.focus();
       showToast('✍️ Type to edit — click away when done');
-      const onBlur = () => { el.removeAttribute('contenteditable'); ctxTargetComponent.set('content', el.innerHTML); el.removeEventListener('blur', onBlur); };
+      const onBlur = () => {
+        el.removeAttribute('contenteditable');
+        ctxTargetComponent.set('content', el.innerHTML);
+        el.removeEventListener('blur', onBlur);
+      };
       el.addEventListener('blur', onBlur);
     }
 
-    function ctxCustomizeSection() { hideContextMenu(); if (!ctxTargetComponent) return; grapesEditor.select(ctxTargetComponent); openSectionEditor(ctxTargetComponent); }
-    function ctxEditSectionContent() { hideContextMenu(); if (!ctxTargetComponent) return; grapesEditor.select(ctxTargetComponent); setTimeout(openContentEditorForSelectedSection, 50); }
-    function ctxAnimate() { hideContextMenu(); if (!ctxTargetComponent) return; grapesEditor.select(ctxTargetComponent); switchDrawerTab('anim'); showToast('🎬 Pick an animation'); }
+    function ctxCustomizeSection() {
+      hideContextMenu();
+      if (!ctxTargetComponent) return;
+      grapesEditor.select(ctxTargetComponent);
+      openSectionEditor(ctxTargetComponent);
+    }
+
+    function ctxEditSectionContent() {
+      hideContextMenu();
+      if (!ctxTargetComponent) return;
+      grapesEditor.select(ctxTargetComponent);
+      setTimeout(openContentEditorForSelectedSection, 50);
+    }
+
+    function ctxAnimate() {
+      hideContextMenu();
+      if (!ctxTargetComponent) return;
+      grapesEditor.select(ctxTargetComponent);
+      switchDrawerTab('anim');
+      showToast('🎬 Pick an animation');
+    }
+
     function ctxAskAiToEdit() {
       hideContextMenu();
       if (!ctxTargetComponent) return;
@@ -5300,19 +4627,65 @@ ${WC_ANIMATION_RUNTIME}
       }
       showToast(`✦ Selected <${tag.toUpperCase()}> for AI edit`);
     }
-    function ctxCropImage() { hideContextMenu(); if (!ctxTargetComponent || (ctxTargetComponent.get('tagName') || '').toLowerCase() !== 'img') return; openCropTool(ctxTargetComponent); }
-    function ctxEditImage() { hideContextMenu(); if (!ctxTargetComponent || (ctxTargetComponent.get('tagName') || '').toLowerCase() !== 'img') return; openImageEditor(ctxTargetComponent); }
-    function ctxEditLink() { hideContextMenu(); if (!ctxTargetComponent) return; openButtonEditor(ctxTargetComponent); setTimeout(() => switchBtnEditorTab('link'), 100); }
-    function ctxDuplicate() { hideContextMenu(); if (!ctxTargetComponent) return; const clone = ctxTargetComponent.clone(); ctxTargetComponent.parent().append(clone); showToast('📋 Duplicated'); renderSmartLayers(); }
-    function ctxBringForward() { hideContextMenu(); if (!ctxTargetComponent) return; ctxTargetComponent.set('style', Object.assign({}, ctxTargetComponent.getStyle(), { 'z-index': '10', 'position': 'relative' })); showToast('⬆️ Brought forward'); }
-    function ctxSendBackward() { hideContextMenu(); if (!ctxTargetComponent) return; ctxTargetComponent.set('style', Object.assign({}, ctxTargetComponent.getStyle(), { 'z-index': '1', 'position': 'relative' })); showToast('⬇️ Sent backward'); }
-    function ctxDelete() { hideContextMenu(); if (!ctxTargetComponent) return; if (confirm('Delete this element?')) { ctxTargetComponent.remove(); showToast('🗑️ Deleted'); renderSmartLayers(); } }
+
+    function ctxCropImage() {
+      hideContextMenu();
+      if (!ctxTargetComponent || (ctxTargetComponent.get('tagName') || '').toLowerCase() !== 'img') return;
+      openCropTool(ctxTargetComponent);
+    }
+
+    function ctxEditImage() {
+      hideContextMenu();
+      if (!ctxTargetComponent || (ctxTargetComponent.get('tagName') || '').toLowerCase() !== 'img') return;
+      openImageEditor(ctxTargetComponent);
+    }
+
+    function ctxEditLink() {
+      hideContextMenu();
+      if (!ctxTargetComponent) return;
+      openButtonEditor(ctxTargetComponent);
+      setTimeout(() => switchBtnEditorTab('link'), 100);
+    }
+
+    function ctxDuplicate() {
+      hideContextMenu();
+      if (!ctxTargetComponent) return;
+      const clone = ctxTargetComponent.clone();
+      ctxTargetComponent.parent().append(clone);
+      showToast('📋 Duplicated');
+      renderSmartLayers();
+    }
+
+    function ctxBringForward() {
+      hideContextMenu();
+      if (!ctxTargetComponent) return;
+      ctxTargetComponent.set('style', Object.assign({}, ctxTargetComponent.getStyle(), { 'z-index': '10', 'position': 'relative' }));
+      showToast('⬆️ Brought forward');
+    }
+
+    function ctxSendBackward() {
+      hideContextMenu();
+      if (!ctxTargetComponent) return;
+      ctxTargetComponent.set('style', Object.assign({}, ctxTargetComponent.getStyle(), { 'z-index': '1', 'position': 'relative' }));
+      showToast('⬇️ Sent backward');
+    }
+
+    function ctxDelete() {
+      hideContextMenu();
+      if (!ctxTargetComponent) return;
+      if (confirm('Delete this element?')) {
+        ctxTargetComponent.remove();
+        showToast('🗑️ Deleted');
+        renderSmartLayers();
+      }
+    }
 
     /* ══════════════ BUTTON EDITOR ══════════════ */
     function openButtonEditor(comp) {
       if (!comp) return;
       editingButton = comp;
-      const attrs = comp.getAttributes() || {}, style = comp.getStyle() || {};
+      const attrs = comp.getAttributes() || {},
+        style = comp.getStyle() || {};
       const el = comp.getEl && comp.getEl();
       const currentText = el ? (el.innerText || el.textContent || '') : (comp.get('content') || '');
       document.getElementById('be-text').value = currentText.trim();
@@ -5322,13 +4695,22 @@ ${WC_ANIMATION_RUNTIME}
       const txtColor = style.color || '#ffffff';
       const bgHex = normalizeHex(bgColor) || '#6366f1';
       const txtHex = normalizeHex(txtColor) || '#ffffff';
-      document.getElementById('be-bg-color').value = bgHex; document.getElementById('be-bg-hex').value = bgHex.toUpperCase();
-      document.getElementById('be-text-color').value = txtHex; document.getElementById('be-text-hex').value = txtHex.toUpperCase();
-      const fs = parseInt(style['font-size']) || 15, pad = parseInt(style['padding-left']) || parseInt(style.padding) || 32, rad = parseInt(style['border-radius']) || 999;
-      document.getElementById('be-font-size').value = fs; document.getElementById('be-font-size-val').textContent = fs + 'px';
-      document.getElementById('be-padding').value = pad; document.getElementById('be-padding-val').textContent = pad + 'px';
-      document.getElementById('be-radius').value = rad; document.getElementById('be-radius-val').textContent = rad + 'px';
-      updatePreview(); renderSectionLinkPresets(); switchBtnEditorTab('content');
+      document.getElementById('be-bg-color').value = bgHex;
+      document.getElementById('be-bg-hex').value = bgHex.toUpperCase();
+      document.getElementById('be-text-color').value = txtHex;
+      document.getElementById('be-text-hex').value = txtHex.toUpperCase();
+      const fs = parseInt(style['font-size']) || 15,
+        pad = parseInt(style['padding-left']) || parseInt(style.padding) || 32,
+        rad = parseInt(style['border-radius']) || 999;
+      document.getElementById('be-font-size').value = fs;
+      document.getElementById('be-font-size-val').textContent = fs + 'px';
+      document.getElementById('be-padding').value = pad;
+      document.getElementById('be-padding-val').textContent = pad + 'px';
+      document.getElementById('be-radius').value = rad;
+      document.getElementById('be-radius-val').textContent = rad + 'px';
+      updatePreview();
+      renderSectionLinkPresets();
+      switchBtnEditorTab('content');
       document.getElementById('button-editor-modal').classList.add('active');
     }
 
@@ -5351,10 +4733,13 @@ ${WC_ANIMATION_RUNTIME}
 
     function openImageEditor(comp) {
       editingImage = comp;
-      const attrs = comp.getAttributes ? (comp.getAttributes() || {}) : {}, style = comp.getStyle ? (comp.getStyle() || {}) : {}, el = comp.getEl && comp.getEl();
+      const attrs = comp.getAttributes ? (comp.getAttributes() || {}) : {},
+        style = comp.getStyle ? (comp.getStyle() || {}) : {},
+        el = comp.getEl && comp.getEl();
       document.getElementById('ie-src').value = attrs.src || (el ? el.src : '') || '';
       document.getElementById('ie-alt').value = attrs.alt || '';
-      const w = parseCssSize(style.width || (el?.style?.width) || '100%', 'px'), h = parseCssSize(style.height || (el?.style?.height) || 'auto', 'px');
+      const w = parseCssSize(style.width || (el?.style?.width) || '100%', 'px'),
+        h = parseCssSize(style.height || (el?.style?.height) || 'auto', 'px');
       document.getElementById('ie-width-value').value = w.value || '100';
       document.getElementById('ie-width-unit').value = ['px', 'cm', 'in', '%', 'auto'].includes(w.unit) ? w.unit : 'px';
       document.getElementById('ie-height-value').value = h.value || '';
@@ -5365,35 +4750,76 @@ ${WC_ANIMATION_RUNTIME}
       document.getElementById('image-editor-modal').classList.add('active');
     }
 
-    function closeImageEditor() { document.getElementById('image-editor-modal').classList.remove('active'); editingImage = null; }
-
-    function previewImageEditor() {
-      const preview = document.getElementById('ie-preview'); if (!preview) return;
-      const src = document.getElementById('ie-src')?.value || '', width = composeCssSize('ie-width-value', 'ie-width-unit', 'auto'), height = composeCssSize('ie-height-value', 'ie-height-unit', 'auto');
-      preview.src = src; preview.style.width = width; preview.style.height = height;
-      preview.style.objectFit = document.getElementById('ie-fit')?.value || 'cover';
-      preview.style.maxWidth = '100%'; preview.style.maxHeight = '220px';
+    function closeImageEditor() {
+      document.getElementById('image-editor-modal').classList.remove('active');
+      editingImage = null;
     }
 
-    function replaceImageFromFile(file) { if (!file) return; const reader = new FileReader(); reader.onload = e => { document.getElementById('ie-src').value = e.target.result; previewImageEditor(); }; reader.readAsDataURL(file); }
+    function previewImageEditor() {
+      const preview = document.getElementById('ie-preview');
+      if (!preview) return;
+      const src = document.getElementById('ie-src')?.value || '',
+        width = composeCssSize('ie-width-value', 'ie-width-unit', 'auto'),
+        height = composeCssSize('ie-height-value', 'ie-height-unit', 'auto');
+      preview.src = src;
+      preview.style.width = width;
+      preview.style.height = height;
+      preview.style.objectFit = document.getElementById('ie-fit')?.value || 'cover';
+      preview.style.maxWidth = '100%';
+      preview.style.maxHeight = '220px';
+    }
+
+    function replaceImageFromFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById('ie-src').value = e.target.result;
+        previewImageEditor();
+      };
+      reader.readAsDataURL(file);
+    }
 
     function applyImageEditor() {
       if (!editingImage) return;
-      const src = document.getElementById('ie-src').value.trim(), alt = document.getElementById('ie-alt').value.trim();
+      const src = document.getElementById('ie-src').value.trim(),
+        alt = document.getElementById('ie-alt').value.trim();
       const width = composeCssSize('ie-width-value', 'ie-width-unit', 'auto');
       const height = composeCssSize('ie-height-value', 'ie-height-unit', 'auto');
       const radius = parseInt(document.getElementById('ie-radius').value, 10);
       const fit = document.getElementById('ie-fit').value || 'cover';
       if (src) editingImage.setAttributes(Object.assign({}, editingImage.getAttributes(), { src, alt }));
-      editingImage.addStyle({ width, height, 'max-width': 'none', 'box-sizing': 'border-box', 'object-fit': fit, 'border-radius': (Number.isFinite(radius) ? radius : 16) + 'px', display: 'block' });
+      editingImage.addStyle({
+        width, height,
+        'max-width': 'none',
+        'box-sizing': 'border-box',
+        'object-fit': fit,
+        'border-radius': (Number.isFinite(radius) ? radius : 16) + 'px',
+        display: 'block'
+      });
       editingImage.set({ draggable: true, resizable: true, stylable: true });
-      renderSmartLayers(); showToast(`🖼️ Image updated`); closeImageEditor();
+      renderSmartLayers();
+      showToast(`🖼️ Image updated`);
+      closeImageEditor();
     }
 
-    function openCropFromImageEditor() { if (!editingImage) { showToast('Open an image first'); return; } closeImageEditor(); openCropTool(editingImage); }
+    function openCropFromImageEditor() {
+      if (!editingImage) {
+        showToast('Open an image first');
+        return;
+      }
+      closeImageEditor();
+      openCropTool(editingImage);
+    }
 
-    function closeButtonEditor() { document.getElementById('button-editor-modal').classList.remove('active'); editingButton = null; }
-    function finishButtonEditor() { showToast('✓ Button updated'); closeButtonEditor(); }
+    function closeButtonEditor() {
+      document.getElementById('button-editor-modal').classList.remove('active');
+      editingButton = null;
+    }
+
+    function finishButtonEditor() {
+      showToast('✓ Button updated');
+      closeButtonEditor();
+    }
 
     function switchBtnEditorTab(tab) {
       ['content', 'link', 'style'].forEach(t => {
@@ -5413,8 +4839,10 @@ ${WC_ANIMATION_RUNTIME}
 
     function updatePreview() {
       if (!editingButton) return;
-      const el = editingButton.getEl && editingButton.getEl(), style = editingButton.getStyle() || {};
-      const preview = document.getElementById('be-preview'); if (!preview) return;
+      const el = editingButton.getEl && editingButton.getEl(),
+        style = editingButton.getStyle() || {};
+      const preview = document.getElementById('be-preview');
+      if (!preview) return;
       const txt = el ? (el.innerText || el.textContent || 'Button') : (editingButton.get('content') || 'Button');
       preview.innerText = txt.trim() || 'Button';
       preview.style.background = style['background-color'] || style.background || 'linear-gradient(135deg,#6366f1,#a855f7)';
@@ -5433,19 +4861,37 @@ ${WC_ANIMATION_RUNTIME}
       updatePreview();
     }
 
-    function applyBtnTextPreset(txt) { document.getElementById('be-text').value = txt; applyBtnText(txt); }
-    function prependBtnEmoji(emoji) { const cur = document.getElementById('be-text').value.trim(); const next = cur ? emoji + ' ' + cur : emoji + ' Get Started'; document.getElementById('be-text').value = next; applyBtnText(next); }
+    function applyBtnTextPreset(txt) {
+      document.getElementById('be-text').value = txt;
+      applyBtnText(txt);
+    }
+
+    function prependBtnEmoji(emoji) {
+      const cur = document.getElementById('be-text').value.trim();
+      const next = cur ? emoji + ' ' + cur : emoji + ' Get Started';
+      document.getElementById('be-text').value = next;
+      applyBtnText(next);
+    }
 
     function applyBtnLink(url) {
       if (!editingButton) return;
       const tag = (editingButton.get('tagName') || 'a').toLowerCase();
       const newTab = document.getElementById('be-newtab').checked;
       const cleanUrl = (url || '').trim() || '#';
-      document.querySelectorAll('#be-section-presets .be-preset-btn').forEach(b => { b.style.borderColor = ''; b.style.color = ''; b.style.background = ''; });
+      document.querySelectorAll('#be-section-presets .be-preset-btn').forEach(b => {
+        b.style.borderColor = '';
+        b.style.color = '';
+        b.style.background = '';
+      });
       if (tag === 'a') {
         const attrs = Object.assign({}, editingButton.getAttributes(), { href: cleanUrl });
-        if (newTab) { attrs.target = '_blank'; attrs.rel = 'noopener noreferrer'; }
-        else { delete attrs.target; delete attrs.rel; }
+        if (newTab) {
+          attrs.target = '_blank';
+          attrs.rel = 'noopener noreferrer';
+        } else {
+          delete attrs.target;
+          delete attrs.rel;
+        }
         editingButton.setAttributes(attrs);
       } else {
         const onclick = newTab ? `window.open('${cleanUrl.replace(/'/g,"\\'")}','_blank','noopener')` : `window.location.href='${cleanUrl.replace(/'/g,"\\'")}'`;
@@ -5455,19 +4901,29 @@ ${WC_ANIMATION_RUNTIME}
     }
 
     function applyBtnLinkPreset(url, btn) {
-      document.getElementById('be-link').value = url; applyBtnLink(url);
-      document.querySelectorAll('#be-section-presets .be-preset-btn').forEach(b => { b.style.borderColor = ''; b.style.color = ''; b.style.background = ''; });
-      btn.style.borderColor = '#10b981'; btn.style.color = '#6ee7b7'; btn.style.background = '#062b22';
+      document.getElementById('be-link').value = url;
+      applyBtnLink(url);
+      document.querySelectorAll('#be-section-presets .be-preset-btn').forEach(b => {
+        b.style.borderColor = '';
+        b.style.color = '';
+        b.style.background = '';
+      });
+      btn.style.borderColor = '#10b981';
+      btn.style.color = '#6ee7b7';
+      btn.style.background = '#062b22';
       showToast(`🔗 Button now links to ${url}`);
     }
 
-    function applyBtnTarget() { applyBtnLink(document.getElementById('be-link').value); }
+    function applyBtnTarget() {
+      applyBtnLink(document.getElementById('be-link').value);
+    }
 
     function applyBtnBg(val) {
       if (!editingButton) return;
       const hex = normalizeHex(val) || val;
       editingButton.addStyle({ 'background': hex, 'background-color': hex });
-      document.getElementById('be-bg-color').value = hex; document.getElementById('be-bg-hex').value = hex.toUpperCase();
+      document.getElementById('be-bg-color').value = hex;
+      document.getElementById('be-bg-hex').value = hex.toUpperCase();
       updatePreview();
     }
 
@@ -5475,18 +4931,42 @@ ${WC_ANIMATION_RUNTIME}
       if (!editingButton) return;
       const hex = normalizeHex(val) || val;
       editingButton.addStyle({ 'color': hex });
-      document.getElementById('be-text-color').value = hex; document.getElementById('be-text-hex').value = hex.toUpperCase();
+      document.getElementById('be-text-color').value = hex;
+      document.getElementById('be-text-hex').value = hex.toUpperCase();
       updatePreview();
     }
 
-    function applyBtnFontSize(val) { if (!editingButton) return; editingButton.addStyle({ 'font-size': val + 'px' }); document.getElementById('be-font-size-val').textContent = val + 'px'; updatePreview(); }
-    function applyBtnPadding(val) { if (!editingButton) return; editingButton.addStyle({ 'padding': val + 'px ' + val + 'px' }); document.getElementById('be-padding-val').textContent = val + 'px'; updatePreview(); }
-    function applyBtnRadius(val) { if (!editingButton) return; editingButton.addStyle({ 'border-radius': val + 'px' }); document.getElementById('be-radius-val').textContent = val + 'px'; updatePreview(); }
+    function applyBtnFontSize(val) {
+      if (!editingButton) return;
+      editingButton.addStyle({ 'font-size': val + 'px' });
+      document.getElementById('be-font-size-val').textContent = val + 'px';
+      updatePreview();
+    }
+
+    function applyBtnPadding(val) {
+      if (!editingButton) return;
+      editingButton.addStyle({ 'padding': val + 'px ' + val + 'px' });
+      document.getElementById('be-padding-val').textContent = val + 'px';
+      updatePreview();
+    }
+
+    function applyBtnRadius(val) {
+      if (!editingButton) return;
+      editingButton.addStyle({ 'border-radius': val + 'px' });
+      document.getElementById('be-radius-val').textContent = val + 'px';
+      updatePreview();
+    }
 
     function applyBtnShadow(type) {
       if (!editingButton) return;
-      const shadows = { none: 'none', soft: '0 4px 12px rgba(0,0,0,0.1)', glow: '0 0 20px rgba(99,102,241,0.5)', hard: '4px 4px 0 #0f172a' };
-      editingButton.addStyle({ 'box-shadow': shadows[type] || 'none' }); updatePreview();
+      const shadows = {
+        none: 'none',
+        soft: '0 4px 12px rgba(0,0,0,0.1)',
+        glow: '0 0 20px rgba(99,102,241,0.5)',
+        hard: '4px 4px 0 #0f172a'
+      };
+      editingButton.addStyle({ 'box-shadow': shadows[type] || 'none' });
+      updatePreview();
     }
 
     function applyBtnStylePreset(name) {
@@ -5502,26 +4982,44 @@ ${WC_ANIMATION_RUNTIME}
       Object.keys(p).forEach(k => editingButton.addStyle({ [k]: p[k] }));
       if (p.background && p.background.startsWith('#')) applyBtnBg(p.background);
       if (p.color) applyBtnTextColor(p.color);
-      updatePreview(); showToast(`🎨 Applied ${name} style`);
+      updatePreview();
+      showToast(`🎨 Applied ${name} style`);
     }
 
     /* ══════════════ SECTION PICKER ══════════════ */
-    function openSectionPicker() { document.getElementById('section-picker-modal').classList.add('active'); }
-    function closeSectionPicker() { document.getElementById('section-picker-modal').classList.remove('active'); closeSectionConfigurator(); }
+    function openSectionPicker() {
+      document.getElementById('section-picker-modal').classList.add('active');
+    }
 
-    function slugifySectionName(name) { return String(name || 'section').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'section'; }
+    function closeSectionPicker() {
+      document.getElementById('section-picker-modal').classList.remove('active');
+      closeSectionConfigurator();
+    }
+
+    function slugifySectionName(name) {
+      return String(name || 'section').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'section';
+    }
 
     function getSectionDisplayName(comp, index = 0) {
       const attrs = comp?.getAttributes?.() || {};
       if (attrs['data-section-name']) return attrs['data-section-name'];
       if (attrs.id) return String(attrs.id).replace(/[-_]+/g, ' ').replace(/\b\w/g, m => m.toUpperCase());
-      try { const h = comp.getEl?.()?.querySelector?.('h1,h2,h3,h4'); if (h?.innerText?.trim()) return h.innerText.trim().slice(0, 40); } catch (e) {}
+      try {
+        const h = comp.getEl?.()?.querySelector?.('h1,h2,h3,h4');
+        if (h?.innerText?.trim()) return h.innerText.trim().slice(0, 40);
+      } catch (e) {}
       return `Section ${index+1}`;
     }
 
     function makeUniqueSectionId(baseId, exceptComp = null) {
       const used = new Set(), root = grapesEditor?.DomComponents?.getWrapper?.();
-      const walk = c => { if (!c) return; const id = c.getAttributes?.()?.id; if (id && c !== exceptComp) used.add(id); const kids = c.components?.(); if (kids?.length) kids.forEach(walk); };
+      const walk = c => {
+        if (!c) return;
+        const id = c.getAttributes?.()?.id;
+        if (id && c !== exceptComp) used.add(id);
+        const kids = c.components?.();
+        if (kids?.length) kids.forEach(walk);
+      };
       walk(root);
       let id = baseId, n = 2;
       while (used.has(id)) id = `${baseId}-${n++}`;
@@ -5535,7 +5033,8 @@ ${WC_ANIMATION_RUNTIME}
       const attrs = Object.assign({}, comp.getAttributes?.() || {});
       const previousId = attrs.id || oldId || '';
       const uniqueId = makeUniqueSectionId(base, comp);
-      attrs.id = uniqueId; attrs['data-section-name'] = clean;
+      attrs.id = uniqueId;
+      attrs['data-section-name'] = clean;
       comp.setAttributes(attrs);
       if (previousId && previousId !== uniqueId) {
         const root = grapesEditor?.DomComponents?.getWrapper?.();
@@ -5546,17 +5045,23 @@ ${WC_ANIMATION_RUNTIME}
             const a = c.getAttributes?.() || {};
             if (a.href === `#${previousId}`) c.setAttributes(Object.assign({}, a, { href: `#${uniqueId}` }));
           }
-          const kids = c.components?.(); if (kids?.length) kids.forEach(walk);
+          const kids = c.components?.();
+          if (kids?.length) kids.forEach(walk);
         };
         walk(root);
       }
     }
 
-    function insertSectionTemplate(type) { openSectionConfigurator(type); }
+    function insertSectionTemplate(type) {
+      openSectionConfigurator(type);
+    }
 
     function openSectionConfigurator(type) {
       const rawHtml = getTemplateHTML(type);
-      if (!rawHtml) { showToast('Template not found'); return; }
+      if (!rawHtml) {
+        showToast('Template not found');
+        return;
+      }
       const parser = new DOMParser();
       const doc = parser.parseFromString(rawHtml, 'text/html');
       const section = doc.body.firstElementChild;
@@ -5569,8 +5074,12 @@ ${WC_ANIMATION_RUNTIME}
           if (!ph) return;
           el.setAttribute('data-wcf-idx', String(idx));
           el.setAttribute('data-wcf-attr', 'placeholder');
-          fields.push({ idx, tag: el.tagName.toLowerCase(), original: ph, label: `📝 Form placeholder (${el.tagName.toLowerCase()})`, attr: 'placeholder' });
-          idx++; return;
+          fields.push({
+            idx, tag: el.tagName.toLowerCase(), original: ph,
+            label: `📝 Form placeholder (${el.tagName.toLowerCase()})`, attr: 'placeholder'
+          });
+          idx++;
+          return;
         }
         if (Array.from(el.childNodes).some(n => n.nodeType === 1)) return;
         const text = el.textContent.trim();
@@ -5599,7 +5108,8 @@ ${WC_ANIMATION_RUNTIME}
     }
 
     function renderSectionConfigurator() {
-      const c = configuringSection; if (!c) return;
+      const c = configuringSection;
+      if (!c) return;
       const container = document.getElementById('section-configurator-content');
       const isEdit = c.mode === 'edit' || !!c.existingComp;
       const displayName = c.existingComp ? (c.existingComp.getAttributes?.()?.['data-section-name'] || 'Section') : c.type.charAt(0).toUpperCase() + c.type.slice(1);
@@ -5663,10 +5173,14 @@ ${WC_ANIMATION_RUNTIME}
         const field = (c.fields || []).find(f => String(f.idx) === String(i));
         if (field && field.attr === 'placeholder') el.setAttribute('placeholder', input.value);
         else el.textContent = input.value;
-        el.removeAttribute('data-wcf-idx'); el.removeAttribute('data-wcf-attr');
+        el.removeAttribute('data-wcf-idx');
+        el.removeAttribute('data-wcf-attr');
       });
       const sec = doc.body.firstElementChild;
-      if (sec && !c.existingComp) { sec.removeAttribute('id'); sec.removeAttribute('data-section-name'); }
+      if (sec && !c.existingComp) {
+        sec.removeAttribute('id');
+        sec.removeAttribute('data-section-name');
+      }
       return { html: doc.body.innerHTML, name };
     }
 
@@ -5683,23 +5197,35 @@ ${WC_ANIMATION_RUNTIME}
           const field = (configuringSection.fields || []).find(f => String(f.idx) === String(i));
           if (field && field.attr === 'placeholder') el.setAttribute('placeholder', input.value);
           else el.textContent = input.value;
-          el.removeAttribute('data-wcf-idx'); el.removeAttribute('data-wcf-attr');
+          el.removeAttribute('data-wcf-idx');
+          el.removeAttribute('data-wcf-attr');
         });
         const sec = doc.body.firstElementChild;
         const preservedId = comp.getAttributes?.()?.id || '';
         const preservedName = comp.getAttributes?.()?.['data-section-name'] || '';
-        if (sec) { if (preservedId) sec.setAttribute('id', preservedId); if (preservedName) sec.setAttribute('data-section-name', preservedName); }
+        if (sec) {
+          if (preservedId) sec.setAttribute('id', preservedId);
+          if (preservedName) sec.setAttribute('data-section-name', preservedName);
+        }
         const parent = comp.parent() || grapesEditor.DomComponents.getWrapper();
         const idx = comp.index();
         const newHtml = sec.outerHTML;
         comp.remove();
         const added = parent.append(newHtml, { at: idx });
         const newComp = Array.isArray(added) ? added[0] : added;
-        if (newComp) { configureEditorComponent(newComp); grapesEditor.select(newComp); try { newComp.getEl()?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }
+        if (newComp) {
+          configureEditorComponent(newComp);
+          grapesEditor.select(newComp);
+          try { newComp.getEl()?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+        }
         closeSectionConfigurator();
         setTimeout(() => {
-          renderFriendlySections(); renderSmartLayers(); refreshSectionDragHandles();
-          renderSectionLinkPresets(); syncCanvasToHtml(); saveProjectData();
+          renderFriendlySections();
+          renderSmartLayers();
+          refreshSectionDragHandles();
+          renderSectionLinkPresets();
+          syncCanvasToHtml();
+          saveProjectData();
           showToast('✍️ Section updated in place — saved!');
         }, 150);
         return;
@@ -5714,7 +5240,10 @@ ${WC_ANIMATION_RUNTIME}
       const doc = parser.parseFromString(configuringSection.editableHtml, 'text/html');
       doc.querySelectorAll('[data-wcf-idx]').forEach(el => el.removeAttribute('data-wcf-idx'));
       const sec = doc.body.firstElementChild;
-      if (sec) { sec.removeAttribute('id'); sec.removeAttribute('data-section-name'); }
+      if (sec) {
+        sec.removeAttribute('id');
+        sec.removeAttribute('data-section-name');
+      }
       const fallbackName = configuringSection.type.charAt(0).toUpperCase() + configuringSection.type.slice(1);
       insertSectionFromConfigurator(doc.body.innerHTML, fallbackName);
     }
@@ -5723,12 +5252,21 @@ ${WC_ANIMATION_RUNTIME}
       if (!grapesEditor) return;
       const added = grapesEditor.addComponents(html);
       const comp = Array.isArray(added) ? added[0] : added;
-      if (comp) { configureEditorComponent(comp); applySectionName(comp, name); grapesEditor.select(comp); }
-      closeSectionConfigurator(); closeSectionPicker();
+      if (comp) {
+        configureEditorComponent(comp);
+        applySectionName(comp, name);
+        grapesEditor.select(comp);
+      }
+      closeSectionConfigurator();
+      closeSectionPicker();
       showToast(`✨ "${name}" section added`);
       setTimeout(() => {
-        renderFriendlySections(); renderSmartLayers(); refreshSectionDragHandles();
-        renderSectionLinkPresets(); syncCanvasToHtml(); saveProjectData();
+        renderFriendlySections();
+        renderSmartLayers();
+        refreshSectionDragHandles();
+        renderSectionLinkPresets();
+        syncCanvasToHtml();
+        saveProjectData();
       }, 150);
     }
 
@@ -5741,7 +5279,13 @@ ${WC_ANIMATION_RUNTIME}
     /* ══════════════ SECTION EDITOR ══════════════ */
     function findSectionComponents() {
       const out = [], wrapper = grapesEditor?.DomComponents?.getWrapper?.();
-      const walk = c => { if (!c) return; const tag = (c.get('tagName') || '').toLowerCase(); if (['section', 'header', 'footer'].includes(tag)) out.push(c); const kids = c.components?.(); if (kids?.length) kids.forEach(walk); };
+      const walk = c => {
+        if (!c) return;
+        const tag = (c.get('tagName') || '').toLowerCase();
+        if (['section', 'header', 'footer'].includes(tag)) out.push(c);
+        const kids = c.components?.();
+        if (kids?.length) kids.forEach(walk);
+      };
       if (wrapper) walk(wrapper);
       return out;
     }
@@ -5751,13 +5295,23 @@ ${WC_ANIMATION_RUNTIME}
       const existing = findSectionComponents().find(c => (c.getAttributes()?.id || '').toLowerCase() === type.toLowerCase() || getSectionDisplayName(c).toLowerCase() === type.toLowerCase());
       if (existing) return openSectionEditor(existing);
       if (!grapesEditor) return;
-      const html = getTemplateHTML(type); if (!html) return showToast('Template not found');
-      const added = grapesEditor.addComponents(html), comp = Array.isArray(added) ? added[0] : added;
-      if (comp) { configureEditorComponent(comp); applySectionName(comp, type.charAt(0).toUpperCase() + type.slice(1)); grapesEditor.select(comp); openSectionEditor(comp); }
+      const html = getTemplateHTML(type);
+      if (!html) return showToast('Template not found');
+      const added = grapesEditor.addComponents(html),
+        comp = Array.isArray(added) ? added[0] : added;
+      if (comp) {
+        configureEditorComponent(comp);
+        applySectionName(comp, type.charAt(0).toUpperCase() + type.slice(1));
+        grapesEditor.select(comp);
+        openSectionEditor(comp);
+      }
     }
 
     function openSelectedSectionEditor() {
-      if (!selectedComponent) { showToast('👉 Click any element on the canvas first'); return; }
+      if (!selectedComponent) {
+        showToast('👉 Click any element on the canvas first');
+        return;
+      }
       grapesEditor.select(selectedComponent);
       openSectionEditor(selectedComponent);
     }
@@ -5767,7 +5321,8 @@ ${WC_ANIMATION_RUNTIME}
       editingSection = comp;
       const tag = (comp.get('tagName') || '').toLowerCase();
       const isSection = ['section', 'header', 'footer'].includes(tag);
-      const style = comp.getStyle?.() || {}, attrs = comp.getAttributes?.() || {};
+      const style = comp.getStyle?.() || {},
+        attrs = comp.getAttributes?.() || {};
       const innerComp = comp.components?.()?.at?.(0);
       const innerStyle = innerComp?.getStyle?.() || {};
       const bg = normalizeHex(style['background-color'] || style.background) || '#ffffff';
@@ -5858,8 +5413,9 @@ ${WC_ANIMATION_RUNTIME}
         'min-height': sectionMinHeight,
         'max-width': sectionMaxWidth
       };
-      if (isSection) { newStyle.padding = padding + 'px 1.5rem'; }
-      else if (padding > 0) newStyle.padding = padding + 'px';
+      if (isSection) {
+        newStyle.padding = padding + 'px 1.5rem';
+      } else if (padding > 0) newStyle.padding = padding + 'px';
       const font = document.getElementById('se-font').value;
       if (font) newStyle['font-family'] = font;
       const shadow = document.getElementById('se-shadow').value;
@@ -5883,14 +5439,21 @@ ${WC_ANIMATION_RUNTIME}
       const cls = document.getElementById('se-class').value.trim().split(/\s+/).filter(Boolean);
       if (editingSection.setClasses) editingSection.setClasses(cls);
       grapesEditor.select(editingSection);
-      if (isSection && !mobileEditMode) { renderFriendlySections(); renderSectionLinkPresets(); }
-      renderSmartLayers(); refreshSectionDragHandles();
+      if (isSection && !mobileEditMode) {
+        renderFriendlySections();
+        renderSectionLinkPresets();
+      }
+      renderSmartLayers();
+      refreshSectionDragHandles();
       const msg = mobileEditMode ? `📱 Mobile styles saved for <${tag.toUpperCase()}>` : (isSection ? `📑 "${document.getElementById('se-name').value.trim()}" saved` : `🎨 <${tag.toUpperCase()}> element styled`);
       showToast(msg);
       closeSectionEditor();
     }
 
-    function closeSectionEditor() { document.getElementById('section-editor-modal').classList.remove('active'); editingSection = null; }
+    function closeSectionEditor() {
+      document.getElementById('section-editor-modal').classList.remove('active');
+      editingSection = null;
+    }
 
     function livePreviewSectionName(name) {
       if (!editingSection) return;
@@ -5901,15 +5464,23 @@ ${WC_ANIMATION_RUNTIME}
     }
 
     function renderSectionLinkPresets() {
-      const box = document.getElementById('be-section-presets'); if (!box || !grapesEditor) return;
+      const box = document.getElementById('be-section-presets');
+      if (!box || !grapesEditor) return;
       const sections = findSectionComponents();
       box.innerHTML = '';
       sections.forEach((comp, i) => {
         let id = comp.getAttributes?.()?.id;
-        if (!id) { const name = getSectionDisplayName(comp, i); applySectionName(comp, name); id = comp.getAttributes?.()?.id; }
+        if (!id) {
+          const name = getSectionDisplayName(comp, i);
+          applySectionName(comp, name);
+          id = comp.getAttributes?.()?.id;
+        }
         if (!id) return;
-        const b = document.createElement('button'); b.type = 'button'; b.className = 'be-preset-btn';
-        b.textContent = getSectionDisplayName(comp, i); b.title = '#' + id;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'be-preset-btn';
+        b.textContent = getSectionDisplayName(comp, i);
+        b.title = '#' + id;
         b.onclick = () => applyBtnLinkPreset('#' + id, b);
         box.appendChild(b);
       });
@@ -5919,13 +5490,22 @@ ${WC_ANIMATION_RUNTIME}
     /* ══════════════ EDIT CONTENT ══════════════ */
     function openContentEditorForSelectedSection() {
       const comp = editingSection || selectedComponent;
-      if (!comp) { showToast('👉 Canvas la oru section-a click pannunga first'); return; }
+      if (!comp) {
+        showToast('👉 Canvas la oru section-a click pannunga first');
+        return;
+      }
       const el = comp.getEl && comp.getEl();
-      if (!el) { showToast('⚠️ Cannot read this section'); return; }
+      if (!el) {
+        showToast('⚠️ Cannot read this section');
+        return;
+      }
       const parser = new DOMParser();
       const doc = parser.parseFromString(el.outerHTML, 'text/html');
       const sec = doc.body.firstElementChild;
-      if (!sec) { showToast('⚠️ Empty section'); return; }
+      if (!sec) {
+        showToast('⚠️ Empty section');
+        return;
+      }
       const fields = [];
       let idx = 0;
       sec.querySelectorAll('h1, h2, h3, h4, h5, h6, p, a, button, span, div, li, strong, em, small, label, input, textarea').forEach(node => {
@@ -5934,8 +5514,12 @@ ${WC_ANIMATION_RUNTIME}
           if (!ph) return;
           node.setAttribute('data-wcf-idx', String(idx));
           node.setAttribute('data-wcf-attr', 'placeholder');
-          fields.push({ idx, tag: node.tagName.toLowerCase(), original: ph, label: `📝 Form placeholder (${node.tagName.toLowerCase()})`, attr: 'placeholder' });
-          idx++; return;
+          fields.push({
+            idx, tag: node.tagName.toLowerCase(), original: ph,
+            label: `📝 Form placeholder (${node.tagName.toLowerCase()})`, attr: 'placeholder'
+          });
+          idx++;
+          return;
         }
         if (Array.from(node.childNodes).some(n => n.nodeType === 1)) return;
         const text = node.textContent.trim();
@@ -5958,7 +5542,13 @@ ${WC_ANIMATION_RUNTIME}
         fields.push({ idx, tag: t, original: text, label: `${label} · ${sameTagCount}`, attr: 'text' });
         idx++;
       });
-      configuringSection = { type: 'content-edit', mode: 'edit', editableHtml: sec.outerHTML, fields, existingComp: comp };
+      configuringSection = {
+        type: 'content-edit',
+        mode: 'edit',
+        editableHtml: sec.outerHTML,
+        fields,
+        existingComp: comp
+      };
       renderSectionConfigurator();
       document.getElementById('section-editor-modal')?.classList.remove('active');
       document.getElementById('section-configurator-modal').classList.add('active');
@@ -5994,13 +5584,25 @@ ${WC_ANIMATION_RUNTIME}
         outline: 'display:inline-block;padding:0.9rem 2rem;border-radius:999px;border:1.5px solid #cbd5e1;color:#334155;font-weight:600;text-decoration:none;background:transparent;',
         whatsapp: 'display:inline-flex;align-items:center;gap:0.5rem;background:#25D366;color:#fff;padding:0.85rem 1.8rem;border-radius:999px;font-weight:700;text-decoration:none;box-shadow:0 8px 25px rgba(37,211,102,0.4);'
       };
-      const labels = { primary: 'Get Started →', outline: 'Learn More', whatsapp: '💬 Chat on WhatsApp' };
-      const clsMap = { primary: 'btn-primary', outline: 'btn-outline', whatsapp: 'btn-whatsapp' };
+      const labels = {
+        primary: 'Get Started →',
+        outline: 'Learn More',
+        whatsapp: '💬 Chat on WhatsApp'
+      };
+      const clsMap = {
+        primary: 'btn-primary',
+        outline: 'btn-outline',
+        whatsapp: 'btn-whatsapp'
+      };
       const html = `<a data-webcraft-control="button" href="#contact" class="${clsMap[style]}" style="${btnStyles[style]}display:inline-block;width:max-content;position:absolute;left:24px;top:24px;margin:0;z-index:1000;">${labels[style]}</a>`;
       const wrapper = grapesEditor.DomComponents.getWrapper();
       const added = wrapper.append(html, { at: 0 });
       const btn = Array.isArray(added) ? added[0] : added;
-      if (btn) { btn.set({ draggable: false, editable: true, stylable: true, selectable: true, droppable: false }); ensureFreeButtonSetup(btn); grapesEditor.select(btn); }
+      if (btn) {
+        btn.set({ draggable: false, editable: true, stylable: true, selectable: true, droppable: false });
+        ensureFreeButtonSetup(btn);
+        grapesEditor.select(btn);
+      }
       showToast('🔘 Button added');
       renderSmartLayers();
     }
@@ -6010,7 +5612,10 @@ ${WC_ANIMATION_RUNTIME}
       currentHtml = currentHtml.replace(/--primary:\s*[^;]+;/g, `--primary: ${primary};`);
       currentHtml = currentHtml.replace(/--primary-gradient:\s*[^;]+;/g, `--primary-gradient: linear-gradient(135deg, ${primary} 0%, ${secondary} 100%);`);
       lockTheme(currentHtml, true);
-      if (projectData && projectData.designs && projectData.designs[activeConceptIndex]) { projectData.designs[activeConceptIndex].html = currentHtml; saveProjectData(); }
+      if (projectData && projectData.designs && projectData.designs[activeConceptIndex]) {
+        projectData.designs[activeConceptIndex].html = currentHtml;
+        saveProjectData();
+      }
       loadHtmlIntoStudioCanvas();
       showToast(`🎨 ${name} theme applied!`);
     }
@@ -6023,27 +5628,52 @@ ${WC_ANIMATION_RUNTIME}
       if (/body\s*\{[^}]*background/i.test(currentHtml)) currentHtml = currentHtml.replace(/(body\s*\{[^}]*background(-color)?\s*:)[^;]+;/i, `$1 ${newBg};`);
       else currentHtml = currentHtml.replace(/<style([^>]*)>/i, `<style$1>\nbody { background: ${newBg}; color: ${newTxt}; }\n`);
       lockTheme(currentHtml, true);
-      if (projectData && projectData.designs && projectData.designs[activeConceptIndex]) { projectData.designs[activeConceptIndex].html = currentHtml; saveProjectData(); }
+      if (projectData && projectData.designs && projectData.designs[activeConceptIndex]) {
+        projectData.designs[activeConceptIndex].html = currentHtml;
+        saveProjectData();
+      }
       loadHtmlIntoStudioCanvas();
       showToast(`🌓 Switched to ${isDark?'light':'dark'} mode`);
     }
 
     function renderFriendlySections() {
-      const container = document.getElementById('friendly-sections-list'); if (!container || !grapesEditor) return;
+      const container = document.getElementById('friendly-sections-list');
+      if (!container || !grapesEditor) return;
       const sections = findSectionComponents();
-      if (!sections.length) { container.innerHTML = '<div style="font-size:0.72rem;color:#64748b;text-align:center;padding:0.75rem;">No sections yet.</div>'; return; }
+      if (!sections.length) {
+        container.innerHTML = '<div style="font-size:0.72rem;color:#64748b;text-align:center;padding:0.75rem;">No sections yet.</div>';
+        return;
+      }
       container.innerHTML = '';
       sections.forEach((comp, i) => {
         const tag = (comp.get('tagName') || 'section').toLowerCase();
         const name = getSectionDisplayName(comp, i);
         const attrs = comp.getAttributes?.() || {};
         const id = attrs.id || '';
-        const item = document.createElement('div'); item.className = 'friendly-section-item';
+        const item = document.createElement('div');
+        item.className = 'friendly-section-item';
         item.innerHTML = `<div class="friendly-section-item-left"><span class="sec-tag">${tag.toUpperCase()}</span><span class="sec-name" title="#${escapeHtml(id)}">${escapeHtml(name)}</span></div><div style="display:flex;gap:0.25rem;flex-shrink:0"><button class="sec-jump" title="Scroll to">Go →</button><button class="sec-jump gold" title="Customize section">🎨</button></div>`;
-        item.onclick = ev => { if (ev.target.closest('button')) return; try { grapesEditor.select(comp); const el = comp.getEl(); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} };
+        item.onclick = ev => {
+          if (ev.target.closest('button')) return;
+          try {
+            grapesEditor.select(comp);
+            const el = comp.getEl();
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } catch (e) {}
+        };
         const buttons = item.querySelectorAll('button');
-        buttons[0].onclick = ev => { ev.stopPropagation(); try { grapesEditor.select(comp); const el = comp.getEl(); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} };
-        buttons[1].onclick = ev => { ev.stopPropagation(); openSectionEditor(comp); };
+        buttons[0].onclick = ev => {
+          ev.stopPropagation();
+          try {
+            grapesEditor.select(comp);
+            const el = comp.getEl();
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } catch (e) {}
+        };
+        buttons[1].onclick = ev => {
+          ev.stopPropagation();
+          openSectionEditor(comp);
+        };
         container.appendChild(item);
       });
       renderSectionLinkPresets();
@@ -6058,16 +5688,30 @@ ${WC_ANIMATION_RUNTIME}
       if (mode === 'smart') renderSmartLayers();
     }
 
-    function refreshSmartLayers() { renderSmartLayers(); renderFriendlySections(); showToast('↺ Refreshed'); }
+    function refreshSmartLayers() {
+      renderSmartLayers();
+      renderFriendlySections();
+      showToast('↺ Refreshed');
+    }
 
     function renderSmartLayers() {
-      const container = document.getElementById('smart-layers-list'); if (!container || !grapesEditor) return;
+      const container = document.getElementById('smart-layers-list');
+      if (!container || !grapesEditor) return;
       container.innerHTML = '';
-      const wrapper = grapesEditor.DomComponents?.getWrapper(); if (!wrapper) return;
+      const wrapper = grapesEditor.DomComponents?.getWrapper();
+      if (!wrapper) return;
       const list = [];
-      const walk = (c) => { const t = (c.get('tagName') || '').toLowerCase(); if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'button', 'span', 'img', 'section'].includes(t)) list.push(c); const k = c.components(); if (k && k.length) k.forEach(walk); };
+      const walk = (c) => {
+        const t = (c.get('tagName') || '').toLowerCase();
+        if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'button', 'span', 'img', 'section'].includes(t)) list.push(c);
+        const k = c.components();
+        if (k && k.length) k.forEach(walk);
+      };
       walk(wrapper);
-      if (!list.length) { container.innerHTML = '<div style="font-size:0.75rem;color:#64748b;text-align:center;padding:1rem;">No elements found.</div>'; return; }
+      if (!list.length) {
+        container.innerHTML = '<div style="font-size:0.75rem;color:#64748b;text-align:center;padding:1rem;">No elements found.</div>';
+        return;
+      }
 
       list.forEach((comp, idx) => {
         const tag = (comp.get('tagName') || 'div').toLowerCase();
@@ -6109,9 +5753,27 @@ ${WC_ANIMATION_RUNTIME}
       window._layerComponents = list;
     }
 
-    function quickEditButton(idx) { if (!window._layerComponents || !window._layerComponents[idx]) return; const comp = window._layerComponents[idx]; grapesEditor.select(comp); openButtonEditor(comp); }
-    function selectLayerComponent(i) { if (!window._layerComponents || !window._layerComponents[i]) return; grapesEditor.select(window._layerComponents[i]); const el = window._layerComponents[i].getEl(); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-    function updateLayerText(i, txt) { if (!window._layerComponents || !window._layerComponents[i]) return; const c = window._layerComponents[i]; c.set('content', txt); const el = c.getEl(); if (el) el.innerText = txt; }
+    function quickEditButton(idx) {
+      if (!window._layerComponents || !window._layerComponents[idx]) return;
+      const comp = window._layerComponents[idx];
+      grapesEditor.select(comp);
+      openButtonEditor(comp);
+    }
+
+    function selectLayerComponent(i) {
+      if (!window._layerComponents || !window._layerComponents[i]) return;
+      grapesEditor.select(window._layerComponents[i]);
+      const el = window._layerComponents[i].getEl();
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function updateLayerText(i, txt) {
+      if (!window._layerComponents || !window._layerComponents[i]) return;
+      const c = window._layerComponents[i];
+      c.set('content', txt);
+      const el = c.getEl();
+      if (el) el.innerText = txt;
+    }
 
     /* ══════════════ DRAWER TABS ══════════════ */
     function switchDrawerTab(tab) {
@@ -6122,21 +5784,49 @@ ${WC_ANIMATION_RUNTIME}
         if (el) el.style.display = (t === tab) ? 'block' : 'none';
         if (rail) rail.classList.toggle('active', t === tab);
       });
-      const titles = { blocks: 'Elements & Blocks', uploads: 'Uploads & Stock Photos', text: 'Typography Presets', anim: '🎬 Animation Effects', lang: '🌐 Multi-Language', styles: 'Style Inspector', traits: 'Website Settings', layers: 'Layers & Content' };
+      const titles = {
+        blocks: 'Elements & Blocks',
+        uploads: 'Uploads & Stock Photos',
+        text: 'Typography Presets',
+        anim: '🎬 Animation Effects',
+        lang: '🌐 Multi-Language',
+        styles: 'Style Inspector',
+        traits: 'Website Settings',
+        layers: 'Layers & Content'
+      };
       document.getElementById('drawer-title').textContent = titles[tab] || 'Tools';
       if (tab === 'layers') renderSmartLayers();
       if (tab === 'traits') renderFriendlySections();
-      if (tab === 'anim') { renderAnimationPresets(); if (selectedComponent) { const attrs = selectedComponent.getAttributes?.() || {}; if (attrs['data-anim']) { const card = document.querySelector(`#anim-presets-grid .anim-card[data-anim="${attrs['data-anim']}"]`); if (card) card.classList.add('active'); } } }
-      if (tab === 'lang') { renderLangChips(); renderHeaderLangSelect(); }
+      if (tab === 'anim') {
+        renderAnimationPresets();
+        if (selectedComponent) {
+          const attrs = selectedComponent.getAttributes?.() || {};
+          if (attrs['data-anim']) {
+            const card = document.querySelector(`#anim-presets-grid .anim-card[data-anim="${attrs['data-anim']}"]`);
+            if (card) card.classList.add('active');
+          }
+        }
+      }
+      if (tab === 'lang') {
+        renderLangChips();
+        renderHeaderLangSelect();
+      }
     }
-    function closeDrawer() { document.getElementById('canva-drawer').classList.add('collapsed'); document.querySelectorAll('.rail-item').forEach(r => r.classList.remove('active')); }
+
+    function closeDrawer() {
+      document.getElementById('canva-drawer').classList.add('collapsed');
+      document.querySelectorAll('.rail-item').forEach(r => r.classList.remove('active'));
+    }
 
     function renderStockPhotos(cat) {
-      const c = document.getElementById('stock-grid'); if (!c) return;
+      const c = document.getElementById('stock-grid');
+      if (!c) return;
       const items = stockPhotos[cat] || stockPhotos.business;
       c.innerHTML = '';
       items.forEach(item => {
-        const d = document.createElement('div'); d.className = 'stock-thumb'; d.setAttribute('draggable', 'true');
+        const d = document.createElement('div');
+        d.className = 'stock-thumb';
+        d.setAttribute('draggable', 'true');
         d.innerHTML = `<img src="${item.url}" loading="lazy"><div class="stock-thumb-caption">${item.caption}</div>`;
         d.ondragstart = (e) => handleImageDragStart(e, item.url, item.caption);
         d.onclick = () => handleImageClick(item.url, item.caption);
@@ -6144,7 +5834,11 @@ ${WC_ANIMATION_RUNTIME}
       });
     }
 
-    function filterStockPhotos(cat, btn) { document.querySelectorAll('#dtab-uploads .bpill').forEach(p => p.classList.remove('active')); btn.classList.add('active'); renderStockPhotos(cat); }
+    function filterStockPhotos(cat, btn) {
+      document.querySelectorAll('#dtab-uploads .bpill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      renderStockPhotos(cat);
+    }
 
     function insertTextPreset(type) {
       if (!grapesEditor) return;
@@ -6160,7 +5854,9 @@ ${WC_ANIMATION_RUNTIME}
 
     function filterBlocks(q) {
       q = q.toLowerCase().trim();
-      document.querySelectorAll('#gjs-blocks .gjs-block').forEach(b => { b.style.display = (!q || b.innerText.toLowerCase().includes(q)) ? 'flex' : 'none'; });
+      document.querySelectorAll('#gjs-blocks .gjs-block').forEach(b => {
+        b.style.display = (!q || b.innerText.toLowerCase().includes(q)) ? 'flex' : 'none';
+      });
     }
 
     function filterBlockCategory(cat, btn) {
@@ -6173,8 +5869,14 @@ ${WC_ANIMATION_RUNTIME}
     }
 
     /* ══════════════ GEMINI AI ══════════════ */
-    function toggleMagicAi() { document.getElementById('magic-ai-panel').classList.toggle('active'); }
-    function quickMagic(q) { document.getElementById('magic-input').value = q; executeMagicAi(); }
+    function toggleMagicAi() {
+      document.getElementById('magic-ai-panel').classList.toggle('active');
+    }
+
+    function quickMagic(q) {
+      document.getElementById('magic-input').value = q;
+      executeMagicAi();
+    }
 
     function buildAiStudioContext() {
       const root = grapesEditor?.DomComponents?.getWrapper?.();
@@ -6186,28 +5888,40 @@ ${WC_ANIMATION_RUNTIME}
         const style = comp.getStyle ? (comp.getStyle() || {}) : {};
         const el = comp.getEl && comp.getEl();
         nodes.push({
-          tag, id: attrs.id || '', classes: attrs.class || '',
+          tag,
+          id: attrs.id || '',
+          classes: attrs.class || '',
           text: el ? ((el.innerText || '').trim().slice(0, 140)) : '',
           section_name: attrs['data-section-name'] || '',
           src: tag === 'img' ? (attrs.src || '') : '',
           href: (tag === 'a' || tag === 'button') ? (attrs.href || '') : '',
-          style: { position: style.position || '', width: style.width || '', height: style.height || '', display: style.display || '', margin: style.margin || '' },
-          draggable: !!comp.get('draggable'), resizable: !!comp.get('resizable'),
-          anim: attrs['data-anim'] || '', mobile: attrs['data-mobile-id'] ? true : false
+          style: {
+            position: style.position || '',
+            width: style.width || '',
+            height: style.height || '',
+            display: style.display || '',
+            margin: style.margin || ''
+          },
+          draggable: !!comp.get('draggable'),
+          resizable: !!comp.get('resizable'),
+          anim: attrs['data-anim'] || '',
+          mobile: attrs['data-mobile-id'] ? true : false
         });
         const kids = comp.components && comp.components();
         if (kids && kids.length) kids.forEach(child => walk(child, depth + 1));
       };
       if (root) walk(root);
       return {
-        selected: selectedComponent ? { tag: (selectedComponent.get('tagName') || '').toLowerCase(), attributes: selectedComponent.getAttributes ? selectedComponent.getAttributes() : {}, style: selectedComponent.getStyle ? selectedComponent.getStyle() : {} } : null,
-        nodes, languages: langState.active
+        selected: selectedComponent ? {
+          tag: (selectedComponent.get('tagName') || '').toLowerCase(),
+          attributes: selectedComponent.getAttributes ? selectedComponent.getAttributes() : {},
+          style: selectedComponent.getStyle ? selectedComponent.getStyle() : {}
+        } : null,
+        nodes,
+        languages: langState.active
       };
     }
 
-    /* ══════════════════════════════════════════════════
-       PUTER.JS & SELECTED ELEMENT AI INTEGRATION
-    ══════════════════════════════════════════════════ */
     function updateAiSelectedTarget(model) {
       const banner = document.getElementById('ai-target-banner');
       const icon = document.getElementById('ai-target-icon');
@@ -6229,7 +5943,10 @@ ${WC_ANIMATION_RUNTIME}
         if (!preview) preview = tag.toUpperCase() + ' component';
 
         if (icon) icon.textContent = '🎯';
-        if (tagEl) { tagEl.style.display = 'inline-block'; tagEl.textContent = tag.toUpperCase(); }
+        if (tagEl) {
+          tagEl.style.display = 'inline-block';
+          tagEl.textContent = tag.toUpperCase();
+        }
         if (prevEl) prevEl.textContent = `"${preview}"`;
         if (clearBtn) clearBtn.style.display = 'inline-block';
         if (input) input.placeholder = `Ask AI to modify this <${tag}> (e.g. rewrite text, style, colors)...`;
@@ -6284,7 +6001,10 @@ ${WC_ANIMATION_RUNTIME}
       const user = await window.PuterService.getUser();
 
       const existing = document.getElementById('puter-account-menu');
-      if (existing) { existing.remove(); return; }
+      if (existing) {
+        existing.remove();
+        return;
+      }
 
       const menu = document.createElement('div');
       menu.id = 'puter-account-menu';
@@ -6359,7 +6079,6 @@ ${WC_ANIMATION_RUNTIME}
       showToast('Signed out of Puter');
     }
 
-    // Listen to Puter auth changes to update header
     window.addEventListener('puter-auth-changed', (e) => {
       const { user, isSignedIn } = e.detail || {};
       const dot = document.getElementById('puter-status-dot');
@@ -6387,9 +6106,6 @@ ${WC_ANIMATION_RUNTIME}
       return escaped;
     }
 
-    /* ══════════════════════════════════════════════════
-       EXECUTE MAGIC AI — Puter.js & Selected Element Editing
-    ══════════════════════════════════════════════════ */
     async function executeMagicAi() {
       const input = document.getElementById('magic-input');
       const q = input.value.trim();
@@ -6406,7 +6122,6 @@ ${WC_ANIMATION_RUNTIME}
       appendMagicChat(q, 'user');
       showMagicTyping();
 
-      // Check if an element is currently selected
       const comp = selectedComponent;
       const hasSelected = !!comp;
       let selectedPayload = null;
@@ -6423,7 +6138,6 @@ ${WC_ANIMATION_RUNTIME}
       }
 
       try {
-        // Run via PuterService (DeepSeek / Free Client-Side AI)
         const result = await window.PuterService.chatAndEdit({
           userPrompt: q,
           selectedElement: selectedPayload,
@@ -6434,13 +6148,10 @@ ${WC_ANIMATION_RUNTIME}
           }
         });
 
-        // 1. Render conversational response in chat
         appendMagicChat(formatMarkdown(result.conversation), 'ai');
 
-        // 2. Apply edits if AI modified the selected element or page
         if (result.isEdit && result.updatedHtml) {
           if (hasSelected && comp) {
-            // Replace selected element with updated HTML
             const parent = comp.parent();
             if (parent) {
               const idx = comp.index();
@@ -6462,12 +6173,10 @@ ${WC_ANIMATION_RUNTIME}
             renderSmartLayers();
             showToast('✨ Selected element updated & saved!');
           } else {
-            // Whole page or added section
             if (result.updatedHtml.includes('<html') || result.updatedHtml.includes('<!DOCTYPE')) {
               currentHtml = result.updatedHtml;
               loadHtmlIntoStudioCanvas();
             } else {
-              // Append as new section
               grapesEditor.addComponents(result.updatedHtml);
               syncCanvasToHtml();
             }
@@ -6528,30 +6237,23 @@ ${WC_ANIMATION_RUNTIME}
       }
     }
 
-    /* ══════════════ MAGIC AI CHAT RENDERING ══════════════ */
     function appendMagicChat(text, sender) {
       const log = document.getElementById('magic-chat-log');
       if (!log) return;
-
       const isUser = sender === 'user';
       const row = document.createElement('div');
       row.className = 'msg ' + (isUser ? 'user' : 'ai');
-
       const avatar = document.createElement('div');
       avatar.className = 'msg-avatar';
       avatar.textContent = isUser ? '👤' : '✦';
-
       const body = document.createElement('div');
       body.className = 'msg-body';
-
       const bubble = document.createElement('div');
       bubble.className = 'msg-bubble';
       bubble.innerHTML = text;
-
       const meta = document.createElement('div');
       meta.className = 'msg-meta';
       meta.textContent = (isUser ? 'You' : 'Gemini') + ' · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
       if (!isUser) {
         const copy = document.createElement('button');
         copy.className = 'msg-copy';
@@ -6567,7 +6269,6 @@ ${WC_ANIMATION_RUNTIME}
         };
         meta.appendChild(copy);
       }
-
       body.appendChild(bubble);
       body.appendChild(meta);
       row.appendChild(avatar);
@@ -6587,7 +6288,10 @@ ${WC_ANIMATION_RUNTIME}
       log.scrollTop = log.scrollHeight;
     }
 
-    function hideMagicTyping() { const el = document.getElementById('magic-typing'); if (el) el.remove(); }
+    function hideMagicTyping() {
+      const el = document.getElementById('magic-typing');
+      if (el) el.remove();
+    }
 
     function clearMagicChat() {
       const log = document.getElementById('magic-chat-log');
@@ -6600,44 +6304,99 @@ ${WC_ANIMATION_RUNTIME}
     function setStudioDevice(dev) {
       if (!grapesEditor) return;
       grapesEditor.setDevice(dev);
-      ['desktop', 'tablet', 'mobile'].forEach(d => { const b = document.getElementById(`dev-${d}`); if (b) b.classList.toggle('active', d.toLowerCase() === dev.toLowerCase()); });
+      ['desktop', 'tablet', 'mobile'].forEach(d => {
+        const b = document.getElementById(`dev-${d}`);
+        if (b) b.classList.toggle('active', d.toLowerCase() === dev.toLowerCase());
+      });
       setTimeout(applyMobileStylesInCanvas, 80);
     }
-    function studioUndo() { if (grapesEditor) grapesEditor.UndoManager.undo(); }
-    function studioRedo() { if (grapesEditor) grapesEditor.UndoManager.redo(); }
+
+    function studioUndo() {
+      if (grapesEditor) grapesEditor.UndoManager.undo();
+    }
+
+    function studioRedo() {
+      if (grapesEditor) grapesEditor.UndoManager.redo();
+    }
     let outlines = true;
-    function toggleStudioOutlines() { if (!grapesEditor) return; outlines = !outlines; grapesEditor.stopCommand('core:component-outline'); if (outlines) grapesEditor.runCommand('core:component-outline'); }
-    function openStudioPreview() { syncCanvasToHtml(); const blob = new Blob([currentHtml], { type: 'text/html;charset=utf-8' }); window.open(URL.createObjectURL(blob), '_blank'); }
+
+    function toggleStudioOutlines() {
+      if (!grapesEditor) return;
+      outlines = !outlines;
+      grapesEditor.stopCommand('core:component-outline');
+      if (outlines) grapesEditor.runCommand('core:component-outline');
+    }
+
+    function openStudioPreview() {
+      syncCanvasToHtml();
+      const blob = new Blob([currentHtml], { type: 'text/html;charset=utf-8' });
+      window.open(URL.createObjectURL(blob), '_blank');
+    }
 
     function toggleFullscreen() {
       fullscreenMode = !fullscreenMode;
-      const rail = document.querySelector('.canva-rail'); const drawer = document.getElementById('canva-drawer');
+      const rail = document.querySelector('.canva-rail');
+      const drawer = document.getElementById('canva-drawer');
       const btn = document.getElementById('fullscreen-btn');
-      if (fullscreenMode) { if (rail) rail.style.display = 'none'; if (drawer) drawer.style.display = 'none'; btn?.classList.add('active'); showToast('⛶ Fullscreen canvas'); }
-      else { if (rail) rail.style.display = ''; if (drawer) drawer.style.display = ''; btn?.classList.remove('active'); showToast('↩️ Sidebars restored'); }
-      setTimeout(() => { try { grapesEditor?.refresh?.(); } catch (e) {} try { window.dispatchEvent(new Event('resize')); } catch (e) {} }, 60);
+      if (fullscreenMode) {
+        if (rail) rail.style.display = 'none';
+        if (drawer) drawer.style.display = 'none';
+        btn?.classList.add('active');
+        showToast('⛶ Fullscreen canvas');
+      } else {
+        if (rail) rail.style.display = '';
+        if (drawer) drawer.style.display = '';
+        btn?.classList.remove('active');
+        showToast('↩️ Sidebars restored');
+      }
+      setTimeout(() => {
+        try { grapesEditor?.refresh?.(); } catch (e) {}
+        try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+      }, 60);
     }
 
-    function openShortcutsModal() { document.getElementById('shortcuts-modal').classList.add('active'); }
-    function closeShortcutsModal() { document.getElementById('shortcuts-modal').classList.remove('active'); }
+    function openShortcutsModal() {
+      document.getElementById('shortcuts-modal').classList.add('active');
+    }
+
+    function closeShortcutsModal() {
+      document.getElementById('shortcuts-modal').classList.remove('active');
+    }
 
     document.addEventListener('keydown', (e) => {
       const t = e.target;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); studioUndo(); }
-      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); studioRedo(); }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'm') { e.preventDefault(); toggleMobileEditMode(); }
-      if (e.key === 'Escape') { closeShortcutsModal(); hideContextMenu(); }
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        studioUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+        e.preventDefault();
+        studioRedo();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        toggleMobileEditMode();
+      }
+      if (e.key === 'Escape') {
+        closeShortcutsModal();
+        hideContextMenu();
+      }
       if (e.key === 'Delete' && selectedComponent) {
         const tag = (selectedComponent.get('tagName') || '').toLowerCase();
         if (!['section', 'header', 'footer', 'body'].includes(tag) || confirm('Delete this ' + tag + '?')) {
-          try { selectedComponent.remove(); renderSmartLayers(); showToast('🗑️ Deleted'); } catch (err) {}
+          try {
+            selectedComponent.remove();
+            renderSmartLayers();
+            showToast('🗑️ Deleted');
+          } catch (err) {}
         }
       }
     });
 
     /* ══════════════ NAVIGATION ══════════════ */
     function goBack() {
+      persistAdminAssets();
       syncCanvasToHtml();
       saveProjectData();
       saveLanguageState();
@@ -6646,6 +6405,7 @@ ${WC_ANIMATION_RUNTIME}
     }
 
     function saveAndReturnToBuilder() {
+      persistAdminAssets();
       syncCanvasToHtml();
       saveProjectData();
       saveLanguageState();
@@ -6663,6 +6423,18 @@ ${WC_ANIMATION_RUNTIME}
       t.textContent = msg;
       t.classList.add('show');
       setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function persistAdminAssets() {
+      try {
+        const raw = localStorage.getItem('webcraft_saved_project');
+        if (!raw) return;
+        const project = JSON.parse(raw);
+        const adminAssets = project.adminAssets;
+        if (adminAssets) {
+          localStorage.setItem('webcraft_admin_assets', JSON.stringify(adminAssets));
+        }
+      } catch (e) {}
     }
   </script>
 </body>

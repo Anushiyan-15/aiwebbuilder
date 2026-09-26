@@ -1,556 +1,321 @@
-/**
- * WebCraft AI — Puter.js Service
- * 
- * Provides client-side free AI Chat, Conversational Co-Pilot,
- * Selected Element In-Place Editing, and Puter Account/Credit Management
- * (Sign In, Switch Account, Sign Up, Quota limit recovery).
- */
-
-(function (window) {
+/* ═══════════════════════════════════════════════════════════════
+   assets/js/puter-service.js
+   Puter.js AI service — chat, edit, Tanglish, voice-aware prompts
+   ═══════════════════════════════════════════════════════════════ */
+window.PuterService = (function () {
   'use strict';
 
-  const PUTER_MODELS = [
-    { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat (V3)', badge: 'Recommended' },
-    { id: 'gpt-4o-mini',            name: 'OpenAI GPT-4o Mini',  badge: 'Fast' },
-    { id: 'claude-3-5-sonnet',      name: 'Claude 3.5 Sonnet',   badge: 'Smart' },
-    { id: 'gemini-2.0-flash',       name: 'Gemini 2.0 Flash',    badge: 'Quick' }
-  ];
-
-  class PuterService {
-    constructor() {
-      this.currentUser = null;
-      this.selectedModel = localStorage.getItem('webcraft_puter_model') || 'deepseek/deepseek-chat';
-      this.chatHistory = [];
-      this.initAuthListeners();
-    }
-
-    /**
-     * Ensure puter.js is loaded
-     */
-    async ensureReady() {
-      if (typeof window.puter !== 'undefined') {
-        return window.puter;
-      }
-      return new Promise((resolve, reject) => {
-        let attempts = 0;
-        const interval = setInterval(() => {
-          attempts++;
-          if (typeof window.puter !== 'undefined') {
-            clearInterval(interval);
-            resolve(window.puter);
-          } else if (attempts > 50) {
-            clearInterval(interval);
-            reject(new Error('Puter.js library (https://js.puter.com/v2/) failed to load. Please check your internet connection.'));
-          }
-        }, 100);
-      });
-    }
-
-    /**
-     * Check if user is signed in
-     */
-    async isSignedIn() {
-      try {
-        await this.ensureReady();
-        return window.puter.auth.isSignedIn();
-      } catch (e) {
-        return false;
-      }
-    }
-
-    /**
-     * Fetch currently authenticated user
-     */
-    async getUser() {
-      try {
-        await this.ensureReady();
-        if (window.puter.auth.isSignedIn()) {
-          this.currentUser = await window.puter.auth.getUser();
-          return this.currentUser;
-        }
-      } catch (e) {
-        console.warn('[PuterService] getUser failed:', e);
-      }
-      this.currentUser = null;
-      return null;
-    }
-
-    /**
-     * Prompt user to sign in
-     */
-    async signIn() {
-      await this.ensureReady();
-      try {
-        const user = await window.puter.auth.signIn();
-        this.currentUser = user || await window.puter.auth.getUser();
-        this.broadcastAuthChange();
-        return this.currentUser;
-      } catch (err) {
-        console.error('[PuterService] Sign in error:', err);
-        throw err;
-      }
-    }
-
-    /**
-     * Sign out current user
-     */
-    async signOut() {
-      await this.ensureReady();
-      try {
-        await window.puter.auth.signOut();
-        this.currentUser = null;
-        this.broadcastAuthChange();
-      } catch (err) {
-        console.warn('[PuterService] Sign out error:', err);
-      }
-    }
-
-    /**
-     * Switch account: Logs out current user and prompts sign-in popup to choose or create another account
-     */
-    async switchAccount() {
-      await this.ensureReady();
-      try {
-        await window.puter.auth.signOut();
-        this.currentUser = null;
-        this.broadcastAuthChange();
-        // Request auth with account prompt
-        const user = await window.puter.auth.signIn({ request_auth: true });
-        this.currentUser = user || await window.puter.auth.getUser();
-        this.broadcastAuthChange();
-        return this.currentUser;
-      } catch (err) {
-        console.error('[PuterService] Switch account error:', err);
-        throw err;
-      }
-    }
-
-    /**
-     * Open Puter sign-up in new tab/window
-     */
-    openSignUp() {
-      window.open('https://puter.com/signup', '_blank', 'width=600,height=700');
-    }
-
-    /**
-     * Broadcast auth state changes to UI
-     */
-    broadcastAuthChange() {
-      window.dispatchEvent(new CustomEvent('puter-auth-changed', {
-        detail: { user: this.currentUser, isSignedIn: !!this.currentUser }
-      }));
-    }
-
-    initAuthListeners() {
-      window.addEventListener('load', async () => {
-        try {
-          await this.getUser();
-          this.broadcastAuthChange();
-        } catch (e) {}
-      });
-    }
-
-    /**
-     * Detect if an error is due to credit exhaustion or quota limits
-     */
-    isQuotaOrCreditError(err) {
-      if (!err) return false;
-      const msg = (typeof err === 'string' ? err : (err.message || err.error || JSON.stringify(err))).toLowerCase();
-      const code = err.code || err.status || 0;
-      return (
-        code === 429 ||
-        code === 402 ||
-        msg.includes('quota') ||
-        msg.includes('credit') ||
-        msg.includes('limit') ||
-        msg.includes('insufficient') ||
-        msg.includes('exceeded') ||
-        msg.includes('payment') ||
-        msg.includes('billing')
-      );
-    }
-
-    /**
-     * Show Credit Limit & Switch Account Modal
-     */
-    showCreditExhaustedModal(opts = {}) {
-      let modal = document.getElementById('puter-credits-modal');
-      if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'puter-credits-modal';
-        modal.className = 'modal-overlay';
-        modal.style.cssText = `
-          position: fixed; inset: 0; z-index: 100050;
-          background: rgba(4, 7, 14, 0.85); backdrop-filter: blur(8px);
-          display: flex; align-items: center; justify-content: center;
-          padding: 1.5rem; animation: pFadeIn 0.2s ease;
-        `;
-        document.body.appendChild(modal);
-      }
-
-      modal.innerHTML = `
-        <div style="
-          background: #111726; border: 1.5px solid #312e81; border-radius: 20px;
-          max-width: 520px; width: 100%; padding: 2rem; color: #f8fafc;
-          box-shadow: 0 25px 60px -15px rgba(0,0,0,0.8), 0 0 30px rgba(99,102,241,0.25);
-          font-family: inherit; position: relative;
-        ">
-          <button type="button" onclick="document.getElementById('puter-credits-modal').style.display='none'" style="
-            position: absolute; top: 1rem; right: 1rem; background: none; border: none;
-            color: #94a3b8; font-size: 1.3rem; cursor: pointer; padding: 0.25rem 0.5rem;
-          ">✕</button>
-
-          <div style="display:flex; align-items:center; gap: 0.75rem; margin-bottom: 1rem;">
-            <div style="
-              width: 48px; height: 48px; border-radius: 12px;
-              background: linear-gradient(135deg, #f59e0b, #ef4444);
-              display: flex; align-items: center; justify-content: center;
-              font-size: 1.6rem;
-            ">⚡</div>
-            <div>
-              <h3 style="font-size: 1.25rem; font-weight: 800; color: #fff; margin: 0;">Puter AI Credits Exhausted</h3>
-              <p style="font-size: 0.8rem; color: #cbd5e1; margin: 0.15rem 0 0;">Free credit quota reached on this account</p>
-            </div>
-          </div>
-
-          <p style="font-size: 0.88rem; color: #94a3b8; line-height: 1.6; margin-bottom: 1.5rem;">
-            Your current Puter account <strong>${this.currentUser?.username ? '@' + this.currentUser.username : ''}</strong> has reached its free AI credit limit. 
-            You can <strong>switch to another Puter account</strong> or <strong>create a new free account</strong> in 30 seconds to continue editing and generating for free!
-          </p>
-
-          <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
-            <button id="p-btn-switch-account" style="
-              display: flex; align-items: center; justify-content: center; gap: 0.6rem;
-              padding: 0.85rem 1.25rem; border-radius: 10px; font-weight: 700; font-size: 0.92rem;
-              background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; border: none;
-              cursor: pointer; box-shadow: 0 4px 15px rgba(79,70,229,0.4); transition: transform 0.15s;
-            ">
-              <span>🔄</span> Switch Puter Account (Sign into another)
-            </button>
-
-            <button id="p-btn-signup-new" style="
-              display: flex; align-items: center; justify-content: center; gap: 0.6rem;
-              padding: 0.85rem 1.25rem; border-radius: 10px; font-weight: 700; font-size: 0.92rem;
-              background: #1e1b4b; border: 1.5px solid #6366f1; color: #c7d2fe;
-              cursor: pointer; transition: background 0.15s;
-            ">
-              <span>➕</span> Create New Free Puter Account
-            </button>
-
-            ${typeof window.openApiKeyModal === 'function' ? `
-            <button id="p-btn-use-gemini" style="
-              display: flex; align-items: center; justify-content: center; gap: 0.6rem;
-              padding: 0.75rem 1.25rem; border-radius: 10px; font-weight: 600; font-size: 0.85rem;
-              background: transparent; border: 1.5px solid #334155; color: #94a3b8;
-              cursor: pointer;
-            ">
-              <span>🔑</span> Use Custom Gemini API Key Instead
-            </button>` : ''}
-          </div>
-
-          <div style="font-size: 0.72rem; color: #64748b; text-align: center;">
-            Tip: Each new Puter account gets its own free AI tier with instant activation.
-          </div>
-        </div>
-      `;
-
-      modal.style.display = 'flex';
-
-      document.getElementById('p-btn-switch-account')?.addEventListener('click', async () => {
-        try {
-          modal.style.display = 'none';
-          await this.switchAccount();
-          if (opts.onSuccess) opts.onSuccess();
-        } catch (e) {
-          console.error(e);
-        }
-      });
-
-      document.getElementById('p-btn-signup-new')?.addEventListener('click', () => {
-        this.openSignUp();
-      });
-
-      document.getElementById('p-btn-use-gemini')?.addEventListener('click', () => {
-        modal.style.display = 'none';
-        if (typeof window.openApiKeyModal === 'function') {
-          window.openApiKeyModal();
-        }
-      });
-    }
-
-    /**
-     * Send AI Chat & Edit request via Puter.js
-     * 
-     * Supports:
-     * - Pure conversational chat (returns chat response)
-     * - Selected element editing (returns chat response + updated element HTML)
-     * - Whole page modification (returns chat response + updated page HTML)
-     */
-    async chatAndEdit({
-      userPrompt,
-      selectedElement = null,
-      currentHtml = '',
-      context = {},
-      onTyping = null
-    }) {
-      await this.ensureReady();
-
-      // Ensure user is signed in
-      const signedIn = await this.isSignedIn();
-      if (!signedIn) {
-        try {
-          await this.signIn();
-        } catch (err) {
-          throw new Error('Puter sign-in was cancelled. Please sign in to proceed with AI generation & editing.');
-        }
-      }
-
-      const hasSelected = !!selectedElement;
-      const selectedHtml = hasSelected ? (selectedElement.html || '') : '';
-      const selectedTag = hasSelected ? (selectedElement.tag || 'div') : '';
-
-      let systemPrompt = '';
-      let userMessage = '';
-
-      if (hasSelected) {
-        systemPrompt = `You are WebCraft AI, an elite web designer and front-end architect.
-The user is visually designing a website and has clicked and SELECTED a specific HTML element on the canvas.
-
-YOUR TASK:
-1. Converse naturally, helpfully, and professionally with the user.
-2. If the user asks for a change, edit, styling, copy change, or improvement to what they have selected, modify the selected element's HTML to fulfill their request.
-3. If the user is just asking a question, advice, or ideas, answer conversationally and do NOT provide any HTML code block.
-
-FORMAT REQUIREMENTS:
-Always structure your output with these two sections:
-
----CONVERSATION---
-[Your friendly, concise response in markdown explaining what you did or answering their question. Use bullet points or emojis if helpful.]
-
----UPDATED_HTML---
-\`\`\`html
-[Return ONLY the updated HTML for the selected element (${selectedTag}). Preserve essential classes, tags, and inline styles unless requested to change. Do NOT wrap in <html>, <body>, or extra outer sections.]
-\`\`\`
-(Note: If the user only asked a question without requesting an edit, write NONE under ---UPDATED_HTML---)`;
-
-        userMessage = `CURRENT SELECTED ELEMENT (${selectedTag}):
-${selectedHtml}
-
-USER INSTRUCTION:
-${userPrompt}`;
-      } else {
-        systemPrompt = `You are WebCraft AI, an elite web designer and front-end architect.
-The user is building a website. No single element is selected, so they are either asking a question, asking for ideas, or asking to update the entire page / add sections.
-
-YOUR TASK:
-1. Converse warmly, smartly, and helpfully with the user.
-2. If they ask to add a section, change site colors, or update the website, provide updated/new HTML or guidance.
-3. If they ask a general question, answer conversationally.
-
-FORMAT REQUIREMENTS:
----CONVERSATION---
-[Your conversational answer in markdown]
-
----UPDATED_HTML---
-[If adding a section or updating the page, provide the complete clean HTML snippet inside \`\`\`html ... \`\`\`. Otherwise, write NONE.]`;
-
-        userMessage = `WEBSITE CONTEXT:
-Business Name: ${context.bizName || 'Website'}
-Current Snippet/DOM info: ${context.summary || 'Responsive modern website'}
-
-USER INSTRUCTION:
-${userPrompt}`;
-      }
-
-      const messages = [
-        { role: 'system', content: systemPrompt },
-        ...this.chatHistory.slice(-6),
-        { role: 'user', content: userMessage }
-      ];
-
-      try {
-        if (onTyping) onTyping(true);
-
-        const modelToUse = this.selectedModel || 'deepseek/deepseek-chat';
-        console.log(`[PuterService] Calling puter.ai.chat with model: ${modelToUse}`);
-
-        const response = await window.puter.ai.chat(messages, {
-          model: modelToUse
-        });
-
-        const rawText = typeof response === 'string'
-          ? response
-          : (response?.message?.content || response?.text || '');
-
-        if (!rawText) {
-          throw new Error('Empty response received from AI.');
-        }
-
-        // Add to history
-        this.chatHistory.push({ role: 'user', content: userPrompt });
-        this.chatHistory.push({ role: 'assistant', content: rawText });
-
-        return this.parseAiResponse(rawText, hasSelected);
-      } catch (err) {
-        console.error('[PuterService] AI request error:', err);
-        if (this.isQuotaOrCreditError(err)) {
-          this.showCreditExhaustedModal();
-          throw new Error('Puter AI credit quota exceeded for this account. Please switch accounts or create a new free Puter account.');
-        }
-        throw err;
-      } finally {
-        if (onTyping) onTyping(false);
-      }
-    }
-
-    /**
-     * Parse structured AI response
-     */
-    parseAiResponse(rawText, hasSelected) {
-      let conversation = '';
-      let updatedHtml = null;
-      let isEdit = false;
-
-      if (rawText.includes('---CONVERSATION---')) {
-        const parts = rawText.split('---UPDATED_HTML---');
-        const convPart = parts[0].replace('---CONVERSATION---', '').trim();
-        conversation = convPart;
-
-        if (parts[1]) {
-          const htmlPart = parts[1].trim();
-          if (htmlPart !== 'NONE' && htmlPart.includes('```')) {
-            const match = htmlPart.match(/```(?:html)?\s*([\s\S]*?)\s*```/i);
-            if (match && match[1] && match[1].trim().length > 5) {
-              updatedHtml = match[1].trim();
-              isEdit = true;
-            }
-          }
-        }
-      } else {
-        // Fallback parsing if model did not use exact headers
-        const codeMatch = rawText.match(/```(?:html)?\s*([\s\S]*?)\s*```/i);
-        if (codeMatch && codeMatch[1]) {
-          updatedHtml = codeMatch[1].trim();
-          conversation = rawText.replace(/```(?:html)?\s*[\s\S]*?\s*```/gi, '').trim();
-          isEdit = true;
-        } else {
-          conversation = rawText;
-          isEdit = false;
-        }
-      }
-
-      if (!conversation) {
-        conversation = isEdit ? '✨ Updated as requested.' : 'Here is what I found for you.';
-      }
-
-      return {
-        conversation,
-        updatedHtml,
-        isEdit,
-        rawText
-      };
-    }
-
-    /**
-     * Generate 3 Bespoke Website Concepts using Puter AI
-     */
-    async generateConceptsWithPuter(bizData) {
-      await this.ensureReady();
-      const signedIn = await this.isSignedIn();
-      if (!signedIn) {
-        await this.signIn();
-      }
-
-      const bizName = bizData.biz_name || 'Zenith Studio';
-      const bizType = bizData.biz_type || 'Digital Agency';
-      const tagline = bizData.biz_tagline || 'Elevate your online presence';
-      const services = bizData.biz_services || 'Web Design, Strategy, Branding';
-      const color = bizData.color_palette || 'purple';
-      const style = bizData.design_style || 'modern';
-
-      const prompt = `You are an elite creative director and principal front-end engineer.
-Generate 3 distinct, beautiful, responsive, modern, production-grade landing page website concepts for this business:
-Business Name: ${bizName}
-Industry/Type: ${bizType}
-Tagline: ${tagline}
-Key Services: ${services}
-Theme Style: ${style}
-Color Scheme: ${color}
-
-REQUIREMENTS:
-1. Provide THREE completely unique concepts (Concept 1: Modern & Bold, Concept 2: Elegant & Minimal, Concept 3: Dynamic & Conversion-Focused).
-2. Each concept must be a COMPLETE, standalone, fully styled HTML page with <!DOCTYPE html>, inline <style> block, modern responsive layout, Hero with CTA button, Services, About, Testimonials/Stats, Contact form, and Footer.
-3. Separate the three concepts with exact markers:
-===CONCEPT_1_START===
-[Full HTML for Concept 1]
-===CONCEPT_1_END===
-
-===CONCEPT_2_START===
-[Full HTML for Concept 2]
-===CONCEPT_2_END===
-
-===CONCEPT_3_START===
-[Full HTML for Concept 3]
-===CONCEPT_3_END===`;
-
-      try {
-        const modelToUse = this.selectedModel || 'deepseek/deepseek-chat';
-        console.log(`[PuterService] Generating 3 concepts with ${modelToUse}...`);
-        
-        const response = await window.puter.ai.chat(prompt, {
-          model: modelToUse
-        });
-
-        const raw = typeof response === 'string' ? response : (response?.message?.content || response?.text || '');
-        
-        const extract = (startTag, endTag) => {
-          if (!raw.includes(startTag)) return null;
-          const part = raw.split(startTag)[1];
-          if (!part) return null;
-          const html = part.split(endTag)[0];
-          return html ? html.replace(/```(?:html)?/g, '').replace(/```/g, '').trim() : null;
-        };
-
-        const c1 = extract('===CONCEPT_1_START===', '===CONCEPT_1_END===');
-        const c2 = extract('===CONCEPT_2_START===', '===CONCEPT_2_END===');
-        const c3 = extract('===CONCEPT_3_START===', '===CONCEPT_3_END===');
-
-        if (c1 && c2 && c3) {
-          return [
-            { name: `${bizName} — Bold Modern`, badge: 'High Impact', description: 'Contemporary layout with rich typography and dynamic accents.', html: c1 },
-            { name: `${bizName} — Clean Minimal`, badge: 'Minimalist', description: 'Refined spacing, elegant lines, and subtle micro-interactions.', html: c2 },
-            { name: `${bizName} — Growth & Conversion`, badge: 'Conversion Pro', description: 'Conversion-driven architecture tailored for maximum client inquiries.', html: c3 }
-          ];
-        }
-
-        // If markers were missing, attempt fallback extraction
-        const blocks = raw.match(/```(?:html)?\s*([\s\S]*?)\s*```/gi);
-        if (blocks && blocks.length >= 3) {
-          return blocks.slice(0, 3).map((b, idx) => {
-            const h = b.replace(/```(?:html)?/g, '').replace(/```/g, '').trim();
-            const names = ['Modern & Bold', 'Clean Minimal', 'Conversion Pro'];
-            return {
-              name: `${bizName} — ${names[idx]}`,
-              badge: `Concept ${idx + 1}`,
-              description: `Custom generated concept #${idx + 1} for ${bizName}`,
-              html: h
-            };
-          });
-        }
-
-        throw new Error('AI generated content was incomplete. Please retry.');
-      } catch (err) {
-        console.error('[PuterService] Concept generation error:', err);
-        if (this.isQuotaOrCreditError(err)) {
-          this.showCreditExhaustedModal();
-        }
-        throw err;
-      }
+  const KEY_MODEL = 'webcraft_puter_model';
+
+  const MODELS = {
+    'deepseek/deepseek-chat': { label: 'DeepSeek V3 (Free)', free: true  },
+    'gpt-4o-mini':            { label: 'GPT-4o Mini',        free: true  },
+    'gpt-4o':                 { label: 'GPT-4o',             free: false },
+    'claude-3-5-sonnet':      { label: 'Claude 3.5 Sonnet',  free: false },
+    'gemini-2.0-flash':       { label: 'Gemini 2.0 Flash',   free: true  }
+  };
+
+  /* ═══════════ TANGLISH SYSTEM ADDENDUM ═══════════ */
+  const TANGLISH = `
+## LANGUAGE SUPPORT
+You understand Tanglish (Tamil written in English letters), English, and Tamil script.
+When the user writes in Tanglish, reply in the SAME Tanglish style, but keep all
+code, class names, IDs, and HTML attributes in English.
+
+Mandatory examples:
+- "hero section color maathu"        → change hero section color
+- "button periya aakku"              → make button bigger
+- "footer la WhatsApp add pannu"     → add WhatsApp to footer
+- "pricing table remove pannu"       → remove the pricing table
+- "site azhaga dark mode la kaattu"  → render site beautifully in dark mode
+- "kizha oru newsletter section add pannu" → add a newsletter section at the bottom
+- "menu bar fix pannu top la"        → fix the menu bar to the top
+- "hero image replace pannu"         → replace the hero image
+
+Never refuse a Tanglish request. If unsure, ask ONE clarifying question in Tanglish.
+`.trim();
+
+  /* ═══════════ BASE SYSTEM PROMPT ═══════════ */
+  const SYSTEM = `You are WebCraft AI — an expert full-stack web developer inside a live editor.
+
+## YOUR JOB
+Two modes:
+A) **CHAT** — user asks a question / wants advice → reply conversationally. No HTML edit.
+B) **EDIT** — user requests a change → return the updated HTML snippet.
+
+## EDIT RULES
+1. Return ONLY the modified HTML when editing. No markdown fences, no commentary around the code.
+2. Change ONLY what the user asked. Never touch unrelated sections.
+3. Preserve existing class names, IDs, colors, fonts unless asked to change them.
+4. If asked to add a section, return ONLY the new section as clean HTML.
+5. Keep the site responsive — mobile-first.
+6. Never invent placeholder text — reuse real content from context.
+
+## WHEN TO EDIT vs CHAT
+- Edit if: action verbs (add / change / remove / make / replace / move / rewrite / style / color / bigger / smaller)
+- Chat if: question words (what / how / why / which / when / can you explain)
+- If genuinely ambiguous, ask ONE short clarifying question.
+
+${TANGLISH}
+
+## STUDIO CONTEXT
+The user is editing a live website in a Canva-style studio. Some elements may
+have data-anim, data-mobile-id, data-section-name attributes — preserve them.
+`.trim();
+
+  /* ═══════════ INTERNAL STATE ═══════════ */
+  let _user = null;
+  let _signedIn = false;
+  let _listenersWired = false;
+
+  function puterReady() {
+    if (!window.puter || !window.puter.ai) {
+      throw new Error('Puter.js not loaded — include https://js.puter.com/v2/ before this script.');
     }
   }
 
-  // Expose global instance
-  window.PuterService = new PuterService();
-  window.PUTER_MODELS = PUTER_MODELS;
+  /* ═══════════ AUTH ═══════════ */
+  async function isSignedIn() {
+    try {
+      puterReady();
+      if (window.puter.auth?.isSignedIn) return !!(await puter.auth.isSignedIn());
+      const u = await puter.auth.getUser();
+      return !!u;
+    } catch { return false; }
+  }
 
-})(window);
+  async function getUser() {
+    try {
+      puterReady();
+      if (window.puter.auth?.getUser) return await puter.auth.getUser();
+      return null;
+    } catch { return null; }
+  }
+
+  async function signIn() {
+    puterReady();
+    if (window.puter.auth?.signIn) {
+      await puter.auth.signIn();
+    }
+    _signedIn = await isSignedIn();
+    _user = await getUser();
+    dispatchAuthChange();
+  }
+
+  async function signOut() {
+    try {
+      puterReady();
+      if (window.puter.auth?.signOut) await puter.auth.signOut();
+    } catch (e) { console.warn('[PuterService] signOut', e); }
+    _signedIn = false;
+    _user = null;
+    dispatchAuthChange();
+  }
+
+  async function switchAccount() {
+    try {
+      puterReady();
+      if (window.puter.auth?.signOut) await puter.auth.signOut();
+    } catch (e) { /* ignore */ }
+    _signedIn = false;
+    _user = null;
+    dispatchAuthChange();
+    setTimeout(() => signIn().catch(() => {}), 100);
+  }
+
+  function openSignUp() {
+    try {
+      puterReady();
+      if (window.puter.auth?.signUp) puter.auth.signUp();
+      else if (window.puter.auth?.signIn) puter.auth.signIn();
+    } catch (e) { console.warn(e); }
+  }
+
+  function dispatchAuthChange() {
+    window.dispatchEvent(new CustomEvent('puter-auth-changed', {
+      detail: { isSignedIn: _signedIn, user: _user }
+    }));
+  }
+
+  function wireAuthListeners() {
+    if (_listenersWired) return;
+    _listenersWired = true;
+    if (window.puter?.auth?.onAuthStateChanged) {
+      try {
+        puter.auth.onAuthStateChanged(async () => {
+          _signedIn = await isSignedIn();
+          _user = await getUser();
+          dispatchAuthChange();
+        });
+      } catch (e) { /* older Puter builds */ }
+    }
+    setTimeout(async () => {
+      _signedIn = await isSignedIn();
+      _user = await getUser();
+      dispatchAuthChange();
+    }, 200);
+  }
+
+  /* ═══════════ ERROR CLASSIFIER ═══════════ */
+  function isQuotaOrCreditError(err) {
+    const m = String(err?.message || err?.error?.message || err || '').toLowerCase();
+    return /credit|quota|limit|usage|402|429|payment/.test(m);
+  }
+
+  /* ═══════════ MODEL ═══════════ */
+  function setModel(m) {
+    if (!MODELS[m]) return;
+    service.selectedModel = m;
+    try { localStorage.setItem(KEY_MODEL, m); } catch (e) {}
+  }
+
+  function getModel() {
+    return service.selectedModel || localStorage.getItem(KEY_MODEL) || 'deepseek/deepseek-chat';
+  }
+
+  /* ═══════════ CORE: chatAndEdit ═══════════ */
+  async function chatAndEdit({ userPrompt, selectedElement = null, currentHtml = '', context = {} }) {
+    puterReady();
+    if (!userPrompt || !userPrompt.trim()) {
+      return { conversation: 'Type or say something first.', isEdit: false, updatedHtml: '' };
+    }
+
+    /* ── Build the context block ── */
+    const lines = [];
+    lines.push(`### CONTEXT`);
+    lines.push(`Business: ${context.bizName || 'Website'}`);
+    if (context.summary) {
+      lines.push(`Section list:`);
+      try {
+        const nodes = context.summary.nodes || [];
+        const topSections = nodes.filter(n => n.tag === 'section').slice(0, 12);
+        topSections.forEach((s, i) => {
+          lines.push(`  ${i + 1}. ${s.section_name || s.id || 'section'} (${s.tag}${s.classes ? '.' + s.classes.split(' ').slice(0, 2).join('.') : ''})`);
+        });
+      } catch (e) {}
+    }
+    lines.push(`### END CONTEXT`);
+
+    /* ── Build user message ── */
+    let userMessage;
+    if (selectedElement && selectedElement.html) {
+      userMessage = `
+${lines.join('\n')}
+
+### SELECTED ELEMENT TO EDIT
+\`\`\`
+${selectedElement.html.slice(0, 6000)}
+\`\`\`
+
+### USER REQUEST
+${userPrompt}
+
+If this is an edit request, return ONLY the updated HTML for the selected element.
+If this is a question, return conversational text only.
+      `.trim();
+    } else {
+      const snippet = (currentHtml || '').slice(0, 8000);
+      userMessage = `
+${lines.join('\n')}
+
+### CURRENT PAGE (truncated)
+\`\`\`html
+${snippet}
+\`\`\`
+
+### USER REQUEST
+${userPrompt}
+
+If this is an edit request, return ONLY the new HTML to add/change (a full section
+or a full-page replacement). If it's a question, answer conversationally.
+      `.trim();
+    }
+
+    /* ── Call Puter AI ── */
+    const messages = [
+      { role: 'system', content: SYSTEM },
+      { role: 'user',   content: userMessage }
+    ];
+
+    let raw = '';
+    try {
+      const model = getModel();
+      const res = await puter.ai.chat(messages, { model, temperature: 0.7 });
+      raw = extractText(res);
+    } catch (err) {
+      const msg = String(err?.message || '').toLowerCase();
+      if (/model|not found|unavailable/.test(msg) && getModel() !== 'deepseek/deepseek-chat') {
+        setModel('deepseek/deepseek-chat');
+        const retry = await puter.ai.chat(messages, { model: getModel(), temperature: 0.7 });
+        raw = extractText(retry);
+      } else {
+        throw err;
+      }
+    }
+
+    return classifyResponse(raw);
+  }
+
+  function extractText(res) {
+    if (res == null) return '';
+    if (typeof res === 'string') return res;
+    if (res?.message?.content) return String(res.message.content);
+    if (res?.text) return String(res.text);
+    if (res?.response) return String(res.response);
+    if (res?.result) return String(res.result);
+    return String(res);
+  }
+
+  /* ═══════════ RESPONSE PARSER ═══════════ */
+  function classifyResponse(raw) {
+    const txt = String(raw || '').trim();
+    if (!txt) return { conversation: '(empty response)', isEdit: false, updatedHtml: '' };
+
+    const fence = txt.match(/```(?:html)?\s*([\s\S]*?)```/i);
+    if (fence && looksLikeHtml(fence[1])) {
+      return { conversation: stripCode(txt), isEdit: true, updatedHtml: fence[1].trim() };
+    }
+
+    if (looksLikeHtml(txt)) {
+      return { conversation: '✨ Updated the website with your changes.', isEdit: true, updatedHtml: txt };
+    }
+
+    return { conversation: txt, isEdit: false, updatedHtml: '' };
+  }
+
+  function looksLikeHtml(s) {
+    const t = String(s || '').trim();
+    if (!t || t.length < 20) return false;
+    if (/^<(section|div|header|footer|main|nav|article|aside|h[1-6]|p|button|a|img|form|ul|ol|table|span|html|!DOCTYPE)/i.test(t)) return true;
+    const tagCount = (t.match(/<[a-z][^>]*>/gi) || []).length;
+    return tagCount > 8;
+  }
+
+  function stripCode(s) {
+    return String(s).replace(/```[\s\S]*?```/g, '').trim() || '✨ Done.';
+  }
+
+  /* ═══════════ PUBLIC API ═══════════ */
+  const service = {
+    MODELS,
+    selectedModel: localStorage.getItem(KEY_MODEL) || 'deepseek/deepseek-chat',
+    isSignedIn,
+    getUser,
+    signIn,
+    signOut,
+    switchAccount,
+    openSignUp,
+    chatAndEdit,
+    isQuotaOrCreditError,
+    setModel,
+    getModel
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireAuthListeners);
+  } else {
+    wireAuthListeners();
+  }
+
+  return service;
+})();

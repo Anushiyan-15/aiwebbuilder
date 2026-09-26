@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zenith Studio — Crafting Next-Generation Digital Experiences</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&amp;family=Inter:wght@300;400;500&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+    --bg:#080a09;
+    --bg-2:#0b0e0c;
+    --ink:#eef2ef;
+    --body:#b3bdb7;
+    --muted:#98a29c;
+    --faint:#6d766f;
+    --line:rgba(255,255,255,.10);
+    --line-2:rgba(255,255,255,.24);
+    --accent:#059669;
+    --accent-soft:#34d399;
+    --serif:'Cormorant Garamond','Times New Roman',Times,serif;
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+    --narrow:800px;
+    --wrap:1180px;
+  }
+
+  *,*::before,*::after{box-sizing:border-box}
+
+  html{
+    scroll-behavior:smooth;
+    scroll-padding-top:88px;
+    -webkit-text-size-adjust:100%;
+  }
+
+  body{
+    margin:0;
+    font-family:var(--sans);
+    font-weight:300;
+    font-size:1rem;
+    line-height:1.75;
+    color:var(--body);
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(85% 55% at 50% -12%, rgba(5,150,105,.13), transparent 70%),
+      radial-gradient(55% 40% at 102% 6%, rgba(99,102,241,.07), transparent 70%);
+    background-repeat:no-repeat;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+  }
+
+  img,svg{max-width:100%;display:block}
+  a{color:inherit}
+  ::selection{background:rgba(5,150,105,.35);color:#fff}
+
+  .wrap{
+    max-width:var(--wrap);
+    margin:0 auto;
+    padding:0 clamp(1.25rem,4vw,2.5rem);
+  }
+
+  .narrow{
+    max-width:var(--narrow);
+    margin:0 auto;
+    padding:0 clamp(1.25rem,4vw,2.5rem);
+  }
+
+  /* ---------- Header ---------- */
+  .site-header{
+    position:sticky;
+    top:0;
+    z-index:60;
+    background:rgba(8,10,9,.82);
+    -webkit-backdrop-filter:blur(14px);
+    backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+  }
+
+  .header-inner{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:2rem;
+    min-height:74px;
+  }
+
+  .brand{
+    font-family:var(--serif);
+    font-size:1.12rem;
+    font-weight:400;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    color:var(--ink);
+    text-decoration:none;
+    white-space:nowrap;
+    transition:color .3s ease;
+  }
+  .brand:hover{color:var(--accent-soft)}
+
+  .nav{
+    display:flex;
+    align-items:center;
+    gap:2.4rem;
+  }
+
+  .nav a{
+    font-size:.7rem;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--muted);
+    text-decoration:none;
+    padding:.4rem 0;
+    border-bottom:1px solid transparent;
+    transition:color .3s ease,border-color .3s ease;
+  }
+  .nav a:hover,.nav a:focus-visible{color:var(--ink);border-color:var(--line-2);outline:none}
+
+  .nav-toggle{
+    display:none;
+    background:none;
+    border:0;
+    border-bottom:1px solid var(--line-2);
+    padding:.35rem 0;
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:.7rem;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+
+  /* ---------- Typography helpers ---------- */
+  .section{padding:clamp(5rem,11vw,9.5rem) 0}
+
+  .section-label{
+    font-size:.68rem;
+    letter-spacing:.3em;
+    text-transform:uppercase;
+    color:var(--faint);
+    margin:0 0 clamp(2rem,4vw,3rem);
+    display:flex;
+    align-items:center;
+    gap:1.2rem;
+  }
+  .section-label::after{
+    content:"";
+    flex:1 1 auto;
+    height:1px;
+    background:var(--line);
+  }
+
+  .section-title{
+    font-family:var(--serif);
+    font-weight:400;
+    font-size:clamp(2rem,4.4vw,3.3rem);
+    line-height:1.12;
+    letter-spacing:-.01em;
+    color:var(--ink);
+    margin:0 0 1.6rem;
+    max-width:22ch;
+  }
+
+  .section-intro{
+    max-width:52ch;
+    margin:0;
+    color:var(--muted);
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    padding:clamp(6rem,15vw,11rem) 0 clamp(3.5rem,8vw,6.5rem);
+    border-bottom:1px solid var(--line);
+  }
+
+  .hero-grid{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 230px;
+    gap:clamp(2.5rem,6vw,6rem);
+    align-items:end;
+  }
+
+  .kicker{
+    font-family:var(--serif);
+    font-style:italic;
+    font-weight:400;
+    font-size:clamp(1rem,1.6vw,1.15rem);
+    color:var(--muted);
+    letter-spacing:.02em;
+    margin:0 0 1.8rem;
+  }
+
+  .hero-title{
+    font-family:var(--serif);
+    font-weight:300;
+    font-size:clamp(2.5rem,6.6vw,5.1rem);
+    line-height:1.02;
+    letter-spacing:-.015em;
+    color:var(--ink);
+    margin:0 0 clamp(2rem,4vw,2.8rem);
+    max-width:19ch;
+  }
+
+  .hero-sub{
+    max-width:48ch;
+    margin:0 0 clamp(2rem,4vw,2.6rem);
+    color:var(--muted);
+  }
+
+  .hero-meta{
+    display:flex;
+    flex-direction:column;
+    gap:.7rem;
+    padding-top:1.3rem;
+    border-top:1px solid var(--line);
+    font-size:.68rem;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--faint);
+    text-align:left;
+  }
+  .hero-meta p{margin:0}
+  .hero-meta a{
+    text-transform:none;
+    letter-spacing:.05em;
+    font-size:.82rem;
+    color:var(--muted);
+    text-decoration:none;
+    border-bottom:1px solid transparent;
+    transition:color .3s ease,border-color .3s ease;
+  }
+  .hero-meta a:hover{color:var(--accent-soft);border-color:var(--accent-soft)}
+
+  .link-cta{
+    display:inline-block;
+    font-family:var(--sans);
+    font-size:.72rem;
+    font-weight:400;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    color:var(--ink);
+    text-decoration:none;
+    background:none;
+    border:0;
+    border-bottom:1px solid var(--line-2);
+    padding:0 0 .55rem;
+    cursor:pointer;
+    transition:color .35s ease,border-color .35s ease;
+  }
+  .link-cta::after{content:"\2192";display:inline-block;margin-left:.7rem;transition:transform .35s ease}
+  .link-cta:hover,.link-cta:focus-visible{color:var(--accent-soft);border-color:var(--accent-soft);outline:none}
+  .link-cta:hover::after{transform:translateX(4px)}
+
+  /* ---------- About ---------- */
+  .about-lede{
+    font-family:var(--serif);
+    font-weight:300;
+    font-size:clamp(1.4rem,2.7vw,1.95rem);
+    line-height:1.48;
+    color:var(--ink);
+    margin:0 0 2.4rem;
+  }
+
+  .about-copy p{margin:0 0 1.6rem;color:var(--body)}
+  .about-copy p:last-child{margin-bottom:0}
+
+  .pullquote{
+    margin:clamp(3rem,7vw,4.5rem) 0;
+    padding-left:clamp(1.2rem,3vw,1.8rem);
+    border-left:1px solid var(--accent);
+    font-family:var(--serif);
+    font-style:italic;
+    font-weight:300;
+    font-size:clamp(1.3rem,2.4vw,1.75rem);
+    line-height:1.45;
+    color:var(--ink);
+  }
+  .pullquote cite{
+    display:block;
+    margin-top:1.2rem;
+    font-family:var(--sans);
+    font-style:normal;
+    font-size:.66rem;
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    color:var(--faint);
+  }
+
+  .portrait{margin:0 0 clamp(3rem,7vw,4.5rem);max-width:340px}
+  .portrait-frame{
+    position:relative;
+    aspect-ratio:3/4;
+    border:1px solid var(--line);
+    border-radius:2px;
+    overflow:hidden;
+    background:
+      radial-gradient(120% 100% at 20% 0%, rgba(5,150,105,.30), transparent 60%),
+      radial-gradient(90% 90% at 100% 100%, rgba(99,102,241,.16), transparent 62%),
+      linear-gradient(160deg,#0e1412,#060807);
+  }
+  .portrait-frame::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 1px, transparent 1px 38px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 38px);
+  }
+  .portrait-frame span{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-52%);
+    font-family:var(--serif);
+    font-size:7.5rem;
+    line-height:1;
+    color:rgba(238,242,239,.14);
+    font-weight:300;
+  }
+  .portrait figcaption{
+    margin-top:1rem;
+    font-size:.64rem;
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    color:var(--faint);
+  }
+
+  /* ---------- Services ---------- */
+  .service-list{margin-top:clamp(2.5rem,6vw,4rem)}
+
+  .service-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:clamp(2rem,6vw,5rem);
+    align-items:center;
+    padding:clamp(2.6rem,6vw,4.5rem) 0;
+    border-top:1px solid var(--line);
+  }
+  .service-row:last-child{border-bottom:1px solid var(--line)}
+  .service-row.reverse .service-media{order:-1}
+
+  .service-index{
+    display:block;
+    font-size:.66rem;
+    letter-spacing:.3em;
+    text-transform:uppercase;
+    color:var(--accent-soft);
+    margin-bottom:1rem;
+  }
+
+  .service-title{
+    font-family:var(--serif);
+    font-weight:400;
+    font-size:clamp(1.75rem,3.2vw,2.5rem);
+    line-height:1.15;
+    letter-spacing:-.01em;
+    color:var(--ink);
+    margin:0 0 1.1rem;
+  }
+
+  .service-copy{max-width:46ch;margin:0;color:var(--body)}
+
+  .service-tags{
+    list-style:none;
+    display:flex;
+    flex-wrap:wrap;
+    gap:.6rem 1.6rem;
+    padding:0;
+    margin:1.8rem 0 0;
+    font-size:.64rem;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--faint);
+  }
+
+  .service-media{
+    position:relative;
+    aspect-ratio:5/4;
+    border:1px solid var(--line);
+    border-radius:2px;
+    overflow:hidden;
+    background:
+      radial-gradient(120% 120% at 15% 8%, rgba(5,150,105,.28), transparent 58%),
+      radial-gradient(80% 80% at 100% 100%, rgba(99,102,241,.15), transparent 62%),
+      linear-gradient(150deg,#0d1311,#060807);
+  }
+  .service-media::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 40px);
+  }
+  .service-media::after{
+    content:attr(data-label);
+    position:absolute;
+    left:1.5rem;
+    bottom:1.2rem;
+    font-size:.62rem;
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    color:rgba(238,242,239,.5);
+  }
+  .media-ring{
+    position:absolute;
+    width:46%;
+    aspect-ratio:1/1;
+    border:1px solid rgba(52,211,153,.35);
+    border-radius:50%;
+    right:12%;
+    top:14%;
+  }
+  .media-line{
+    position:absolute;
+    left:1.5rem;
+    right:1.5rem;
+    top:50%;
+    height:1px;
+    background:linear-gradient(90deg,rgba(52,211,153,.5),rgba(255,255,255,.05));
+  }
+
+  /* ---------- Metrics ---------- */
+  .metrics{
+    padding:clamp(3.25rem,7vw,5rem) 0;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+  .metrics .section-label{margin-bottom:clamp(1.6rem,3vw,2.2rem)}
+
+  .ribbon{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:baseline;
+    gap:1.6rem 0;
+  }
+  .ribbon-item{
+    flex:1 1 auto;
+    display:flex;
+    align-items:baseline;
+    gap:.85rem;
+    padding:0 clamp(1.2rem,3vw,2.6rem);
+    border-left:1px solid var(--line);
+  }
+  .ribbon-item:first-child{border-left:0;padding-left:0}
+  .ribbon-item:last-child{padding-right:0}
+
+  .num{
+    font-family:var(--serif);
+    font-weight:500;
+    font-size:clamp(1.6rem,3vw,2.35rem);
+    line-height:1;
+    color:var(--ink);
+  }
+  .lab{
+    font-size:.63rem;
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    color:var(--faint);
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* ---------- Contact ---------- */
+  .contact-lines{
+    margin:clamp(1.5rem,4vw,2.5rem) 0 0;
+  }
+  .big-link{
+    display:block;
+    font-family:var(--serif);
+    font-weight:400;
+    font-size:clamp(1.5rem,4.2vw,2.6rem);
+    line-height:1.25;
+    letter-spacing:-.01em;
+    color:var(--ink);
+    text-decoration:none;
+    padding:clamp(.9rem,2.4vw,1.5rem) 0;
+    border-bottom:1px solid var(--line);
+    transition:color .35s ease,border-color .35s ease;
+  }
+  .big-link:first-child{border-top:1px solid var(--line)}
+  .big-link:hover,.big-link:focus-visible{color:var(--accent-soft);border-color:var(--accent-soft);outline:none}
+
+  .contact-address{
+    margin:1.6rem 0 0;
+    font-size:.68rem;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    color:var(--faint);
+  }
+
+  .mini-form{
+    margin-top:clamp(3rem,7vw,4.5rem);
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:clamp(1.6rem,4vw,2.4rem);
+    align-items:end;
+  }
+  .field{display:flex;flex-direction:column;gap:.55rem;min-width:0}
+  .field.full{grid-column:1/-1}
+
+  .mini-form label{
+    font-size:.62rem;
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    color:var(--faint);
+  }
+
+  .mini-form input,
+  .mini-form textarea{
+    width:100%;
+    background:transparent;
+    border:0;
+    border-bottom:1px solid var(--line);
+    border-radius:0;
+    color:var(--ink);
+    font-family:var(--sans);
+    font-weight:300;
+    font-size:.98rem;
+    line-height:1.6;
+    padding:.55rem 0;
+    outline:none;
+    transition:border-color .3s ease;
+  }
+  .mini-form textarea{resize:vertical;min-height:3rem}
+  .mini-form input::placeholder,
+  .mini-form textarea::placeholder{color:#5c655f}
+  .mini-form input:focus,
+  .mini-form textarea:focus{border-color:var(--accent-soft)}
+
+  .form-actions{
+    grid-column:1/-1;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:1.2rem 2rem;
+  }
+
+  .form-note{
+    margin:0;
+    font-size:.75rem;
+    letter-spacing:.06em;
+    color:var(--accent-soft);
+  }
+  .form-note.err{color:#f0a6a6}
+
+  /* ---------- Footer ---------- */
+  .site-footer{
+    background:var(--bg-2);
+    border-top:1px solid var(--line);
+    padding:clamp(3.5rem,8vw,5.5rem) 0 2.5rem;
+  }
+
+  .footer-inner{
+    display:grid;
+    grid-template-columns:1.5fr 1fr 1fr;
+    gap:clamp(2.5rem,6vw,4rem);
+  }
+
+  .footer-brand{
+    font-family:var(--serif);
+    font-size:1.5rem;
+    font-weight:400;
+    letter-spacing:.1em;
+    color:var(--ink);
+    margin:0 0 .9rem;
+  }
+  .footer-mission{
+    margin:0;
+    max-width:34ch;
+    font-size:.88rem;
+    color:var(--faint);
+  }
+
+  .footer-col h4{
+    margin:0 0 1.3rem;
+    font-family:var(--sans);
+    font-weight:400;
+    font-size:.62rem;
+    letter-spacing:.26em;
+    text-transform:uppercase;
+    color:var(--faint);
+  }
+  .footer-col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.7rem}
+  .footer-col a{
+    font-size:.9rem;
+    color:var(--body);
+    text-decoration:none;
+    border-bottom:1px solid transparent;
+    transition:color .3s ease,border-color .3s ease;
+  }
+  .footer-col a:hover{color:var(--accent-soft);border-color:var(--accent-soft)}
+
+  .footer-bottom{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    gap:.8rem 2rem;
+    margin-top:clamp(3rem,6vw,4.5rem);
+    padding-top:1.7rem;
+    border-top:1px solid var(--line);
+    font-size:.7rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--faint);
+  }
+  .footer-bottom p{margin:0}
+
+  /* ---------- Reveal ---------- */
+  .reveal{
+    opacity:0;
+    transform:translateY(18px);
+    transition:opacity .9s cubic-bezier(.22,.61,.36,1),transform .9s cubic-bezier(.22,.61,.36,1);
+  }
+  .reveal.in{opacity:1;transform:none}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .hero-grid{grid-template-columns:1fr;align-items:start}
+    .hero-meta{max-width:320px}
+    .footer-inner{grid-template-columns:1fr 1fr}
+  }
+
+  @media (max-width:860px){
+    .nav-toggle{display:inline-block}
+    .nav{
+      position:fixed;
+      left:0;
+      right:0;
+      top:74px;
+      flex-direction:column;
+      align-items:flex-start;
+      gap:1.4rem;
+      padding:2rem clamp(1.25rem,4vw,2.5rem) 2.6rem;
+      background:rgba(8,10,9,.98);
+      border-bottom:1px solid var(--line);
+      opacity:0;
+      transform:translateY(-10px);
+      pointer-events:none;
+      transition:opacity .35s ease,transform .35s ease;
+    }
+    .nav.open{opacity:1;transform:none;pointer-events:auto}
+    .nav a{font-size:.78rem}
+
+    .service-row,
+    .service-row.reverse{grid-template-columns:1fr;gap:2.2rem}
+    .service-row.reverse .service-media{order:0}
+
+    .ribbon{flex-direction:column;gap:1.4rem}
+    .ribbon-item{border-left:0;padding:0;flex-direction:column;align-items:flex-start;gap:.35rem}
+
+    .mini-form{grid-template-columns:1fr}
+    .footer-inner{grid-template-columns:1fr}
+    .portrait{max-width:100%}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .reveal{opacity:1;transform:none;transition:none}
+    .link-cta::after{transition:none}
+  }
+
+/* Studio Overrides */
+* { box-sizing: border-box; } body {margin: 0;}
+
+/* Mobile Overrides */
+@media (max-width: 767px) {
+  [data-mobile-id][data-mobile-padding] { padding: var(--mb-p, inherit); }
+  [data-mobile-bg] { background: attr(data-mobile-bg type(<color>), inherit); }
+  [data-mobile-color] { color: attr(data-mobile-color type(<color>), inherit); }
+  [data-mobile-font-size] { font-size: attr(data-mobile-font-size type(<length>), inherit); }
+  [data-mobile-text-align] { text-align: attr(data-mobile-text-align type(<custom-ident>), inherit); }
+  [data-mobile-display] { display: attr(data-mobile-display type(<custom-ident>), inherit); }
+  [data-mobile-width] { width: attr(data-mobile-width type(<length>), auto); }
+  [data-mobile-height] { height: attr(data-mobile-height type(<length>), auto); }
+  [data-mobile-min-height] { min-height: attr(data-mobile-min-height type(<length>), auto); }
+  [data-mobile-max-width] { max-width: attr(data-mobile-max-width type(<length>), none); }
+  [data-mobile-margin] { margin: attr(data-mobile-margin type(<length>), inherit); }
+  [data-mobile-border-radius] { border-radius: attr(data-mobile-border-radius type(<length>), inherit); }
+  [data-mobile-hide="true"] { display: none !important; }
+}
+
+/* Studio Overrides */
+* { box-sizing: border-box; } body {margin: 0;}
+
+/* Mobile Overrides */
+@media (max-width: 767px) {
+  [data-mobile-id][data-mobile-padding] { padding: var(--mb-p, inherit); }
+  [data-mobile-bg] { background: attr(data-mobile-bg type(<color>), inherit); }
+  [data-mobile-color] { color: attr(data-mobile-color type(<color>), inherit); }
+  [data-mobile-font-size] { font-size: attr(data-mobile-font-size type(<length>), inherit); }
+  [data-mobile-text-align] { text-align: attr(data-mobile-text-align type(<custom-ident>), inherit); }
+  [data-mobile-display] { display: attr(data-mobile-display type(<custom-ident>), inherit); }
+  [data-mobile-width] { width: attr(data-mobile-width type(<length>), auto); }
+  [data-mobile-height] { height: attr(data-mobile-height type(<length>), auto); }
+  [data-mobile-min-height] { min-height: attr(data-mobile-min-height type(<length>), auto); }
+  [data-mobile-max-width] { max-width: attr(data-mobile-max-width type(<length>), none); }
+  [data-mobile-margin] { margin: attr(data-mobile-margin type(<length>), inherit); }
+  [data-mobile-border-radius] { border-radius: attr(data-mobile-border-radius type(<length>), inherit); }
+  [data-mobile-hide="true"] { display: none !important; }
+}
+
+/* Studio Overrides */
+* { box-sizing: border-box; } body {margin: 0;}
+
+/* Mobile Overrides */
+@media (max-width: 767px) {
+  [data-mobile-id][data-mobile-padding] { padding: var(--mb-p, inherit); }
+  [data-mobile-bg] { background: attr(data-mobile-bg type(<color>), inherit); }
+  [data-mobile-color] { color: attr(data-mobile-color type(<color>), inherit); }
+  [data-mobile-font-size] { font-size: attr(data-mobile-font-size type(<length>), inherit); }
+  [data-mobile-text-align] { text-align: attr(data-mobile-text-align type(<custom-ident>), inherit); }
+  [data-mobile-display] { display: attr(data-mobile-display type(<custom-ident>), inherit); }
+  [data-mobile-width] { width: attr(data-mobile-width type(<length>), auto); }
+  [data-mobile-height] { height: attr(data-mobile-height type(<length>), auto); }
+  [data-mobile-min-height] { min-height: attr(data-mobile-min-height type(<length>), auto); }
+  [data-mobile-max-width] { max-width: attr(data-mobile-max-width type(<length>), none); }
+  [data-mobile-margin] { margin: attr(data-mobile-margin type(<length>), inherit); }
+  [data-mobile-border-radius] { border-radius: attr(data-mobile-border-radius type(<length>), inherit); }
+  [data-mobile-hide="true"] { display: none !important; }
+}
+</style>
+</head>
+<body>
+<body><header id="section-1" data-section-name="Section 1" class="site-header"><div class="wrap header-inner"><a href="#top" class="brand">Zenith Studio</a><nav id="nav" aria-label="Primary" class="nav"><a href="#about">About</a><a href="#services">Services</a><a href="#metrics">Metrics</a><a href="#contact">Contact</a></nav><button id="navToggle" type="button" aria-expanded="false" aria-controls="nav" class="nav-toggle">Menu</button></div></header><main id="top"><!-- ============ HERO ============ --><section id="crafting-next-generation-digital-experie" data-section-name="Crafting next-generation digital experie" class="hero"><div class="wrap hero-grid"><div class="hero-main"><p class="kicker">Creative &amp; Digital Agency — San Francisco, CA</p><h1 class="hero-title">Crafting next-generation digital experiences that inspire and scale.</h1><p class="hero-sub">A design and engineering studio for high-growth brands. We build the interfaces, systems and identities that carry modern businesses into their next decade.</p><a href="#contact" class="link-cta">Start a project</a></div><aside class="hero-meta"><p>Est. 2012</p><p>450 Innovation Parkway</p><p><a href="mailto:hello@zenithstudio.com">hello@zenithstudio.com</a></p><p><a href="tel:+15558901234">+1 (555) 890-1234</a></p></aside></div></section><!-- ============ ABOUT ============ --><section id="about" class="section"><div class="narrow"><p class="section-label reveal">01 — About</p><p class="about-lede reveal">Zenith Studio is a creative and digital agency shaping next-generation experiences for brands that intend to lead their category. Every engagement begins with the same question: what will this feel like in five years?</p><figure class="portrait reveal"><div aria-hidden="true" class="portrait-frame"><span>Z</span></div><figcaption>Studio practice — San Francisco</figcaption></figure><div class="about-copy reveal"><p>We work with a small number of partners at a time. That constraint is deliberate. It allows our designers, engineers and strategists to sit in the same room, hold the same standard, and move from first sketch to production release without translation loss.</p><p>Our clients are high-growth teams — venture-backed startups, scaled platforms, and established institutions rebuilding for a digital-first audience. They come to us for top-tier quality: interfaces that read clearly, systems that extend cleanly, and brands that carry weight in a crowded market.</p></div><blockquote class="pullquote reveal">
+        “We design for the moment after launch — when beauty has to keep working.”
+        <cite>Elena Marchetti — Creative Director, Zenith Studio</cite></blockquote><div class="about-copy reveal"><p>That philosophy turns into a method: research before decoration, systems before screens, and measurement before opinion. It is slower at the start and considerably faster everywhere else.</p><p>We are based at 450 Innovation Parkway in San Francisco and collaborate with teams across four continents.</p></div></div></section><!-- ============ SERVICES ============ --><section id="services" class="section"><div class="wrap"><p class="section-label reveal">02 — Services</p><h2 class="section-title reveal">Four disciplines, one standard of craft.</h2><p class="section-intro reveal">Each service stands on its own, and each one is stronger because the others exist. Most partners begin with a single engagement and expand from there.</p><div class="service-list"><article class="service-row reveal"><div class="service-text"><span class="service-index">01 / UI &amp; UX</span><h3 class="service-title">UI/UX Design</h3><p class="service-copy">Research, information architecture, interaction design and high-fidelity interface systems. We map the journey before we draw a single screen, then build components that hold together across every state, viewport and language.</p><ul class="service-tags"><li>Research</li><li>Design Systems</li><li>Prototyping</li><li>Accessibility</li></ul></div><div data-label="Interface Study" aria-hidden="true" class="service-media"><span class="media-ring"></span><span class="media-line"></span></div></article><article class="service-row reverse reveal"><div class="service-text"><span class="service-index">02 / Engineering</span><h3 class="service-title">Full-Stack Web Development</h3><p class="service-copy">Performance-obsessed builds across modern front-end frameworks and resilient back-end architecture. Fast by default, documented by default, and handed over in a state your team can actually maintain.</p><ul class="service-tags"><li>Front-End</li><li>APIs &amp; Platforms</li><li>Headless CMS</li><li>Performance</li></ul></div><div data-label="Platform Build" aria-hidden="true" class="service-media"><span class="media-ring"></span><span class="media-line"></span></div></article><article class="service-row reveal"><div class="service-text"><span class="service-index">03 / Identity</span><h3 class="service-title">Brand Identity</h3><p class="service-copy">Positioning, voice, typography, colour and mark. We build identity systems that survive contact with reality — packaging, product, campaign and pitch deck alike — with guidelines your team will genuinely use.</p><ul class="service-tags"><li>Positioning</li><li>Visual Identity</li><li>Guidelines</li><li>Art Direction</li></ul></div><div data-label="Identity System" aria-hidden="true" class="service-media"><span class="media-ring"></span><span class="media-line"></span></div></article><article class="service-row reverse reveal"><div class="service-text"><span class="service-index">04 / Growth</span><h3 class="service-title">Growth Optimization</h3><p class="service-copy">Analytics instrumentation, conversion research, experiment design and continuous iteration. We treat the live product as the studio's longest-running project — measured, refined, and compounding.</p><ul class="service-tags"><li>Analytics</li><li>CRO</li><li>SEO</li><li>Experimentation</li></ul></div><div data-label="Growth Engine" aria-hidden="true" class="service-media"><span class="media-ring"></span><span class="media-line"></span></div></article></div></div></section><!-- ============ METRICS ============ --><section id="metrics" class="metrics"><div class="wrap"><p class="section-label reveal">03 — By the numbers</p><div class="ribbon reveal"><div class="ribbon-item"><span class="num">240+</span><span class="lab">Projects Shipped</span></div><div class="ribbon-item"><span class="num">12</span><span class="lab">Years in Practice</span></div><div class="ribbon-item"><span class="num">38</span><span class="lab">Industry Awards</span></div><div class="ribbon-item"><span class="num">96%</span><span class="lab">Client Retention</span></div><div class="ribbon-item"><span class="num">4</span><span class="lab">Continents Served</span></div></div></div></section><!-- ============ CONTACT ============ --><section id="contact" class="section"><div class="narrow"><p class="section-label reveal">04 — Contact</p><h2 class="section-title reveal">Let’s build something exceptional.</h2><div class="contact-lines reveal"><a href="mailto:hello@zenithstudio.com" class="big-link">hello@zenithstudio.com</a><a href="tel:+15558901234" class="big-link">+1 (555) 890-1234</a></div><p class="contact-address reveal">450 Innovation Parkway, San Francisco, CA</p><form id="contactForm" novalidate="" class="mini-form reveal"><div class="field"><label for="name">Name</label><input id="name" name="name" type="text" autocomplete="name" placeholder="Jane Doe"/></div><div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" placeholder="jane@company.com"/></div><div class="field full"><label for="message">Project</label><textarea id="message" name="message" rows="2" placeholder="A line or two about what you’re building."></textarea></div><div class="form-actions"><button type="submit" class="link-cta">Send inquiry</button><p id="formNote" role="status" aria-live="polite" class="form-note"></p></div></form></div></section></main><!-- ============ FOOTER ============ --><footer id="studio" data-section-name="STUDIO" class="site-footer"><div class="wrap footer-inner"><div class="footer-col"><p class="footer-brand">Zenith Studio</p><p class="footer-mission">Crafting next-generation digital experiences that inspire and scale.</p></div><div class="footer-col"><h4>Studio</h4><ul><li><a href="#about">About</a></li><li><a href="#services">Services</a></li><li><a href="#metrics">Metrics</a></li><li><a href="#contact">Contact</a></li></ul></div><div class="footer-col"><h4>Reach us</h4><ul><li><a href="mailto:hello@zenithstudio.com">hello@zenithstudio.com</a></li><li><a href="tel:+15558901234">+1 (555) 890-1234</a></li><li><a href="#top">450 Innovation Parkway, San Francisco, CA</a></li></ul></div></div><div class="wrap footer-bottom"><p>© <span id="year">2024</span> Zenith Studio. All rights reserved.</p><p>Creative &amp; Digital Agency — San Francisco</p></div></footer></body>
+
+<script>
+  (function () {
+    'use strict';
+
+    /* Year */
+    var yearEl = document.getElementById('year');
+    if (yearEl) { yearEl.textContent = new Date().getFullYear(); }
+
+    /* Mobile navigation */
+    var toggle = document.getElementById('navToggle');
+    var nav = document.getElementById('nav');
+
+    function closeNav() {
+      if (!nav || !toggle) { return; }
+      nav.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.textContent = 'Menu';
+    }
+
+    if (toggle && nav) {
+      toggle.addEventListener('click', function () {
+        var isOpen = nav.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        toggle.textContent = isOpen ? 'Close' : 'Menu';
+      });
+
+      nav.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', closeNav);
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { closeNav(); }
+      });
+    }
+
+    /* Scroll reveal */
+    var revealEls = document.querySelectorAll('.reveal');
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!reduceMotion && 'IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+
+      revealEls.forEach(function (el, i) {
+        el.style.transitionDelay = ((i % 4) * 70) + 'ms';
+        observer.observe(el);
+      });
+    } else {
+      revealEls.forEach(function (el) { el.classList.add('in'); });
+    }
+
+    /* Contact form */
+    var form = document.getElementById('contactForm');
+    var note = document.getElementById('formNote');
+
+    if (form && note) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        var fields = form.elements;
+        var name = fields['name'] ? fields['name'].value.trim() : '';
+        var email = fields['email'] ? fields['email'].value.trim() : '';
+        var validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+        note.classList.remove('err');
+
+        if (!name || !validEmail) {
+          note.classList.add('err');
+          note.textContent = 'Please add your name and a valid email address.';
+          return;
+        }
+
+        note.textContent = 'Thank you, ' + name + '. We will reply within one business day.';
+        form.reset();
+      });
+    }
+  })();
+</script>
+<script id="wc-animation-runtime">
+(function(){
+  var KEYFRAMES = {
+    fadeIn:[{opacity:0},{opacity:1}],
+    slideUp:[{opacity:0,transform:'translateY(50px)'},{opacity:1,transform:'translateY(0)'}],
+    slideDown:[{opacity:0,transform:'translateY(-50px)'},{opacity:1,transform:'translateY(0)'}],
+    slideLeft:[{opacity:0,transform:'translateX(50px)'},{opacity:1,transform:'translateX(0)'}],
+    slideRight:[{opacity:0,transform:'translateX(-50px)'},{opacity:1,transform:'translateX(0)'}],
+    zoomIn:[{opacity:0,transform:'scale(0.7)'},{opacity:1,transform:'scale(1)'}],
+    zoomOut:[{opacity:0,transform:'scale(1.3)'},{opacity:1,transform:'scale(1)'}],
+    bounce:[{transform:'translateY(0)'},{transform:'translateY(-30px)'},{transform:'translateY(0)'},{transform:'translateY(-15px)'},{transform:'translateY(0)'}],
+    rotate:[{opacity:0,transform:'rotate(-180deg) scale(0.7)'},{opacity:1,transform:'rotate(0deg) scale(1)'}],
+    flip:[{opacity:0,transform:'perspective(400px) rotateY(90deg)'},{opacity:1,transform:'perspective(400px) rotateY(0deg)'}],
+    pulse:[{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}],
+    shake:[{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],
+    blur:[{opacity:0,filter:'blur(12px)'},{opacity:1,filter:'blur(0)'}],
+    lightSpeed:[{opacity:0,transform:'translateX(80px) skewX(-25deg)'},{opacity:1,transform:'translateX(0) skewX(0)'}]
+  };
+  function preApply(el, kf){ if(!kf||!kf[0]) return; var f=kf[0]; if('opacity' in f) el.style.opacity=f.opacity; if('transform' in f) el.style.transform=f.transform; if('filter' in f) el.style.filter=f.filter; }
+  function play(el){
+    var type=el.getAttribute('data-anim'), kf=KEYFRAMES[type]; if(!kf) return;
+    var dur=parseInt(el.getAttribute('data-anim-duration'))||700, delay=parseInt(el.getAttribute('data-anim-delay'))||0;
+    var easing=el.getAttribute('data-anim-easing')||'cubic-bezier(0.22,1,0.36,1)';
+    var rep=el.getAttribute('data-anim-repeat')||'1', iter=rep==='infinite'?Infinity:(parseInt(rep)||1);
+    try { if(el._wcAnim&&el._wcAnim.cancel) el._wcAnim.cancel(); el._wcAnim=el.animate(kf,{duration:dur,delay:delay,easing:easing,fill:'both',iterations:iter}); } catch(e){}
+  }
+  function init(){
+    var els=document.querySelectorAll('[data-anim]'); if(!els.length) return;
+    var io=('IntersectionObserver' in window) ? new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting){ play(e.target); io.unobserve(e.target); } }); },{threshold:0.15}) : null;
+    Array.prototype.forEach.call(els,function(el){
+      var trig=el.getAttribute('data-anim-trigger')||'scroll', kf=KEYFRAMES[el.getAttribute('data-anim')];
+      if(trig==='scroll'||trig==='load') preApply(el,kf);
+      if(trig==='scroll'){ if(io) io.observe(el); else play(el); }
+      else if(trig==='load'){ requestAnimationFrame(function(){ play(el); }); }
+      else if(trig==='hover'){ el.addEventListener('mouseenter',function(){ play(el); }); }
+      else if(trig==='click'){ el.addEventListener('click',function(ev){ ev.preventDefault(); play(el); }); }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+</body>
+</html>

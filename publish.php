@@ -1,0 +1,1215 @@
+<?php
+/**
+ * publish.php — Post-Design Publishing Wizard
+ * 
+ * Flow: Review → AI Admin Panel Generation → Credentials → Payment → Published
+ * Uses AI thinking (Puter.js / DeepSeek) to write real PHP admin code from scratch.
+ */
+require_once __DIR__ . '/config.php';
+
+// ─── Utilities ──────────────────────────────────────────
+function clean(string $v): string { return htmlspecialchars(strip_tags(trim($v)), ENT_QUOTES, 'UTF-8'); }
+function slugify(string $s): string { $s = strtolower(trim($s)); $s = preg_replace('/[^a-z0-9]+/', '-', $s); return trim($s, '-') ?: 'site'; }
+function ordersDir(): string { $d = defined('STORAGE_DIR') ? STORAGE_DIR . '/orders' : __DIR__ . '/storage/orders'; if (!is_dir($d)) @mkdir($d, 0755, true); return $d; }
+function publishedDir(): string { $d = __DIR__ . '/published'; if (!is_dir($d)) @mkdir($d, 0755, true); return $d; }
+function loadOrder(string $orderId): ?array {
+    $f = ordersDir() . '/' . $orderId . '.json';
+    if (!file_exists($f)) return null;
+    return json_decode(file_get_contents($f), true);
+}
+function saveOrder(array $o): bool {
+    return file_put_contents(ordersDir() . '/' . $o['order_id'] . '.json', json_encode($o, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) !== false;
+}
+
+// ─── AJAX Endpoints ────────────────────────────────────
+if (isset($_GET['action'])) {
+    header('Content-Type: application/json');
+
+    // Check username availability
+    if ($_GET['action'] === 'check_username') {
+        $u = strtolower(preg_replace('/[^a-z0-9_]/i', '', $_GET['username'] ?? ''));
+        if (strlen($u) < 4 || strlen($u) > 20) { echo json_encode(['ok' => false, 'msg' => 'Use 4–20 characters']); exit; }
+        if (!preg_match('/^[a-z]/', $u)) { echo json_encode(['ok' => false, 'msg' => 'Must start with a letter']); exit; }
+        $reserved = ['admin','root','administrator','owner','system','test','user','demo','support'];
+        if (in_array($u, $reserved)) { echo json_encode(['ok' => false, 'msg' => 'This username is reserved']); exit; }
+        foreach (glob(ordersDir() . '/*.json') as $f) {
+            $o = json_decode(file_get_contents($f), true);
+            if (($o['admin_username'] ?? '') === $u) { echo json_encode(['ok' => false, 'msg' => 'Already taken — try another']); exit; }
+        }
+        echo json_encode(['ok' => true, 'msg' => '✓ Available']); exit;
+    }
+
+    // Check slug availability
+    if ($_GET['action'] === 'check_slug') {
+        $s = slugify($_GET['slug'] ?? '');
+        if (strlen($s) < 3) { echo json_encode(['ok' => false, 'msg' => 'Name too short']); exit; }
+        if (is_dir(publishedDir() . '/' . $s)) { echo json_encode(['ok' => false, 'msg' => 'Already published — pick another name']); exit; }
+        echo json_encode(['ok' => true, 'slug' => $s]); exit;
+    }
+
+    // Order details (for final step credentials display)
+    if ($_GET['action'] === 'order_details') {
+        $oid = clean($_GET['order_id'] ?? '');
+        $order = loadOrder($oid);
+        if (!$order) { echo json_encode(['success' => false]); exit; }
+        echo json_encode([
+            'success' => true,
+            'order' => [
+                'order_id'       => $order['order_id'],
+                'live_url'       => $order['live_url'],
+                'admin_url'      => $order['admin_url'],
+                'admin_username' => $order['admin_username'],
+                'admin_password_plain' => $order['admin_password_plain'] ?? null,
+            ]
+        ]);
+        exit;
+    }
+
+    // Raw chat (fallback to Gemini)
+    if ($_GET['action'] === 'raw_chat') {
+        $body = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+        $prompt = $body['prompt'] ?? '';
+        $apiKey = $body['api_key'] ?? (defined('GEMINI_API_KEY') ? GEMINI_API_KEY : '');
+        if (!$prompt || !$apiKey) { echo json_encode(['success'=>false,'error'=>'Missing prompt or API key']); exit; }
+
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+             . (defined('GEMINI_MODEL') ? GEMINI_MODEL : 'gemini-2.0-flash')
+             . ':generateContent?key=' . urlencode($apiKey);
+
+        $payload = json_encode([
+            'contents' => [['parts' => [['text' => $prompt]]]],
+            'generationConfig' => ['temperature' => 0.3, 'maxOutputTokens' => 16000]
+        ]);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 180,
+        ]);
+        $resp = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($code !== 200) { echo json_encode(['success'=>false,'error'=>"Gemini error $code"]); exit; }
+        $j = json_decode($resp, true);
+        $text = $j['candidates'][0]['content']['parts'][0]['text'] ?? '';
+        echo json_encode(['success' => true, 'text' => $text]);
+        exit;
+    }
+}
+
+// ─── POST: Create Order ────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'create_order' || true)) {
+    $raw = file_get_contents('php://input');
+    $data = json_decode($raw, true) ?: $_POST;
+    if (($data['action'] ?? '') === 'create_order') {
+        header('Content-Type: application/json');
+        try {
+            $siteName    = clean($data['siteName'] ?? '');
+            $genMode     = clean($data['genMode'] ?? 'static');
+            $package     = clean($data['package'] ?? 'pro');
+            $conceptIdx  = (int)($data['conceptIndex'] ?? 0);
+            $adminUser   = strtolower(clean($data['adminUsername'] ?? ''));
+            $adminPass   = (string)($data['adminPassword'] ?? '');
+            $adminEmail  = clean($data['adminEmail'] ?? '');
+            $html        = (string)($data['html'] ?? '');
+            $adminFilesJson = (string)($data['adminFiles'] ?? '{}');
+            $adminSql       = (string)($data['adminSql'] ?? '');
+            $adminEntitiesJson = (string)($data['adminEntities'] ?? '[]');
+
+            $adminFiles    = json_decode($adminFilesJson, true) ?: [];
+            $adminEntities = json_decode($adminEntitiesJson, true) ?: [];
+
+            $errors = [];
+            if ($siteName === '') $errors[] = 'Site name is required';
+            if ($html === '')     $errors[] = 'Website design is missing';
+
+            $needsAdmin = in_array($genMode, ['admin','database'], true);
+            if ($needsAdmin) {
+                if (!preg_match('/^[a-z][a-z0-9_]{3,19}$/', $adminUser)) $errors[] = 'Invalid admin username';
+                if (strlen($adminPass) < 8) $errors[] = 'Password must be at least 8 characters';
+                if (!filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid admin email';
+            }
+            if ($errors) { echo json_encode(['success' => false, 'errors' => $errors]); exit; }
+
+            $slug = slugify($siteName);
+            $n = 2;
+            while (is_dir(publishedDir() . '/' . $slug)) { $slug = slugify($siteName) . '-' . $n++; }
+
+            $pricing = [
+                'starter'  => ['label' => 'Starter',  'price' => 9.00],
+                'pro'      => ['label' => 'Pro',      'price' => 19.00],
+                'business' => ['label' => 'Business', 'price' => 49.00],
+            ];
+            $pack = $pricing[$package] ?? $pricing['pro'];
+
+            $orderId = 'WBL-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
+
+            $designDir = defined('STORAGE_DIR') ? STORAGE_DIR . '/designs' : __DIR__ . '/storage/designs';
+            if (!is_dir($designDir)) @mkdir($designDir, 0755, true);
+            file_put_contents($designDir . '/' . $orderId . '.html', $html);
+
+            $order = [
+                'order_id'          => $orderId,
+                'site_name'         => $siteName,
+                'slug'              => $slug,
+                'concept_index'     => $conceptIdx,
+                'gen_mode'          => $genMode,
+                'package'           => $package,
+                'package_label'     => $pack['label'],
+                'amount'            => $pack['price'],
+                'currency'          => defined('PAYPAL_CURRENCY') ? PAYPAL_CURRENCY : 'USD',
+                'admin_username'    => $needsAdmin ? $adminUser : '',
+                'admin_email'       => $needsAdmin ? $adminEmail : '',
+                'admin_password_hash'  => $needsAdmin ? password_hash($adminPass, PASSWORD_DEFAULT) : '',
+                'admin_password_plain' => $needsAdmin ? $adminPass : '',  // for final display only
+                'admin_files'       => $adminFiles,
+                'admin_sql'         => $adminSql,
+                'admin_entities'    => $adminEntities,
+                'status'            => 'payment_pending',
+                'paypal_order_id'   => null,
+                'paypal_capture_id' => null,
+                'live_url'          => null,
+                'admin_url'         => null,
+                'created_at'        => date('Y-m-d H:i:s'),
+                'ip'                => $_SERVER['REMOTE_ADDR'] ?? '',
+            ];
+            saveOrder($order);
+
+            $paypalReady = defined('PAYPAL_CLIENT_ID') && PAYPAL_CLIENT_ID && strpos(PAYPAL_CLIENT_ID, 'YOUR_') !== 0;
+
+            if ($paypalReady && file_exists(__DIR__ . '/includes/PayPalService.php')) {
+                require_once __DIR__ . '/includes/PayPalService.php';
+                try {
+                    $pp = new PayPalService();
+                    $ppOrder = $pp->createOrder(
+                        $orderId,
+                        (float)$pack['price'],
+                        'WebBuilder site publishing - ' . $siteName,
+                        SITE_URL . '/publish.php?action=paypal_return&order_id=' . urlencode($orderId),
+                        SITE_URL . '/publish.php?action=paypal_cancel&order_id=' . urlencode($orderId)
+                    );
+
+                    if (($ppOrder['success'] ?? false) && !empty($ppOrder['order_id'])) {
+                        $order['paypal_order_id'] = $ppOrder['order_id'];
+                        saveOrder($order);
+
+                        $approveUrl = $ppOrder['checkout_url'] ?? null;
+                        if (!$approveUrl) {
+                            foreach (($ppOrder['raw']['links'] ?? []) as $lnk) {
+                                if (($lnk['rel'] ?? '') === 'approve') { $approveUrl = $lnk['href']; break; }
+                            }
+                        }
+
+                        echo json_encode(['success' => true, 'order_id' => $orderId, 'slug' => $slug, 'mode' => $ppOrder['mode'] ?? 'paypal', 'checkout_url' => $approveUrl]);
+                        exit;
+                    }
+                } catch (Throwable $e) { /* fall to simulator */ }
+            }
+
+            echo json_encode([
+                'success'      => true,
+                'order_id'     => $orderId,
+                'slug'         => $slug,
+                'mode'         => 'simulator',
+                'checkout_url' => SITE_URL . '/publish.php?action=simulate_pay&order_id=' . urlencode($orderId),
+            ]);
+            exit;
+
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'errors' => ['Server error: ' . $e->getMessage()]]);
+            exit;
+        }
+    }
+}
+
+// ─── Simulated Payment ─────────────────────────────────
+if (($_GET['action'] ?? '') === 'simulate_pay') {
+    $oid = clean($_GET['order_id'] ?? '');
+    $order = loadOrder($oid);
+    if (!$order) { http_response_code(404); exit('Order not found'); }
+    $order['status'] = 'paid';
+    $order['paypal_capture_id'] = 'SIM-' . strtoupper(bin2hex(random_bytes(4)));
+    saveOrder($order);
+    header('Location: ' . SITE_URL . '/publish.php?step=done&order_id=' . urlencode($oid));
+    exit;
+}
+
+// ─── Actual Publish ────────────────────────────────────
+if (($_GET['action'] ?? '') === 'do_publish') {
+    $oid = clean($_GET['order_id'] ?? '');
+    $order = loadOrder($oid);
+    if (!$order) { http_response_code(404); exit('Order not found'); }
+
+    $slug = $order['slug'];
+    $targetDir = publishedDir() . '/' . $slug;
+    if (!is_dir($targetDir)) @mkdir($targetDir, 0755, true);
+
+    // 1. Write index.html
+    $designPath = (defined('STORAGE_DIR') ? STORAGE_DIR : __DIR__ . '/storage') . '/designs/' . $oid . '.html';
+    $siteHtml = file_exists($designPath) ? file_get_contents($designPath) : '<h1>Site</h1>';
+    file_put_contents($targetDir . '/index.html', $siteHtml);
+
+    // 2. Write AI-generated admin panel
+    $adminUrl = null;
+    if (in_array($order['gen_mode'], ['admin','database'], true) && !empty($order['admin_files'])) {
+        $adminDir = $targetDir . '/admin';
+        if (!is_dir($adminDir)) @mkdir($adminDir, 0755, true);
+
+        // Credentials
+        file_put_contents($adminDir . '/.auth.json', json_encode([
+            'username' => $order['admin_username'],
+            'email'    => $order['admin_email'],
+            'hash'     => $order['admin_password_hash'],
+            'created'  => $order['created_at'],
+        ], JSON_PRETTY_PRINT));
+
+        // Write every AI-generated file
+        foreach ($order['admin_files'] as $relPath => $content) {
+            $relPath = str_replace(['..', '\\'], '', $relPath);
+            $relPath = ltrim($relPath, '/');
+            if ($relPath === '') continue;
+            $fullPath = $adminDir . '/' . $relPath;
+            $dir = dirname($fullPath);
+            if (!is_dir($dir)) @mkdir($dir, 0755, true);
+            file_put_contents($fullPath, $content);
+        }
+
+        // SQL schema (database mode)
+        if ($order['gen_mode'] === 'database' && !empty($order['admin_sql'])) {
+            file_put_contents($adminDir . '/schema.sql', $order['admin_sql']);
+        }
+
+        // Ensure login.php entry exists
+        if (!file_exists($adminDir . '/login.php') && file_exists($adminDir . '/index.php')) {
+            file_put_contents($adminDir . '/login.php', "<?php session_start(); require __DIR__ . '/index.php';");
+        }
+
+        // Ensure uploads folder for file fields
+        if (!is_dir($adminDir . '/uploads')) @mkdir($adminDir . '/uploads', 0755, true);
+
+        $adminUrl = SITE_URL . '/published/' . $slug . '/admin/login.php';
+        if (!file_exists($adminDir . '/login.php')) $adminUrl = SITE_URL . '/published/' . $slug . '/admin/';
+    }
+
+    // 3. meta.json
+    file_put_contents($targetDir . '/meta.json', json_encode([
+        'site_name'    => $order['site_name'],
+        'slug'         => $slug,
+        'order_id'     => $oid,
+        'package'      => $order['package'],
+        'published_at' => date('Y-m-d H:i:s'),
+        'admin_url'    => $adminUrl,
+        'file_count'   => count($order['admin_files'] ?? []),
+    ], JSON_PRETTY_PRINT));
+
+    // 4. Update order
+    $order['status'] = 'published';
+    $order['live_url'] = SITE_URL . '/published/' . $slug . '/';
+    $order['admin_url'] = $adminUrl;
+    $order['published_at'] = date('Y-m-d H:i:s');
+    saveOrder($order);
+
+    // 5. Notify admin
+    if (defined('ADMIN_EMAIL')) {
+        @mail(ADMIN_EMAIL,
+            "🆕 New Website Published – {$order['site_name']}",
+            "Order: {$oid}\nSite: {$order['site_name']}\nLive: {$order['live_url']}\nPackage: {$order['package_label']}\nFiles: " . count($order['admin_files'] ?? []),
+            "From: noreply@" . ($_SERVER['HTTP_HOST'] ?? 'localhost')
+        );
+    }
+
+    // 6. Email client
+    if (!empty($order['admin_email'])) {
+        @mail($order['admin_email'],
+            "✅ Your Website is Live! – {$order['site_name']}",
+            "Hi,\n\nYour site is now live:\n{$order['live_url']}\n\n" .
+            ($adminUrl ? "Admin Login: {$adminUrl}\nUsername: {$order['admin_username']}\nPassword: {$order['admin_password_plain']}\n\n" : '') .
+            "Thank you for choosing WEBbuilder.lk!",
+            "From: noreply@" . ($_SERVER['HTTP_HOST'] ?? 'localhost')
+        );
+    }
+
+    header('Location: ' . SITE_URL . '/publish.php?step=done&order_id=' . urlencode($oid));
+    exit;
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Publish Your Website — WEBbuilder.lk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:radial-gradient(ellipse at top,#1e1b4b 0%,#0a0d14 55%);color:#e2e8f0;min-height:100vh;padding:2rem 1.25rem;line-height:1.55}
+.wrap{max-width:980px;margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
+.brand{display:flex;align-items:center;gap:.7rem;font-weight:800;font-size:1.05rem;color:#fff}
+.brand .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#4f46e5,#a855f7);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.backlink{color:#94a3b8;font-size:.85rem;text-decoration:none;font-weight:600;padding:.5rem .9rem;border:1.5px solid #334155;border-radius:9px}
+.backlink:hover{border-color:#6366f1;color:#fff}
+.card{background:#111622;border:1px solid #1e293b;border-radius:24px;overflow:hidden;box-shadow:0 25px 70px rgba(0,0,0,.55)}
+.steps{display:flex;gap:.4rem;padding:1.25rem 2rem;background:#0d121c;border-bottom:1px solid #1e293b;overflow-x:auto}
+.step{flex:1;min-width:max-content;display:flex;align-items:center;gap:.5rem;padding:.5rem .9rem;border-radius:999px;font-size:.76rem;font-weight:700;color:#64748b;background:#0b0f17;border:1.5px solid transparent;transition:.25s;white-space:nowrap}
+.step.active{background:#1e1b4b;border-color:#6366f1;color:#c7d2fe}
+.step.done{background:#064e3b;color:#a7f3d0}
+.step.hidden{display:none}
+.step .n{width:22px;height:22px;border-radius:50%;background:#1e293b;color:#94a3b8;font-size:.7rem;display:flex;align-items:center;justify-content:center;font-weight:800}
+.step.active .n{background:#6366f1;color:#fff}
+.step.done .n{background:#10b981;color:#fff}
+.body{padding:2.5rem}
+.h1{font-size:1.75rem;font-weight:900;color:#fff;letter-spacing:-.02em;margin-bottom:.4rem}
+.sub{color:#94a3b8;font-size:.95rem;margin-bottom:2rem;line-height:1.6}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
+@media(max-width:720px){.grid2,.grid3{grid-template-columns:1fr}}
+.field{margin-bottom:1.25rem}
+.lbl{display:block;font-size:.82rem;font-weight:700;color:#cbd5e1;margin-bottom:.4rem}
+.hint{font-size:.76rem;color:#64748b;margin-top:.35rem;line-height:1.5}
+.inp{width:100%;padding:.8rem 1rem;border:1.5px solid #283347;border-radius:11px;background:#0b0f17;color:#fff;font-family:inherit;font-size:.92rem;transition:.2s}
+.inp:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.2);background:#111726}
+.inp.ok{border-color:#10b981}
+.inp.bad{border-color:#ef4444}
+.msg{font-size:.75rem;margin-top:.3rem;font-weight:600}
+.msg.ok{color:#34d399}.msg.bad{color:#f87171}
+.summary{background:#0b0f17;border:1px solid #1e293b;border-radius:14px;padding:1.25rem;margin-bottom:1.5rem}
+.summary-row{display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px dashed #1e293b;font-size:.88rem}
+.summary-row:last-child{border-bottom:none}
+.summary-row .k{color:#94a3b8}
+.summary-row .v{color:#fff;font-weight:700}
+.pkg{border:2px solid #283347;border-radius:16px;padding:1.5rem 1.25rem;background:#0b0f17;cursor:pointer;transition:.25s;position:relative;text-align:left}
+.pkg:hover{border-color:#6366f1;transform:translateY(-3px)}
+.pkg.selected{border-color:#10b981;background:linear-gradient(180deg,#062b22,#0b0f17);box-shadow:0 12px 32px rgba(16,185,129,.25)}
+.pkg h3{font-size:1.05rem;font-weight:800;color:#fff;margin-bottom:.25rem}
+.pkg .price{font-size:2rem;font-weight:900;color:#a5b4fc;margin:.4rem 0 .8rem;letter-spacing:-.02em}
+.pkg .price small{font-size:.75rem;color:#94a3b8;font-weight:600}
+.pkg ul{list-style:none;font-size:.82rem;color:#cbd5e1;line-height:1.9}
+.pkg li::before{content:'✓ ';color:#10b981;font-weight:800}
+.pkg .badge{position:absolute;top:-10px;right:1rem;background:linear-gradient(135deg,#4f46e5,#a855f7);color:#fff;font-size:.65rem;font-weight:800;padding:.25rem .7rem;border-radius:999px;letter-spacing:.05em}
+.btn{display:inline-flex;align-items:center;gap:.55rem;padding:.85rem 1.75rem;border-radius:12px;font-family:inherit;font-size:.92rem;font-weight:700;border:none;cursor:pointer;transition:.2s;text-decoration:none;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 8px 24px rgba(79,70,229,.4)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(79,70,229,.55)}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;border:1.5px solid #334155;color:#cbd5e1}
+.btn-ghost:hover{border-color:#6366f1;color:#fff}
+.btn-paypal{background:linear-gradient(135deg,#0070ba,#003087);color:#fff;box-shadow:0 8px 24px rgba(0,112,186,.4);font-weight:800}
+.btn-paypal:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,112,186,.55)}
+.footer{display:flex;justify-content:space-between;align-items:center;padding:1.25rem 2rem;background:#0d121c;border-top:1px solid #1e293b;gap:.75rem;flex-wrap:wrap}
+.info{background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(168,85,247,.06));border:1.5px solid rgba(99,102,241,.4);border-radius:14px;padding:1.1rem 1.25rem;margin-bottom:1.75rem;display:flex;gap:.9rem;align-items:flex-start;font-size:.86rem;color:#c7d2fe;line-height:1.55}
+.info .ic{font-size:1.5rem;flex-shrink:0}
+.info strong{color:#fff;font-weight:800}
+.cred-box{background:#0b0f17;border:2px dashed #10b981;border-radius:14px;padding:1.25rem;margin-bottom:1rem}
+.cred-row{display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;font-family:'Fira Code',monospace;font-size:.88rem;gap:.75rem;flex-wrap:wrap}
+.cred-row .k{color:#94a3b8;min-width:110px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:.82rem}
+.cred-row .v{color:#fff;font-weight:700;flex:1;word-break:break-all}
+.copy{background:#1e293b;border:none;color:#cbd5e1;padding:.3rem .7rem;border-radius:7px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit}
+.copy:hover{background:#4f46e5;color:#fff}
+.link-big{display:flex;align-items:center;gap:.75rem;background:#0b0f17;border:1.5px solid #283347;border-radius:12px;padding:.9rem 1.1rem;text-decoration:none;color:#c7d2fe;font-weight:700;font-size:.9rem;transition:.2s;margin-bottom:.75rem}
+.link-big:hover{border-color:#6366f1;transform:translateX(4px)}
+.link-big .ic{font-size:1.4rem}
+.link-big .arrow{margin-left:auto;color:#6366f1;font-weight:900}
+.hidden{display:none!important}
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(120px);background:#111622;border:1.5px solid #10b981;border-radius:12px;padding:.85rem 1.5rem;color:#fff;font-weight:700;font-size:.88rem;box-shadow:0 10px 30px rgba(0,0,0,.6);z-index:9999;transition:.3s;max-width:calc(100vw - 2rem)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.pw-strength{height:5px;background:#1e293b;border-radius:999px;overflow:hidden;margin-top:.5rem}
+.pw-strength-fill{height:100%;width:0%;transition:.3s;background:#ef4444}
+.pw-strength-fill.s1{width:25%;background:#ef4444}
+.pw-strength-fill.s2{width:50%;background:#f59e0b}
+.pw-strength-fill.s3{width:75%;background:#eab308}
+.pw-strength-fill.s4{width:100%;background:#10b981}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:64px;height:64px;border:4px solid #1e293b;border-top-color:#6366f1;border-radius:50%;animation:spin .9s linear infinite}
+.file-row{padding:.35rem 0;font-family:'Fira Code',monospace;font-size:.82rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.file-icon{font-size:1rem}
+.file-name{color:#cbd5e1}
+.folder-name{color:#fff;font-weight:800;font-size:.85rem}
+.view-btn{background:#1e293b;border:none;color:#a5b4fc;padding:.15rem .55rem;border-radius:6px;font-size:.7rem;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+.view-btn:hover{background:#4f46e5;color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><div class="logo">✦</div> WEBbuilder.lk</div>
+    <a href="<?= SITE_URL ?>/builder.php" class="backlink">← Back to Editor</a>
+  </div>
+
+  <div class="card">
+    <!-- Steps -->
+    <div class="steps" id="steps">
+      <div class="step active" data-step="1"><span class="n">1</span> Review</div>
+      <div class="step" data-step="2" id="step-btn-2"><span class="n">2</span> AI Admin Panel</div>
+      <div class="step" data-step="3.5" id="step-btn-35"><span class="n">3</span> Credentials</div>
+      <div class="step" data-step="3"><span class="n">4</span> Payment</div>
+      <div class="step" data-step="4"><span class="n">5</span> Published</div>
+    </div>
+
+    <div class="body">
+
+      <!-- ═══ STEP 1: Review ═══ -->
+      <section id="sec-1">
+        <h1 class="h1">🎉 Ready to Publish</h1>
+        <p class="sub">Here's a quick review of what we're about to launch. Confirm and continue.</p>
+
+        <div class="summary">
+          <div class="summary-row"><span class="k">Website Name</span><span class="v" id="rev-name">—</span></div>
+          <div class="summary-row"><span class="k">Design Variation</span><span class="v" id="rev-concept">—</span></div>
+          <div class="summary-row"><span class="k">Generation Mode</span><span class="v" id="rev-mode">—</span></div>
+          <div class="summary-row"><span class="k">Admin Panel</span><span class="v" id="rev-admin">—</span></div>
+          <div class="summary-row"><span class="k">Auto-Saved</span><span class="v" style="color:#34d399">✓ Yes</span></div>
+        </div>
+
+        <div class="info">
+          <div class="ic">💡</div>
+          <div>
+            <strong>What happens next?</strong><br>
+            <span id="next-flow-text">—</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ STEP 2: AI Admin Generation ═══ -->
+      <section id="sec-2" class="hidden">
+        <h1 class="h1">🧠 AI is Writing Your Admin Panel</h1>
+        <p class="sub">
+          Powered by <strong style="color:#a5b4fc">AI thinking</strong> — no templates. Every PHP file will be written from scratch based on your requirements.
+        </p>
+
+        <!-- Loading state -->
+        <div id="admin-gen-loading" class="hidden" style="text-align:center;padding:3rem 1rem;">
+          <div class="spinner" style="margin:0 auto 1.5rem;"></div>
+          <div style="font-weight:800;color:#fff;font-size:1.05rem;margin-bottom:.5rem" id="admin-gen-stage">Analyzing your requirements…</div>
+          <div style="color:#94a3b8;font-size:.88rem" id="admin-gen-msg">This usually takes 30–60 seconds.</div>
+          <div style="max-width:420px;margin:2rem auto 0;background:#0b0f17;border:1px solid #1e293b;border-radius:12px;padding:1rem;">
+            <div style="height:6px;background:#1e293b;border-radius:999px;overflow:hidden;">
+              <div id="admin-gen-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#a855f7);transition:width .4s ease;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input state -->
+        <div id="admin-gen-input">
+          <div class="info">
+            <div class="ic">📋</div>
+            <div>
+              <strong>Your admin requirements:</strong><br>
+              <span style="white-space:pre-wrap;font-family:'Fira Code',monospace;font-size:.8rem;color:#c7d2fe;display:block;margin-top:.4rem" id="req-display"></span>
+            </div>
+          </div>
+          <div style="text-align:right;margin-top:1rem">
+            <button class="btn btn-primary" id="btn-gen-admin">🚀 Generate Admin Panel →</button>
+          </div>
+        </div>
+
+        <!-- Result state -->
+        <div id="admin-gen-result" class="hidden">
+          <div class="info" style="border-color:#10b981;background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(5,150,105,.06))">
+            <div class="ic">✅</div>
+            <div>
+              <strong>AI generated <span id="admin-file-count">0</span> files!</strong><br>
+              <span style="font-size:.85rem;color:#a7f3d0" id="admin-setup-note">—</span>
+            </div>
+          </div>
+
+          <h3 style="color:#fff;font-size:1rem;margin:1.5rem 0 .75rem">📁 File Structure</h3>
+          <div id="admin-file-tree" style="background:#0b0f17;border:1px solid #1e293b;border-radius:12px;padding:1rem;max-height:420px;overflow-y:auto;"></div>
+
+          <h3 style="color:#fff;font-size:1rem;margin:1.5rem 0 .75rem">🗄️ SQL Schema Preview</h3>
+          <pre id="admin-sql-preview" style="background:#0b0f17;border:1px solid #1e293b;border-radius:12px;padding:1rem;color:#a5b4fc;font-family:'Fira Code',monospace;font-size:.78rem;overflow-x:auto;max-height:200px;"></pre>
+
+          <div style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="regenerateAdmin()">🔄 Regenerate</button>
+            <button class="btn btn-ghost" onclick="editRequirements()">✏️ Edit Requirements</button>
+          </div>
+        </div>
+
+        <!-- File viewer -->
+        <div id="file-viewer" class="hidden" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);padding:2rem;align-items:center;justify-content:center;display:none">
+          <div style="background:#111622;border:1.5px solid #283347;border-radius:16px;width:100%;max-width:1000px;height:85vh;display:flex;flex-direction:column;overflow:hidden;">
+            <div style="padding:1rem 1.25rem;background:#0d121c;border-bottom:1px solid #1e293b;display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:.65rem;min-width:0">
+                <span style="font-size:1.2rem">📄</span>
+                <span style="color:#fff;font-weight:700;font-family:'Fira Code',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="fv-path">file.php</span>
+              </div>
+              <div style="display:flex;gap:.5rem;flex-shrink:0">
+                <button class="btn btn-ghost" style="padding:.4rem .8rem;font-size:.78rem" onclick="fixFileWithAI()">🤖 Fix with AI</button>
+                <button class="btn btn-ghost" style="padding:.4rem .8rem;font-size:.78rem" onclick="closeFileViewer()">✕ Close</button>
+              </div>
+            </div>
+            <textarea id="fv-content" readonly style="flex:1;width:100%;padding:1.25rem;background:#050810;color:#e2e8f0;font-family:'Fira Code',monospace;font-size:.82rem;line-height:1.6;border:none;outline:none;resize:none;"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ STEP 3.5: Credentials ═══ -->
+      <section id="sec-3-5" class="hidden">
+        <h1 class="h1">🔐 Admin Login Credentials</h1>
+        <p class="sub">Choose how <strong style="color:#a5b4fc">you</strong> will log in to manage your website.</p>
+
+        <div class="field">
+          <label class="lbl" for="adm-user">Admin Username</label>
+          <input class="inp" type="text" id="adm-user" placeholder="e.g. school_admin" autocomplete="off">
+          <div class="msg" id="adm-user-msg"></div>
+          <div class="hint">4–20 characters. Letters, numbers, and underscore only. Must start with a letter.</div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label class="lbl" for="adm-pass">Password</label>
+            <input class="inp" type="password" id="adm-pass" placeholder="Min 8 characters" autocomplete="new-password">
+            <div class="pw-strength"><div class="pw-strength-fill" id="pw-bar"></div></div>
+            <div class="msg" id="adm-pass-msg"></div>
+          </div>
+          <div class="field">
+            <label class="lbl" for="adm-pass2">Confirm Password</label>
+            <input class="inp" type="password" id="adm-pass2" placeholder="Re-enter" autocomplete="new-password">
+            <div class="msg" id="adm-pass2-msg"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl" for="adm-email">Recovery Email</label>
+          <input class="inp" type="email" id="adm-email" placeholder="you@example.com">
+          <div class="hint">We'll email your login details and password-reset here.</div>
+        </div>
+
+        <div class="info">
+          <div class="ic">🔗</div>
+          <div>
+            <strong>Your login URL will be:</strong><br>
+            <code id="adm-url-preview" style="font-family:'Fira Code',monospace;font-size:.78rem;color:#34d399;word-break:break-all;"><?= SITE_URL ?>/published/your-site/admin/login.php</code>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ STEP 3: Payment ═══ -->
+      <section id="sec-3" class="hidden">
+        <h1 class="h1">💳 Choose Your Plan</h1>
+        <p class="sub">All plans include hosting setup, SSL, and lifetime admin access. Cancel anytime.</p>
+
+        <div class="grid3" id="pkg-grid">
+          <div class="pkg" data-pkg="starter">
+            <h3>Starter</h3>
+            <div class="price">$9 <small>/mo</small></div>
+            <ul>
+              <li>1 Website</li>
+              <li>5 GB Bandwidth</li>
+              <li>Basic Support</li>
+              <li>SSL Included</li>
+            </ul>
+          </div>
+          <div class="pkg selected" data-pkg="pro">
+            <span class="badge">POPULAR</span>
+            <h3>Pro</h3>
+            <div class="price">$19 <small>/mo</small></div>
+            <ul>
+              <li>3 Websites</li>
+              <li>50 GB Bandwidth</li>
+              <li>Priority Support</li>
+              <li>SSL + Backup</li>
+            </ul>
+          </div>
+          <div class="pkg" data-pkg="business">
+            <h3>Business</h3>
+            <div class="price">$49 <small>/mo</small></div>
+            <ul>
+              <li>Unlimited Websites</li>
+              <li>500 GB Bandwidth</li>
+              <li>24/7 Support</li>
+              <li>SSL + Daily Backup</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="summary" style="margin-top:1.75rem">
+          <div class="summary-row"><span class="k">Plan</span><span class="v" id="pay-pkg">Pro</span></div>
+          <div class="summary-row"><span class="k">Billing</span><span class="v">Monthly</span></div>
+          <div class="summary-row"><span class="k">Total Today</span><span class="v" id="pay-total" style="font-size:1.15rem;color:#34d399">$19.00 USD</span></div>
+        </div>
+      </section>
+
+      <!-- ═══ STEP 4: Published ═══ -->
+      <section id="sec-4" class="hidden">
+        <div style="text-align:center;margin-bottom:2rem">
+          <div style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:2.6rem;margin:0 auto 1.25rem;box-shadow:0 12px 40px rgba(16,185,129,.5)">🚀</div>
+          <h1 class="h1" style="margin-bottom:.4rem">Your website is LIVE!</h1>
+          <p class="sub" style="margin-bottom:0">Everything is set up. Bookmark this page — you can also find these credentials in your email.</p>
+        </div>
+
+        <div class="info">
+          <div class="ic">🔒</div>
+          <div>
+            <strong>Important:</strong> Save your admin credentials now. We've also emailed them to you.
+          </div>
+        </div>
+
+        <h3 style="color:#fff;font-size:1rem;margin-bottom:.75rem">🌐 Your Website</h3>
+        <a class="link-big" id="live-link" href="#" target="_blank">
+          <span class="ic">🌐</span><span id="live-url-text">Loading…</span><span class="arrow">↗</span>
+        </a>
+
+        <h3 style="color:#fff;font-size:1rem;margin:.5rem 0 .75rem" id="admin-heading">🔐 Admin Panel</h3>
+        <a class="link-big hidden" id="admin-link" href="#" target="_blank">
+          <span class="ic">🔐</span><span id="admin-url-text">Loading…</span><span class="arrow">↗</span>
+        </a>
+
+        <div class="cred-box hidden" id="cred-box">
+          <h4 style="color:#a7f3d0;font-size:.85rem;margin-bottom:.85rem;font-weight:800">🔑 Your Credentials</h4>
+          <div class="cred-row">
+            <span class="k">Username</span>
+            <span class="v" id="cred-user">—</span>
+            <button class="copy" onclick="copyText(document.getElementById('cred-user').textContent,this)">Copy</button>
+          </div>
+          <div class="cred-row">
+            <span class="k">Password</span>
+            <span class="v" id="cred-pass">—</span>
+            <button class="copy" onclick="copyText(document.getElementById('cred-pass').textContent,this)">Copy</button>
+          </div>
+          <div style="margin-top:.85rem;padding-top:.85rem;border-top:1px dashed #1e293b;font-size:.76rem;color:#fbbf24">
+            ⚠️ For security reasons, this password will not be shown again after you leave this page.
+          </div>
+        </div>
+
+        <h3 style="color:#fff;font-size:1rem;margin:1.25rem 0 .75rem">🎯 What's Next?</h3>
+        <div class="summary">
+          <div class="summary-row"><span class="k">1. Open your admin panel</span><span class="v">Edit any content</span></div>
+          <div class="summary-row"><span class="k">2. Share your live URL</span><span class="v">Social / Business cards</span></div>
+          <div class="summary-row"><span class="k">3. Contact support</span><span class="v"><?= defined('CONTACT_EMAIL') ? CONTACT_EMAIL : 'info@webbuilder.lk' ?></span></div>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="footer">
+      <button class="btn btn-ghost" id="btn-back">← Back</button>
+      <div style="font-size:.78rem;color:#64748b;font-weight:600" id="step-label">Step 1</div>
+      <button class="btn btn-primary" id="btn-next">Continue →</button>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://js.puter.com/v2/"></script>
+<script src="<?= SITE_URL ?>/assets/js/puter-service.js"></script>
+<script src="<?= SITE_URL ?>/assets/js/ai-admin-generator.js"></script>
+<script>
+/* ═══════════════ STATE ═══════════════ */
+const SESSION_KEY = 'webcraft_saved_project';
+const SITE_URL = <?= json_encode(SITE_URL) ?>;
+const state = {
+  step: 1,
+  siteName: 'My Website',
+  bizType: 'business',
+  conceptIndex: 0,
+  genMode: 'static',
+  hasAdmin: false,
+  html: '',
+  adminRequirements: '',
+  adminFiles: null,
+  adminSql: '',
+  adminEntities: [],
+  adminTitle: 'Admin Panel',
+  adminSetupNote: '',
+  adminUsername: '',
+  adminPassword: '',
+  adminEmail: '',
+  package: 'pro',
+  orderId: null,
+  slug: null,
+};
+
+/* ═══════════════ INIT ═══════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  loadFromSession();
+  detectStepFromUrl();
+  bindEvents();
+  updatePackageUI();
+  renderStep();
+});
+
+function detectStepFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const oid = params.get('order_id');
+  const step = params.get('step');
+  if (step === 'done' && oid) {
+    state.orderId = oid;
+    finalizeOrder(oid);
+  }
+}
+
+function loadFromSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return;
+    const p = JSON.parse(raw);
+
+    state.siteName    = p.bizName || 'My Website';
+    state.conceptIndex = p.activeDesignIndex || 0;
+    state.genMode     = p.selectedGenMode || 'static';
+    state.hasAdmin    = state.genMode !== 'static';
+    state.bizType     = p.wizard?.biz_type || 'business';
+    state.adminRequirements = p.wizard?.admin_requirements || '';
+
+    const d = (p.designs || [])[state.conceptIndex] || {};
+    state.html = d.html || '';
+
+    // Hide admin steps if not needed
+    if (!state.hasAdmin) {
+      document.getElementById('step-btn-2')?.classList.add('hidden');
+      document.getElementById('step-btn-35')?.classList.add('hidden');
+    }
+
+    updateReview();
+  } catch (e) { console.warn('loadFromSession:', e); }
+}
+
+function updateReview() {
+  document.getElementById('rev-name').textContent    = state.siteName;
+  document.getElementById('rev-concept').textContent = 'Variation ' + (state.conceptIndex + 1);
+  const modeLabels = { static: 'Static (HTML/CSS)', admin: 'Admin Panel + PHP', database: 'Admin + MySQL' };
+  document.getElementById('rev-mode').textContent    = modeLabels[state.genMode] || state.genMode;
+  document.getElementById('rev-admin').textContent   = state.hasAdmin ? '✓ AI will write it' : '✗ Static only';
+
+  document.getElementById('next-flow-text').innerHTML = state.hasAdmin
+    ? 'The AI will write your complete admin panel from scratch, then you choose credentials, pay, and go live. No coding required.'
+    : 'We\'ll take payment then instantly publish your website to a live URL.';
+}
+
+/* ═══════════════ NAVIGATION ═══════════════ */
+function currentSteps() {
+  return state.hasAdmin ? [1, 2, 3.5, 3, 4] : [1, 3, 4];
+}
+function nextStep() { const c = currentSteps(); return c[c.indexOf(state.step) + 1] || null; }
+function prevStep() { const c = currentSteps(); return c[c.indexOf(state.step) - 1] || null; }
+
+function renderStep() {
+  document.querySelectorAll('section[id^="sec-"]').forEach(s => s.classList.add('hidden'));
+  const targetId = 'sec-' + String(state.step).replace('.', '-');
+  document.getElementById(targetId)?.classList.remove('hidden');
+
+  document.querySelectorAll('.step').forEach(el => {
+    const s = parseFloat(el.dataset.step);
+    el.classList.remove('active', 'done');
+    const curIdx = currentSteps().indexOf(state.step);
+    const elIdx = currentSteps().indexOf(s);
+    if (s === state.step) el.classList.add('active');
+    else if (elIdx >= 0 && elIdx < curIdx) el.classList.add('done');
+  });
+
+  const labelMap = { 1: 'Step 1 — Review', 2: 'Step 2 — AI Admin', 3.5: 'Step 3 — Credentials', 3: 'Step 4 — Payment', 4: 'Step 5 — Published' };
+  document.getElementById('step-label').textContent = labelMap[state.step] || '';
+
+  document.getElementById('btn-back').style.visibility = prevStep() ? 'visible' : 'hidden';
+
+  const btnNext = document.getElementById('btn-next');
+  if (state.step === 1) { btnNext.textContent = 'Continue →'; btnNext.className = 'btn btn-primary'; btnNext.style.display = ''; }
+  else if (state.step === 2) {
+    btnNext.textContent = 'Continue to Credentials →';
+    btnNext.className = 'btn btn-primary';
+    btnNext.style.display = (state.adminFiles && Object.keys(state.adminFiles).length) ? '' : 'none';
+  }
+  else if (state.step === 3.5) { btnNext.textContent = 'Continue →'; btnNext.className = 'btn btn-primary'; btnNext.style.display = ''; }
+  else if (state.step === 3) { btnNext.innerHTML = '🔒 Pay & Publish Now'; btnNext.className = 'btn btn-paypal'; btnNext.style.display = ''; }
+  else { btnNext.style.display = 'none'; }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function bindEvents() {
+  document.getElementById('btn-next').addEventListener('click', onNext);
+  document.getElementById('btn-back').addEventListener('click', () => {
+    const p = prevStep();
+    if (p) { state.step = p; renderStep(); }
+  });
+
+  document.querySelectorAll('#pkg-grid .pkg').forEach(p => {
+    p.addEventListener('click', () => {
+      document.querySelectorAll('#pkg-grid .pkg').forEach(x => x.classList.remove('selected'));
+      p.classList.add('selected');
+      state.package = p.dataset.pkg;
+      updatePackageUI();
+    });
+  });
+
+  // Admin username live check
+  const userInput = document.getElementById('adm-user');
+  userInput?.addEventListener('input', () => {
+    const v = userInput.value.trim().toLowerCase();
+    state.adminUsername = v;
+    updateAdminUrlPreview();
+    if (v.length < 4) return setMsg('adm-user-msg', '', '');
+    if (!/^[a-z][a-z0-9_]{3,19}$/.test(v)) return setMsg('adm-user-msg', 'Use letters, numbers, underscore. Start with a letter.', 'bad');
+    userInput.classList.remove('ok', 'bad');
+    fetch(SITE_URL + '/publish.php?action=check_username&username=' + encodeURIComponent(v))
+      .then(r => r.json())
+      .then(j => {
+        userInput.classList.toggle('ok', j.ok);
+        userInput.classList.toggle('bad', !j.ok);
+        setMsg('adm-user-msg', j.msg, j.ok ? 'ok' : 'bad');
+      })
+      .catch(() => {});
+  });
+
+  // Password strength
+  const pass = document.getElementById('adm-pass');
+  pass?.addEventListener('input', () => {
+    state.adminPassword = pass.value;
+    const s = scorePassword(pass.value);
+    const bar = document.getElementById('pw-bar');
+    bar.className = 'pw-strength-fill s' + s;
+    const map = ['Too short', 'Weak', 'Fair', 'Good', 'Strong ✓'];
+    if (pass.value.length === 0) setMsg('adm-pass-msg', '', '');
+    else if (pass.value.length < 8) setMsg('adm-pass-msg', 'Must be at least 8 characters', 'bad');
+    else setMsg('adm-pass-msg', map[s], s >= 3 ? 'ok' : 'bad');
+  });
+
+  const pass2 = document.getElementById('adm-pass2');
+  pass2?.addEventListener('input', () => {
+    if (!pass2.value) return setMsg('adm-pass2-msg', '', '');
+    if (pass2.value === pass.value) setMsg('adm-pass2-msg', '✓ Passwords match', 'ok');
+    else setMsg('adm-pass2-msg', 'Passwords do not match', 'bad');
+  });
+
+  document.getElementById('adm-email')?.addEventListener('input', e => {
+    state.adminEmail = e.target.value.trim();
+  });
+
+  // Admin generation button
+  document.getElementById('btn-gen-admin')?.addEventListener('click', generateAdmin);
+}
+
+function updatePackageUI() {
+  const prices = { starter: 9, pro: 19, business: 49 };
+  const labels = { starter: 'Starter', pro: 'Pro', business: 'Business' };
+  document.getElementById('pay-pkg').textContent = labels[state.package];
+  document.getElementById('pay-total').textContent = '$' + prices[state.package].toFixed(2) + ' USD';
+}
+
+function updateAdminUrlPreview() {
+  const slug = slugifyLocal(state.siteName) || 'your-site';
+  document.getElementById('adm-url-preview').textContent = SITE_URL + '/published/' + slug + '/admin/login.php';
+}
+
+function slugifyLocal(s) { return String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+
+function scorePassword(p) {
+  let s = 0;
+  if (!p) return 0;
+  if (p.length >= 8) s++;
+  if (p.length >= 12) s++;
+  if (/[A-Z]/.test(p) && /[a-z]/.test(p)) s++;
+  if (/\d/.test(p)) s++;
+  if (/[^A-Za-z0-9]/.test(p)) s++;
+  return Math.min(4, Math.max(1, s - 1));
+}
+
+function setMsg(id, txt, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = txt;
+  el.className = 'msg ' + (cls || '');
+}
+
+/* ═══════════════ STEP HANDLERS ═══════════════ */
+async function onNext() {
+  const btn = document.getElementById('btn-next');
+
+  if (state.step === 1) {
+    if (!state.html) { showToast('⚠️ No design found'); return; }
+    state.step = state.hasAdmin ? 2 : 3;
+    if (state.hasAdmin) {
+      document.getElementById('req-display').textContent = state.adminRequirements || '(default — AI will decide)';
+    }
+    renderStep();
+    return;
+  }
+
+  if (state.step === 2) {
+    if (!state.adminFiles || !Object.keys(state.adminFiles).length) { showToast('⚠️ Generate the admin panel first'); return; }
+    state.step = 3.5;
+    renderStep();
+    return;
+  }
+
+  if (state.step === 3.5) {
+    const u = state.adminUsername;
+    const p = state.adminPassword;
+    const p2 = document.getElementById('adm-pass2').value;
+    const e = state.adminEmail;
+
+    if (!/^[a-z][a-z0-9_]{3,19}$/.test(u)) { showToast('⚠️ Enter a valid username'); return; }
+    if (p.length < 8) { showToast('⚠️ Password must be 8+ characters'); return; }
+    if (p !== p2) { showToast('⚠️ Passwords do not match'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { showToast('⚠️ Enter a valid recovery email'); return; }
+    state.step = 3;
+    renderStep();
+    return;
+  }
+
+  if (state.step === 3) {
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.innerHTML = '⏳ Creating order…';
+    try {
+      const res = await fetch(SITE_URL + '/publish.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_order',
+          siteName: state.siteName,
+          genMode: state.genMode,
+          conceptIndex: state.conceptIndex,
+          package: state.package,
+          adminUsername: state.adminUsername,
+          adminPassword: state.adminPassword,
+          adminEmail: state.adminEmail,
+          html: state.html,
+          adminFiles: JSON.stringify(state.adminFiles || {}),
+          adminSql: state.adminSql || '',
+          adminEntities: JSON.stringify(state.adminEntities || [])
+        })
+      });
+      const j = await res.json();
+      if (!j.success) {
+        showToast('❌ ' + ((j.errors || []).join(' · ') || 'Order failed'));
+        btn.disabled = false; btn.innerHTML = original;
+        return;
+      }
+      state.orderId = j.order_id;
+      showToast('✓ Opening checkout…');
+      setTimeout(() => { window.location.href = j.checkout_url; }, 500);
+    } catch (err) {
+      console.error(err);
+      showToast('❌ Network error');
+      btn.disabled = false; btn.innerHTML = original;
+    }
+  }
+}
+
+/* ═══════════════ AI ADMIN GENERATION ═══════════════ */
+async function generateAdmin() {
+  const loading = document.getElementById('admin-gen-loading');
+  const input = document.getElementById('admin-gen-input');
+  const result = document.getElementById('admin-gen-result');
+
+  input.classList.add('hidden');
+  result.classList.add('hidden');
+  loading.classList.remove('hidden');
+
+  const stages = [
+    { t: 'Analyzing requirements…', m: 'Parsing what you need', p: 10 },
+    { t: 'Designing database schema…', m: 'Planning tables and fields', p: 25 },
+    { t: 'Writing PHP files…', m: 'Login, dashboard, CRUD pages', p: 55 },
+    { t: 'Finalizing code…', m: 'Adding validation & styling', p: 80 },
+    { t: 'Almost done…', m: 'Packaging files', p: 95 }
+  ];
+  let i = 0;
+  const stageInterval = setInterval(() => {
+    if (i < stages.length) {
+      document.getElementById('admin-gen-stage').textContent = stages[i].t;
+      document.getElementById('admin-gen-msg').textContent = stages[i].m;
+      document.getElementById('admin-gen-bar').style.width = stages[i].p + '%';
+      i++;
+    }
+  }, 3500);
+
+  try {
+    const result_ = await window.AIAdminGenerator.generate({
+      bizName: state.siteName,
+      bizType: state.bizType,
+      userRequirements: state.adminRequirements,
+      genMode: state.genMode,
+      existingHtml: state.html
+    }, (p) => {
+      if (p.message) document.getElementById('admin-gen-msg').textContent = p.message;
+    });
+
+    clearInterval(stageInterval);
+    document.getElementById('admin-gen-bar').style.width = '100%';
+
+    state.adminFiles = result_.files || {};
+    state.adminSql = result_.sql || '';
+    state.adminEntities = result_.entities || [];
+    state.adminTitle = result_.admin_title || 'Admin Panel';
+    state.adminSetupNote = result_.setup_notes || '';
+
+    document.getElementById('admin-file-count').textContent = Object.keys(state.adminFiles).length;
+    document.getElementById('admin-setup-note').textContent = state.adminSetupNote;
+    renderFileTree(state.adminFiles);
+    document.getElementById('admin-sql-preview').textContent = state.adminSql || '-- No SQL (file-based storage)';
+    result.classList.remove('hidden');
+    loading.classList.add('hidden');
+    showToast('✅ Admin panel generated!');
+
+    // Make the "Continue to Credentials" button appear
+    document.getElementById('btn-next').style.display = '';
+  } catch (err) {
+    clearInterval(stageInterval);
+    loading.classList.add('hidden');
+    input.classList.remove('hidden');
+    showToast('❌ Generation failed: ' + err.message);
+  }
+}
+
+function renderFileTree(files) {
+  const tree = window.AIAdminGenerator.buildFileTree(files);
+  const container = document.getElementById('admin-file-tree');
+  container.innerHTML = '';
+  renderNode(tree, container, 0);
+}
+
+function renderNode(node, container, depth) {
+  const keys = Object.keys(node.children).sort((a, b) => {
+    const af = node.children[a].isFile, bf = node.children[b].isFile;
+    if (af !== bf) return af ? 1 : -1;
+    return a.localeCompare(b);
+  });
+  keys.forEach(key => {
+    const child = node.children[key];
+    const row = document.createElement('div');
+    row.className = 'file-row';
+    const indent = '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(depth);
+    if (child.isFile) {
+      row.innerHTML = `${indent}<span class="file-icon">${fileIcon(child.name)}</span> <span class="file-name">${escapeHtml(child.name)}</span> <button class="view-btn" onclick="openFileViewer('${child.path.replace(/'/g,"\\'")}')">View</button>`;
+    } else {
+      row.innerHTML = `${indent}<span class="file-icon">📁</span> <span class="folder-name">${escapeHtml(child.name)}/</span>`;
+    }
+    container.appendChild(row);
+    if (!child.isFile) renderNode(child, container, depth + 1);
+  });
+}
+
+function fileIcon(name) {
+  if (name.endsWith('.php')) return '🐘';
+  if (name.endsWith('.sql')) return '🗄️';
+  if (name.endsWith('.html')) return '🌐';
+  if (name.endsWith('.css')) return '🎨';
+  if (name.endsWith('.js')) return '📜';
+  if (name.endsWith('.json')) return '📋';
+  return '📄';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+let currentViewingFile = null;
+function openFileViewer(path) {
+  currentViewingFile = path;
+  document.getElementById('fv-path').textContent = path;
+  document.getElementById('fv-content').value = state.adminFiles[path] || '';
+  const v = document.getElementById('file-viewer');
+  v.classList.remove('hidden');
+  v.style.display = 'flex';
+}
+function closeFileViewer() {
+  const v = document.getElementById('file-viewer');
+  v.classList.add('hidden');
+  v.style.display = 'none';
+  currentViewingFile = null;
+}
+
+async function fixFileWithAI() {
+  if (!currentViewingFile) return;
+  const issue = prompt('What should AI fix?', 'Make sure validation and error handling are complete');
+  if (!issue) return;
+  showToast('🤖 AI is fixing the file…');
+  try {
+    const fixed = await window.AIAdminGenerator.fixFile(
+      currentViewingFile,
+      state.adminFiles[currentViewingFile],
+      issue,
+      { files: state.adminFiles }
+    );
+    state.adminFiles[currentViewingFile] = fixed;
+    document.getElementById('fv-content').value = fixed;
+    showToast('✅ File fixed');
+  } catch (e) {
+    showToast('❌ Fix failed: ' + e.message);
+  }
+}
+
+function regenerateAdmin() {
+  document.getElementById('admin-gen-result').classList.add('hidden');
+  document.getElementById('admin-gen-input').classList.remove('hidden');
+  document.getElementById('btn-next').style.display = 'none';
+}
+
+function editRequirements() {
+  showToast('Going back to edit requirements in builder…');
+  setTimeout(() => { window.location.href = SITE_URL + '/builder.php?resume=1#step3b'; }, 500);
+}
+
+/* ═══════════════ FINALIZE ═══════════════ */
+async function finalizeOrder(orderId) {
+  try {
+    const res = await fetch(SITE_URL + '/publish.php?action=do_publish&order_id=' + encodeURIComponent(orderId));
+    if (res.redirected) { window.location.href = res.url; return; }
+  } catch (e) { console.warn('do_publish:', e); }
+
+  try {
+    const r = await fetch(SITE_URL + '/publish.php?action=order_details&order_id=' + encodeURIComponent(orderId));
+    const j = await r.json();
+    if (j.success) showPublished(j.order);
+  } catch (e) { console.warn('order_details:', e); }
+}
+
+function showPublished(order) {
+  state.step = 4;
+  renderStep();
+
+  document.getElementById('live-link').href = order.live_url;
+  document.getElementById('live-url-text').textContent = order.live_url;
+
+  if (order.admin_url) {
+    document.getElementById('admin-link').classList.remove('hidden');
+    document.getElementById('admin-link').href = order.admin_url;
+    document.getElementById('admin-url-text').textContent = order.admin_url;
+    document.getElementById('cred-box').classList.remove('hidden');
+    document.getElementById('cred-user').textContent = order.admin_username || '—';
+    document.getElementById('cred-pass').textContent = order.admin_password_plain || '(sent via email)';
+  } else {
+    document.getElementById('admin-heading').style.display = 'none';
+  }
+
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      p.published = { orderId: order.order_id, liveUrl: order.live_url, adminUrl: order.admin_url };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(p));
+    }
+  } catch (e) {}
+}
+
+/* ═══════════════ UI HELPERS ═══════════════ */
+function copyText(txt, btn) {
+  if (!txt) return;
+  const t = document.createElement('textarea');
+  t.value = txt;
+  document.body.appendChild(t);
+  t.select();
+  try { document.execCommand('copy'); btn.textContent = '✓ Copied'; setTimeout(() => btn.textContent = 'Copy', 1500); } catch (e) {}
+  t.remove();
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+</script>
+</body>
+</html>
