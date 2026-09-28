@@ -1,0 +1,18 @@
+{
+    "email": "anonymous",
+    "name": "",
+    "sites": {
+        "zenith-studio-4": {
+            "order_id": "WBL-2026-D5236D",
+            "site_name": "Zenith Studio",
+            "slug": "zenith-studio-4",
+            "package": "pro",
+            "amount": 19,
+            "live_url": "http:\/\/localhost\/project\/webbbuilder\/published\/zenith-studio-4\/",
+            "admin_url": null,
+            "published_at": "2026-09-28 12:37:35",
+            "next_payment_due": "2026-10-28",
+            "site_active": true
+        }
+    }
+}

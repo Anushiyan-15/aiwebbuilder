@@ -1,0 +1,32 @@
+{
+    "starter": {
+        "label": "Starter Plan",
+        "price": 1,
+        "currency": "USD",
+        "period": "month",
+        "sites": 1,
+        "bandwidth": "5 GB",
+        "support": "Standard",
+        "active": true
+    },
+    "pro": {
+        "label": "Pro Plan",
+        "price": 19,
+        "currency": "USD",
+        "period": "month",
+        "sites": 3,
+        "bandwidth": "50 GB",
+        "support": "Priority",
+        "active": true
+    },
+    "business": {
+        "label": "Business Plan",
+        "price": 49,
+        "currency": "USD",
+        "period": "month",
+        "sites": "Unlimited",
+        "bandwidth": "500 GB",
+        "support": "24\/7 Dedicated",
+        "active": true
+    }
+}

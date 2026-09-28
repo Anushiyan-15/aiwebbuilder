@@ -1,0 +1,23 @@
+[
+    {
+        "id": "1",
+        "title": "Premium Consultation",
+        "category": "Consulting",
+        "price": "150.00",
+        "description": "One-on-one expert session tailored to your goals."
+    },
+    {
+        "id": "2",
+        "title": "Standard Package",
+        "category": "Services",
+        "price": "99.00",
+        "description": "Comprehensive package covering all essentials."
+    },
+    {
+        "id": "3",
+        "title": "Starter Pack",
+        "category": "Basic",
+        "price": "49.00",
+        "description": "Quick setup and support to get you up and running."
+    }
+]

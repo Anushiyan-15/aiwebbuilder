@@ -1,8 +1,8 @@
 {
-    "order_id": "WBL-2026-59CA99",
+    "order_id": "WBL-2026-D5236D",
     "site_name": "Zenith Studio",
-    "slug": "zenith-studio",
-    "concept_index": 2,
+    "slug": "zenith-studio-4",
+    "concept_index": 1,
     "gen_mode": "static",
     "package": "pro",
     "package_label": "Pro",
@@ -17,11 +17,12 @@
     "admin_entities": [],
     "status": "published",
     "paypal_order_id": null,
-    "paypal_capture_id": "SIM-70380F55",
-    "live_url": "http://localhost/project/webbbuilder/published/zenith-studio/",
+    "paypal_capture_id": "SIM-EA9DA0AC",
+    "live_url": "http:\/\/localhost\/project\/webbbuilder\/published\/zenith-studio-4\/",
     "admin_url": null,
-    "created_at": "2026-09-26 16:01:05",
+    "created_at": "2026-09-28 12:37:22",
     "ip": "::1",
-    "published_at": "2026-09-26 16:01:24",
-    "site_active": false
+    "published_at": "2026-09-28 12:37:35",
+    "next_payment_due": "2026-10-28",
+    "site_active": true
 }

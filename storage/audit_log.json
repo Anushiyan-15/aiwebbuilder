@@ -1,0 +1,52 @@
+[
+    {
+        "id": "AUD-20260928-140454-5816",
+        "timestamp": "2026-09-28 14:04:54",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "site_deactivated",
+        "order_id": "zenith-studio",
+        "detail": "Tenant 'zenith-studio' status changed to DEACTIVATED",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260928-131010-1f74",
+        "timestamp": "2026-09-28 13:10:10",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "update_plans",
+        "order_id": "pricing",
+        "detail": "Updated subscription pricing plans",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260928-125135-07f9",
+        "timestamp": "2026-09-28 12:51:35",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "site_deactivated",
+        "order_id": "\u2014",
+        "detail": "Tenant '' status changed to DEACTIVATED",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260928-125123-b2da",
+        "timestamp": "2026-09-28 12:51:23",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "site_deactivated",
+        "order_id": "\u2014",
+        "detail": "Tenant '' status changed to DEACTIVATED",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260928-121052-e154",
+        "timestamp": "2026-09-28 12:10:52",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "plan_updated",
+        "order_id": "\u2014",
+        "detail": "Subscription plan rates & labels updated",
+        "ip": "::1"
+    }
+]

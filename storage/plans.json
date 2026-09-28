@@ -1,0 +1,101 @@
+{
+    "starter": {
+        "id": "starter",
+        "label": "Starter",
+        "price": 1,
+        "period": "month",
+        "popular": false,
+        "features": [
+            {
+                "text": "1 Website",
+                "included": true
+            },
+            {
+                "text": "5 GB Bandwidth",
+                "included": true
+            },
+            {
+                "text": "Basic Support",
+                "included": true
+            },
+            {
+                "text": "SSL Included",
+                "included": true
+            },
+            {
+                "text": "Admin Panel",
+                "included": false
+            },
+            {
+                "text": "Priority Support",
+                "included": false
+            }
+        ]
+    },
+    "pro": {
+        "id": "pro",
+        "label": "Pro",
+        "price": 19,
+        "period": "month",
+        "popular": true,
+        "features": [
+            {
+                "text": "3 Websites",
+                "included": true
+            },
+            {
+                "text": "50 GB Bandwidth",
+                "included": true
+            },
+            {
+                "text": "Priority Support",
+                "included": true
+            },
+            {
+                "text": "SSL + Backup",
+                "included": true
+            },
+            {
+                "text": "Admin Panel",
+                "included": true
+            },
+            {
+                "text": "AI Features",
+                "included": false
+            }
+        ]
+    },
+    "business": {
+        "id": "business",
+        "label": "Business",
+        "price": 49,
+        "period": "month",
+        "popular": false,
+        "features": [
+            {
+                "text": "Unlimited Websites",
+                "included": true
+            },
+            {
+                "text": "500 GB Bandwidth",
+                "included": true
+            },
+            {
+                "text": "24\/7 Support",
+                "included": true
+            },
+            {
+                "text": "SSL + Daily Backup",
+                "included": true
+            },
+            {
+                "text": "Admin Panel",
+                "included": true
+            },
+            {
+                "text": "AI Features",
+                "included": true
+            }
+        ]
+    }
+}

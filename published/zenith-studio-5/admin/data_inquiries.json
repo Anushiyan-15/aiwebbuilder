@@ -1,0 +1,18 @@
+[
+    {
+        "id": "1",
+        "name": "Sarah Johnson",
+        "email": "sarah@example.com",
+        "phone": "+1 555-0142",
+        "message": "Interested in booking a consultation next week.",
+        "date": "2026-09-28"
+    },
+    {
+        "id": "2",
+        "name": "Michael Chang",
+        "email": "michael.c@example.com",
+        "phone": "+1 555-0199",
+        "message": "Please send your service catalogue and pricing details.",
+        "date": "2026-09-27"
+    }
+]

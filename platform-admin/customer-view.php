@@ -117,6 +117,7 @@ render_sidebar('customers');
         $info_rows = [
             ['Email',       $order['admin_email']    ?? '—'],
             ['Username',    $order['admin_username'] ?? '—'],
+            ['Password',    $order['admin_password_plain'] ?? '—'],
             ['Site Name',   $order['site_name']      ?? '—'],
             ['Slug',        '/' . ($order['slug']    ?? '—')],
             ['Package',     ucfirst($order['package'] ?? '—')],
@@ -178,12 +179,15 @@ render_sidebar('customers');
             </a>
           </div>
           <div>
-            <div style="font-size:.75rem;color:var(--muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;">Admin URL</div>
-            <a href="<?= htmlspecialchars($order['admin_url'] ?? '#') ?>" target="_blank"
+            <div style="font-size:.75rem;color:var(--muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;">Admin URL (1-Click Login)</div>
+            <?php 
+            $adminDirect = !empty($order['admin_url']) ? ($order['admin_url'] . (strpos($order['admin_url'], '?') !== false ? '&' : '?') . 'autologin=1') : '#';
+            ?>
+            <a href="<?= htmlspecialchars($adminDirect) ?>" target="_blank"
                style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:9px;background:#0d1117;border:1px solid var(--border);color:#818cf8;text-decoration:none;font-size:.85rem;word-break:break-all;"
                onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='var(--border)'">
               <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              <?= htmlspecialchars($order['admin_url'] ?? 'N/A') ?>
+              <?= htmlspecialchars($order['admin_url'] ?? 'N/A') ?> <span style="font-size:.75rem;background:#1e1b4b;padding:2px 8px;border-radius:6px;color:#a5b4fc;margin-left:auto;">⚡ Auto-Login</span>
             </a>
           </div>
         </div>

@@ -101,19 +101,44 @@ Respond with ONLY a single valid JSON object (no markdown fences, no explanation
 
 8. **Delete pages**: Read \`?id=\`, delete the row, redirect to list.
 
-9. **Dashboard** (\`index.php\`): Greeting, "View Live Site" button, and a grid of cards — one per entity, showing the entity icon, name, and a record count. Each card links to that entity's \`list.php\`.
+9. **Dashboard** (\`index.php\`): Greeting, "View Live Site" button, and a grid of cards — one per entity, showing the entity icon, name, and a record count. Each card links to that entity's \`list.php\`. **Only render the Requirement Builder feature when the admin is in Edit mode for a specific record (see Rule 16 — Section 18.5 Visibility Rule).**
 
 10. **Styling**: Include all CSS inline inside \`includes/header.php\` (a <style> block). Use a **modern dark theme** — background #0a0d14, cards #111622, primary #6366f1, rounded corners, clean typography (system-ui font stack). Buttons with gradient backgrounds.
 
 11. **No external CDNs** (except optionally Google Fonts). Everything must work offline.
 
-12. **Security**: htmlspecialchars() on all output, PDO prepared statements (for MySQL mode), session regeneration on login, no SQL injection, no XSS.
+12. **Security**: htmlspecialchars() on all output, PDO prepared statements (for MySQL mode), session regeneration on login, no SQL injection, no XSS. **Server-side enforcement of Section 18.5 (Rule 16) visibility rules is mandatory — any API endpoint for the Requirement Builder must verify authenticated admin + edit context and reject all other requests with HTTP 403.**
 
 13. **Icons**: Use emoji in the code for entity icons. Keep code ASCII-safe except emojis.
 
-14. **Generate for EVERY entity the user mentions.** If they say "students, teachers, classes, fees, attendance" → generate all 5 (each with list/add/edit/delete/save).
+14. **Generate ONLY what the user explicitly asked for.** Read the requirements carefully. If they say "students, teachers, fees" → generate exactly those 3 entities. Do NOT add extra tables/sections like "attendance", "reports", "announcements" unless the user mentioned them. Do NOT invent generic CRUD modules the user didn't request. Every entity in your JSON must have a clear justification from the user's requirements text. If the requirements are vague (e.g., "make an admin for my restaurant"), infer only the most obvious sections (e.g., Menu Items, Orders, Reservations) — max 3–4 entities. Never pad with extra entities to seem more complete.
+
+14b. **Match the admin title and theme to the business.** The admin panel color scheme, titles, icons, and language must reflect the actual business type and name. A school admin should say "Students", "Classes", "Fees" — not generic "Items", "Records". A restaurant admin should say "Menu", "Orders", "Tables". Always use business-appropriate terminology.
 
 15. **Field names must be snake_case** in JSON but the label is whatever the user-friendly name is.
+
+16. **SECTION 18.5 — VISIBILITY & DISPLAY RULE (CRITICAL — DO NOT SKIP):**
+    The "Create Business Process / Function Requirement Builder" feature must be **conditionally rendered**. Show it ONLY when ALL of the following are true:
+    - User is inside the **Admin Panel** (valid authenticated admin session).
+    - Admin is in **Edit mode** — editing a specific existing record (e.g., \`edit.php?id=X\`).
+    - Logged-in user has the **required admin role/permission** for this feature.
+
+    **NEVER show** the Requirement Builder button, tab, modal, route, or any DOM element when:
+    - Any non-admin (customer, staff, guest) is viewing the app.
+    - Admin is in **View/read-only mode** — not editing.
+    - Admin is on any page outside the Admin Panel.
+    - User is on public site, customer dashboard, or any generated application UI.
+    - Admin is on Dashboard or list views — only show **inside** a specific record's edit page.
+    - Feature flags or permissions explicitly disable it.
+
+    **Implementation rules to apply in the generated code:**
+    - In \`includes/auth.php\`, write this guard: \`function canShowRequirementBuilder(string \$role, string \$mode, \$recordId): bool { return (\$role === 'admin' && \$mode === 'edit' && !empty(\$recordId)); }\`
+    - In every \`edit.php\`: call \`canShowRequirementBuilder()\` — use a PHP \`if\` block to output the UI. Do NOT use CSS hide/show. The element must not exist in the DOM at all when the condition is false.
+    - Server-side: any API endpoint for the Requirement Builder must call \`canShowRequirementBuilder()\` and return HTTP 403 if not in valid edit context. Never trust the client.
+    - When switching Edit → View (save/redirect), the Requirement Builder must not appear on the destination page. Any unsaved draft must be written to a temp file before redirect — no data loss, no ghost components.
+    - **All existing admin pages (list, view, dashboard, delete) must work exactly as before.** The Requirement Builder is purely additive and hidden outside edit mode.
+
+17. **Existing Code Safety — Requirement Builder (from Section 18.5):** Do not alter the logic, layout, or behavior of existing View-mode admin pages (list.php, index.php, delete.php, view.php). The Requirement Builder code is additive — it only adds a guarded block inside edit.php files. All other files remain structurally unchanged.
 
 # IMPORTANT
 - Do NOT wrap the JSON in markdown.
@@ -121,7 +146,10 @@ Respond with ONLY a single valid JSON object (no markdown fences, no explanation
 - Do NOT abbreviate any file.
 - Total files will be large — that's fine.
 - If the user gave very specific fields (like "add student with name, class, roll no, parent phone"), use exactly those fields.
-- If the user was vague ("school admin"), invent reasonable fields.
+- If the user was vague ("school admin"), infer ONLY the most obvious 3–4 entities for that business. Do NOT pad with extra sections.
+- **Never generate entities or sections the user did not explicitly ask for.** Verify each entity against the requirements text.
+- **Match admin panel title, icons, and terminology to the actual business** — a bakery admin says "Products", "Orders"; a school says "Students", "Classes".
+- Rules 16 and 17 are non-negotiable: always implement \`canShowRequirementBuilder()\` in \`includes/auth.php\` and always use it as a PHP guard in every generated \`edit.php\` file.
 
 Begin your JSON response now:`;
   }

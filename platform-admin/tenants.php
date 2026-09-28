@@ -265,8 +265,10 @@ render_sidebar('tenants');
                   </a>
 
                   <!-- Admin Login Link -->
-                  <?php if (!empty($adminUrl)): ?>
-                    <a href="<?= htmlspecialchars($adminUrl) ?>" target="_blank" class="btn btn-ghost btn-sm" style="color:#a5b4fc;border-color:rgba(99,102,241,0.3);" title="Open Customer Admin Panel">
+                  <?php if (!empty($adminUrl)): 
+                    $directAdmin = $adminUrl . (strpos($adminUrl, '?') !== false ? '&' : '?') . 'autologin=1';
+                  ?>
+                    <a href="<?= htmlspecialchars($directAdmin) ?>" target="_blank" class="btn btn-ghost btn-sm" style="color:#a5b4fc;border-color:rgba(99,102,241,0.3);" title="Open Customer Admin Panel (1-Click Login)">
                       🔐 Admin
                     </a>
                   <?php endif; ?>

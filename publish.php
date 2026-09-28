@@ -142,10 +142,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'crea
             $n = 2;
             while (is_dir(publishedDir() . '/' . $slug)) { $slug = slugify($siteName) . '-' . $n++; }
 
+            // Load dynamic pricing from storage/plans.json
+            $plansFile = (defined('STORAGE_DIR') ? STORAGE_DIR : __DIR__ . '/storage') . '/plans.json';
+            $savedPlans = file_exists($plansFile) ? json_decode(file_get_contents($plansFile), true) : null;
             $pricing = [
-                'starter'  => ['label' => 'Starter',  'price' => 9.00],
-                'pro'      => ['label' => 'Pro',      'price' => 19.00],
-                'business' => ['label' => 'Business', 'price' => 49.00],
+                'starter'  => ['label' => $savedPlans['starter']['label'] ?? 'Starter',   'price' => (float)($savedPlans['starter']['price'] ?? 9.00)],
+                'pro'      => ['label' => $savedPlans['pro']['label'] ?? 'Pro',           'price' => (float)($savedPlans['pro']['price'] ?? 19.00)],
+                'business' => ['label' => $savedPlans['business']['label'] ?? 'Business', 'price' => (float)($savedPlans['business']['price'] ?? 49.00)],
             ];
             $pack = $pricing[$package] ?? $pricing['pro'];
 
@@ -242,6 +245,52 @@ if (($_GET['action'] ?? '') === 'simulate_pay') {
     exit;
 }
 
+// ─── PayPal Return (after buyer approves on PayPal) ────
+if (($_GET['action'] ?? '') === 'paypal_return') {
+    $oid       = clean($_GET['order_id'] ?? '');
+    $ppOrderId = clean($_GET['token'] ?? '');   // PayPal sends ?token=PAYPAL_ORDER_ID
+    $order = loadOrder($oid);
+    if (!$order) { http_response_code(404); exit('Order not found'); }
+
+    // Already paid or published? Just go to done.
+    if (in_array($order['status'] ?? '', ['paid', 'published'])) {
+        header('Location: ' . SITE_URL . '/publish.php?step=done&order_id=' . urlencode($oid));
+        exit;
+    }
+
+    require_once __DIR__ . '/includes/PayPalService.php';
+    $pp = new PayPalService();
+
+    $captureResult = $pp->captureOrder($ppOrderId ?: ($order['paypal_order_id'] ?? ''));
+
+    if ($captureResult['success'] ?? false) {
+        $order['status']            = 'paid';
+        $order['paypal_order_id']   = $captureResult['paypal_order_id'] ?? $ppOrderId;
+        $order['paypal_capture_id'] = $captureResult['capture_id'] ?? '';
+        $order['paid_at']           = date('Y-m-d H:i:s');
+        $order['payer_email']       = $captureResult['payer']['email'] ?? '';
+        saveOrder($order);
+        header('Location: ' . SITE_URL . '/publish.php?step=done&order_id=' . urlencode($oid));
+    } else {
+        $errMsg = urlencode($captureResult['error'] ?? 'Payment capture failed');
+        header('Location: ' . SITE_URL . '/publish.php?payment_error=' . $errMsg . '&order_id=' . urlencode($oid));
+    }
+    exit;
+}
+
+// ─── PayPal Cancel ─────────────────────────────────────
+if (($_GET['action'] ?? '') === 'paypal_cancel') {
+    $oid = clean($_GET['order_id'] ?? '');
+    $order = loadOrder($oid);
+    if ($order) {
+        $order['status'] = 'cancelled';
+        saveOrder($order);
+    }
+    header('Location: ' . SITE_URL . '/publish.php?payment_cancelled=1&order_id=' . urlencode($oid));
+    exit;
+}
+
+
 // ─── Actual Publish ────────────────────────────────────
 if (($_GET['action'] ?? '') === 'do_publish') {
     $oid = clean($_GET['order_id'] ?? '');
@@ -258,45 +307,28 @@ if (($_GET['action'] ?? '') === 'do_publish') {
     file_put_contents($targetDir . '/index.html', $siteHtml);
 
     // 2. Write AI-generated admin panel
+    // 2. Write complete, working AI/CMS admin panel
     $adminUrl = null;
-    if (in_array($order['gen_mode'], ['admin','database'], true) && !empty($order['admin_files'])) {
+    $needsAdmin = in_array($order['gen_mode'] ?? '', ['admin','database'], true) || !empty($order['admin_username']);
+    if ($needsAdmin) {
         $adminDir = $targetDir . '/admin';
-        if (!is_dir($adminDir)) @mkdir($adminDir, 0755, true);
+        require_once __DIR__ . '/includes/AdminPanelGenerator.php';
+        AdminPanelGenerator::install($adminDir, $order);
 
-        // Credentials
-        file_put_contents($adminDir . '/.auth.json', json_encode([
-            'username' => $order['admin_username'],
-            'email'    => $order['admin_email'],
-            'hash'     => $order['admin_password_hash'],
-            'created'  => $order['created_at'],
-        ], JSON_PRETTY_PRINT));
-
-        // Write every AI-generated file
-        foreach ($order['admin_files'] as $relPath => $content) {
-            $relPath = str_replace(['..', '\\'], '', $relPath);
-            $relPath = ltrim($relPath, '/');
-            if ($relPath === '') continue;
-            $fullPath = $adminDir . '/' . $relPath;
-            $dir = dirname($fullPath);
-            if (!is_dir($dir)) @mkdir($dir, 0755, true);
-            file_put_contents($fullPath, $content);
+        // Merge any extra custom admin files if provided
+        if (!empty($order['admin_files']) && is_array($order['admin_files'])) {
+            foreach ($order['admin_files'] as $relPath => $content) {
+                $relPath = str_replace(['..', '\\'], '', $relPath);
+                $relPath = ltrim($relPath, '/');
+                if ($relPath === '' || $relPath === '.auth.json') continue;
+                $fullPath = $adminDir . '/' . $relPath;
+                $dir = dirname($fullPath);
+                if (!is_dir($dir)) @mkdir($dir, 0755, true);
+                file_put_contents($fullPath, $content);
+            }
         }
-
-        // SQL schema (database mode)
-        if ($order['gen_mode'] === 'database' && !empty($order['admin_sql'])) {
-            file_put_contents($adminDir . '/schema.sql', $order['admin_sql']);
-        }
-
-        // Ensure login.php entry exists
-        if (!file_exists($adminDir . '/login.php') && file_exists($adminDir . '/index.php')) {
-            file_put_contents($adminDir . '/login.php', "<?php session_start(); require __DIR__ . '/index.php';");
-        }
-
-        // Ensure uploads folder for file fields
-        if (!is_dir($adminDir . '/uploads')) @mkdir($adminDir . '/uploads', 0755, true);
 
         $adminUrl = SITE_URL . '/published/' . $slug . '/admin/login.php';
-        if (!file_exists($adminDir . '/login.php')) $adminUrl = SITE_URL . '/published/' . $slug . '/admin/';
     }
 
     // 3. meta.json
@@ -367,8 +399,48 @@ if (($_GET['action'] ?? '') === 'do_publish') {
     $order['site_active'] = true;
     saveOrder($order);
 
-    header('Location: ' . SITE_URL . '/publish.php?step=done&order_id=' . urlencode($oid));
-    exit;
+    // Synchronize to Supabase PostgreSQL
+    require_once __DIR__ . '/includes/db.php';
+    syncOrderToDatabase($order);
+
+}
+
+// Load active subscription plans for Step 3 checkout
+$plansFile = (defined('STORAGE_DIR') ? STORAGE_DIR : __DIR__ . '/storage') . '/plans.json';
+$activePlans = [
+    'starter' => [
+        'id' => 'starter', 'label' => 'Starter', 'price' => 9.00, 'period' => 'month', 'popular' => false,
+        'features' => [
+            ['text' => '1 Website', 'included' => true],
+            ['text' => '5 GB Bandwidth', 'included' => true],
+            ['text' => 'Basic Support', 'included' => true],
+            ['text' => 'SSL Included', 'included' => true],
+        ]
+    ],
+    'pro' => [
+        'id' => 'pro', 'label' => 'Pro', 'price' => 19.00, 'period' => 'month', 'popular' => true,
+        'features' => [
+            ['text' => '3 Websites', 'included' => true],
+            ['text' => '50 GB Bandwidth', 'included' => true],
+            ['text' => 'Priority Support', 'included' => true],
+            ['text' => 'SSL + Backup', 'included' => true],
+        ]
+    ],
+    'business' => [
+        'id' => 'business', 'label' => 'Business', 'price' => 49.00, 'period' => 'month', 'popular' => false,
+        'features' => [
+            ['text' => 'Unlimited Websites', 'included' => true],
+            ['text' => '500 GB Bandwidth', 'included' => true],
+            ['text' => '24/7 Support', 'included' => true],
+            ['text' => 'SSL + Daily Backup', 'included' => true],
+        ]
+    ],
+];
+if (file_exists($plansFile)) {
+    $decoded = json_decode(file_get_contents($plansFile), true);
+    if (is_array($decoded) && !empty($decoded)) {
+        $activePlans = $decoded;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -480,10 +552,9 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:radial-grad
     <!-- Steps -->
     <div class="steps" id="steps">
       <div class="step active" data-step="1"><span class="n">1</span> Review</div>
-      <div class="step" data-step="2" id="step-btn-2"><span class="n">2</span> AI Admin Panel</div>
-      <div class="step" data-step="3.5" id="step-btn-35"><span class="n">3</span> Credentials</div>
-      <div class="step" data-step="3"><span class="n">4</span> Payment</div>
-      <div class="step" data-step="4"><span class="n">5</span> Published</div>
+      <div class="step" data-step="3.5" id="step-btn-35"><span class="n">2</span> Admin Credentials</div>
+      <div class="step" data-step="3"><span class="n">3</span> Choose Plan &amp; Pay</div>
+      <div class="step" data-step="4"><span class="n">4</span> Published</div>
     </div>
 
     <div class="body">
@@ -630,37 +701,27 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:radial-grad
         <p class="sub">All plans include hosting setup, SSL, and lifetime admin access. Cancel anytime.</p>
 
         <div class="grid3" id="pkg-grid">
-          <div class="pkg" data-pkg="starter">
-            <h3>Starter</h3>
-            <div class="price">$9 <small>/mo</small></div>
+          <?php foreach ($activePlans as $pkey => $p): 
+            $isPop = !empty($p['popular']);
+            $periodSuffix = ($p['period'] ?? 'month') === 'year' ? '/yr' : (($p['period'] ?? '') === 'lifetime' ? 'once' : '/mo');
+          ?>
+          <div class="pkg <?= $pkey === 'pro' || ($isPop && !isset($activePlans['pro']['popular'])) ? 'selected' : '' ?> <?= $isPop ? 'is-popular' : '' ?>" data-pkg="<?= htmlspecialchars($pkey) ?>" data-price="<?= number_format((float)$p['price'], 2, '.', '') ?>" data-label="<?= htmlspecialchars($p['label']) ?>" data-period="<?= htmlspecialchars($periodSuffix) ?>">
+            <?php if ($isPop): ?>
+              <span class="badge" style="background:#10b981;color:#0a0d14;font-weight:900">POPULAR</span>
+            <?php endif; ?>
+            <h3><?= htmlspecialchars($p['label']) ?></h3>
+            <div class="price">$<?= number_format((float)$p['price'], 0) ?> <small><?= $periodSuffix ?></small></div>
             <ul>
-              <li>1 Website</li>
-              <li>5 GB Bandwidth</li>
-              <li>Basic Support</li>
-              <li>SSL Included</li>
+              <?php foreach ($p['features'] ?? [] as $feat): 
+                $inc = !empty($feat['included']);
+              ?>
+              <li style="<?= !$inc ? 'color:#64748b;text-decoration:line-through;opacity:.7;' : '' ?>">
+                <span><?= $inc ? '✓' : '✗' ?></span> <?= htmlspecialchars($feat['text']) ?>
+              </li>
+              <?php endforeach; ?>
             </ul>
           </div>
-          <div class="pkg selected" data-pkg="pro">
-            <span class="badge">POPULAR</span>
-            <h3>Pro</h3>
-            <div class="price">$19 <small>/mo</small></div>
-            <ul>
-              <li>3 Websites</li>
-              <li>50 GB Bandwidth</li>
-              <li>Priority Support</li>
-              <li>SSL + Backup</li>
-            </ul>
-          </div>
-          <div class="pkg" data-pkg="business">
-            <h3>Business</h3>
-            <div class="price">$49 <small>/mo</small></div>
-            <ul>
-              <li>Unlimited Websites</li>
-              <li>500 GB Bandwidth</li>
-              <li>24/7 Support</li>
-              <li>SSL + Daily Backup</li>
-            </ul>
-          </div>
+          <?php endforeach; ?>
         </div>
 
         <div class="summary" style="margin-top:1.75rem">
@@ -690,55 +751,21 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:radial-grad
           <span class="ic">🌐</span><span id="live-url-text">Loading…</span><span class="arrow">↗</span>
         </a>
 
-        <h3 style="color:#fff;font-size:1rem;margin:.5rem 0 .75rem" id="admin-heading">🔐 Admin Panel</h3>
-        <a class="link-big hidden" id="admin-link" href="#" target="_blank">
-          <span class="ic">🔐</span><span id="admin-url-text">Loading…</span><span class="arrow">↗</span>
-        </a>
+        <!-- Action buttons row -->
+        <div style="display:flex;flex-wrap:wrap;gap:.75rem;margin:1.25rem 0 .5rem;">
+          <button class="link-big hidden" id="admin-link-btn" onclick="openAdminModal()" style="border:none;cursor:pointer;flex:1;min-width:200px;">
+            <span class="ic">🔐</span><span>Admin Panel</span><span class="arrow">→</span>
+          </button>
+          <button class="link-big" id="guide-link-btn" onclick="openGuideModal()" style="border-color:#6366f1;border:2px solid #6366f1;cursor:pointer;flex:1;min-width:200px;background:transparent;">
+            <span class="ic">🚀</span><span>Feature Guide</span><span class="arrow">→</span>
+          </button>
+        </div>
 
-        <h3 style="color:#fff;font-size:1rem;margin:.5rem 0 .75rem">⚙️ Manage Your Website</h3>
+        <h3 style="color:#fff;font-size:1rem;margin:.75rem 0 .5rem">⚙️ Manage Your Website</h3>
         <a class="link-big" id="manager-link" href="#" target="_blank" style="border-color:#a855f7;">
           <span class="ic">⚙️</span><span id="manager-url-text">Open Website Manager</span><span class="arrow">→</span>
         </a>
 
-        <div class="cred-box hidden" id="cred-box">
-          <h4 style="color:#a7f3d0;font-size:.85rem;margin-bottom:.85rem;font-weight:800">🔑 Your Credentials</h4>
-          <div class="cred-row">
-            <span class="k">Username</span>
-            <span class="v" id="cred-user">—</span>
-            <button class="copy" onclick="copyText(document.getElementById('cred-user').textContent,this)">Copy</button>
-          </div>
-          <div class="cred-row">
-            <span class="k">Password</span>
-            <span class="v" id="cred-pass">—</span>
-            <button class="copy" onclick="copyText(document.getElementById('cred-pass').textContent,this)">Copy</button>
-          </div>
-          <div style="margin-top:.85rem;padding-top:.85rem;border-top:1px dashed #1e293b;font-size:.76rem;color:#fbbf24">
-            ⚠️ For security reasons, this password will not be shown again after you leave this page.
-          </div>
-        </div>
-
-        <!-- ═══ STEP-BY-STEP CUSTOMER ONBOARDING GUIDE ═══ -->
-        <h3 style="color:#fff;font-size:1.1rem;margin:1.75rem 0 .75rem;display:flex;align-items:center;gap:0.5rem;">
-          <span>🚀</span> Step-by-Step Guide: What to Do Next
-        </h3>
-        <div id="dynamic-guide" style="display:flex;flex-direction:column;gap:0.9rem;margin-bottom:1.5rem;">
-          <!-- Dynamically filled by JS -->
-          <div style="background:#0b0f17;border:1px solid #1e293b;border-left:4px solid #6366f1;border-radius:12px;padding:1rem;">
-            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
-              <span style="background:#6366f1;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">1</span>
-              <strong style="color:#fff;font-size:0.9rem;">Log In to Your Admin Panel</strong>
-            </div>
-            <p style="color:#94a3b8;font-size:0.82rem;line-height:1.55;margin-left:1.85rem;" id="guide-login-text">Click the 🔐 Admin Panel button above. Enter your username and password.</p>
-          </div>
-          <div id="guide-entities-steps"></div>
-          <div style="background:#0b0f17;border:1px solid #1e293b;border-left:4px solid #a855f7;border-radius:12px;padding:1rem;">
-            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
-              <span style="background:#a855f7;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">+</span>
-              <strong style="color:#fff;font-size:0.9rem;">Add New Features Anytime with AI</strong>
-            </div>
-            <p style="color:#94a3b8;font-size:0.82rem;line-height:1.55;margin-left:1.85rem;">Go to <strong style="color:#c7d2fe;">⚙️ Website Manager</strong> → AI Feature Adder tab → type what you need in plain English → AI builds it automatically!</p>
-          </div>
-        </div>
       </section>
 
     </div>
@@ -751,6 +778,88 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:radial-grad
   </div>
 
 </div>
+
+<!-- ═══ ADMIN PANEL POPUP MODAL ═══ -->
+<div id="admin-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;" onclick="if(event.target===this)closeAdminModal()">
+  <div style="background:#111622;border:1.5px solid #1e293b;border-radius:20px;width:100%;max-width:480px;margin:1rem;box-shadow:0 24px 64px rgba(0,0,0,.6);overflow:hidden;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.4rem;background:#0d121c;border-bottom:1px solid #1e293b;">
+      <div style="display:flex;align-items:center;gap:.6rem;">
+        <span style="font-size:1.3rem;">🔐</span>
+        <strong style="color:#fff;font-size:1rem;">Admin Panel Access</strong>
+      </div>
+      <button onclick="closeAdminModal()" style="background:none;border:none;color:#64748b;font-size:1.4rem;cursor:pointer;line-height:1;padding:.2rem .4rem;border-radius:6px;transition:color .2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#64748b'">✕</button>
+    </div>
+    <!-- Body -->
+    <div style="padding:1.4rem;">
+      <!-- Credentials -->
+      <div style="background:#0b0f17;border:1px solid #1e293b;border-radius:12px;padding:1rem;margin-bottom:1rem;">
+        <div style="font-size:.75rem;font-weight:700;color:#6366f1;letter-spacing:.07em;margin-bottom:.75rem;">🔑 YOUR CREDENTIALS</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem 0;border-bottom:1px dashed #1e293b;">
+          <span style="color:#94a3b8;font-size:.82rem;min-width:80px;">Username</span>
+          <span style="color:#fff;font-weight:700;font-family:'Fira Code',monospace;font-size:.88rem;" id="modal-cred-user">—</span>
+          <button class="copy" onclick="copyText(document.getElementById('modal-cred-user').textContent,this)">Copy</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem 0;">
+          <span style="color:#94a3b8;font-size:.82rem;min-width:80px;">Password</span>
+          <span style="color:#fff;font-weight:700;font-family:'Fira Code',monospace;font-size:.88rem;" id="modal-cred-pass">—</span>
+          <button class="copy" onclick="copyText(document.getElementById('modal-cred-pass').textContent,this)">Copy</button>
+        </div>
+        <div style="margin-top:.75rem;font-size:.73rem;color:#fbbf24;">⚠️ Save these now — password won't be shown again after you leave this page.</div>
+      </div>
+      <!-- URL -->
+      <div style="background:#0b0f17;border:1px solid #1e293b;border-radius:12px;padding:.9rem;margin-bottom:1.1rem;">
+        <div style="font-size:.75rem;font-weight:700;color:#64748b;letter-spacing:.07em;margin-bottom:.4rem;">LOGIN URL</div>
+        <code style="font-family:'Fira Code',monospace;font-size:.78rem;color:#34d399;word-break:break-all;" id="modal-admin-url">—</code>
+      </div>
+      <!-- Buttons -->
+      <div style="display:flex;gap:.6rem;">
+        <a id="modal-admin-open-btn" href="#" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.75rem;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-weight:700;font-size:.88rem;border-radius:10px;text-decoration:none;transition:opacity .2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+          ⚡ One-Click Login
+        </a>
+        <button onclick="closeAdminModal()" style="padding:.75rem 1.1rem;background:#1e293b;color:#94a3b8;font-weight:600;font-size:.88rem;border:none;border-radius:10px;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#283347'" onmouseout="this.style.background='#1e293b'">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FEATURE GUIDE POPUP MODAL ═══ -->
+<div id="guide-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;" onclick="if(event.target===this)closeGuideModal()">
+  <div style="background:#111622;border:1.5px solid #1e293b;border-radius:20px;width:100%;max-width:540px;margin:1rem;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.6);overflow:hidden;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.4rem;background:#0d121c;border-bottom:1px solid #1e293b;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:.6rem;">
+        <span style="font-size:1.3rem;">🚀</span>
+        <strong style="color:#fff;font-size:1rem;">Step-by-Step Guide: What to Do Next</strong>
+      </div>
+      <button onclick="closeGuideModal()" style="background:none;border:none;color:#64748b;font-size:1.4rem;cursor:pointer;line-height:1;padding:.2rem .4rem;border-radius:6px;transition:color .2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#64748b'">✕</button>
+    </div>
+    <!-- Scrollable body -->
+    <div style="padding:1.4rem;overflow-y:auto;display:flex;flex-direction:column;gap:.85rem;">
+      <!-- Step 1: Login -->
+      <div style="background:#0b0f17;border:1px solid #1e293b;border-left:4px solid #6366f1;border-radius:12px;padding:1rem;">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;">
+          <span style="background:#6366f1;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0;">1</span>
+          <strong style="color:#fff;font-size:.9rem;">Log In to Your Admin Panel</strong>
+        </div>
+        <p style="color:#94a3b8;font-size:.82rem;line-height:1.55;margin-left:1.85rem;" id="guide-login-text">Click the 🔐 Admin Panel button. Your credentials are pre-filled — just click Login.</p>
+      </div>
+      <!-- Dynamic entity steps injected here -->
+      <div id="guide-entities-steps"></div>
+      <!-- Add features step -->
+      <div style="background:#0b0f17;border:1px solid #1e293b;border-left:4px solid #a855f7;border-radius:12px;padding:1rem;">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;">
+          <span style="background:#a855f7;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0;">+</span>
+          <strong style="color:#fff;font-size:.9rem;">Add New Features Anytime with AI</strong>
+        </div>
+        <p style="color:#94a3b8;font-size:.82rem;line-height:1.55;margin-left:1.85rem;">Go to <strong style="color:#c7d2fe;">⚙️ Website Manager</strong> → AI Feature Adder tab → describe what you need in plain English → AI builds it automatically!</p>
+      </div>
+      <!-- Close button -->
+      <button onclick="closeGuideModal()" style="margin-top:.4rem;width:100%;padding:.75rem;background:#1e293b;color:#94a3b8;font-weight:600;font-size:.9rem;border:none;border-radius:10px;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#283347'" onmouseout="this.style.background='#1e293b'">✕ Close Guide</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://js.puter.com/v2/"></script>
@@ -799,7 +908,18 @@ function detectStepFromUrl() {
     state.orderId = oid;
     finalizeOrder(oid);
   }
+  if (params.get('payment_cancelled') === '1') {
+    setTimeout(() => showToast('⚠️ Payment cancelled. You can try again below.'), 600);
+    if (oid) {
+      state.step = 3;
+      renderStep();
+    }
+  }
+  if (params.get('payment_error')) {
+    setTimeout(() => showToast('❌ Payment error: ' + decodeURIComponent(params.get('payment_error'))), 600);
+  }
 }
+
 
 function loadFromSession() {
   try {
@@ -858,13 +978,13 @@ function updateReview() {
   document.getElementById('rev-admin').textContent   = state.hasAdmin ? '✓ AI will write it' : '✗ Static only';
 
   document.getElementById('next-flow-text').innerHTML = state.hasAdmin
-    ? 'The AI will write your complete admin panel from scratch, then you choose credentials, pay, and go live. No coding required.'
-    : 'We\'ll take payment then instantly publish your website to a live URL.';
+    ? 'Confirm your admin credentials, select your plan, and complete payment. Your website and full CMS admin panel will be published automatically.'
+    : 'Choose your plan, make payment, and your website will be published live instantly.';
 }
 
 /* ═══════════════ NAVIGATION ═══════════════ */
 function currentSteps() {
-  return state.hasAdmin ? [1, 2, 3.5, 3, 4] : [1, 3, 4];
+  return state.hasAdmin ? [1, 3.5, 3, 4] : [1, 3, 4];
 }
 function nextStep() { const c = currentSteps(); return c[c.indexOf(state.step) + 1] || null; }
 function prevStep() { const c = currentSteps(); return c[c.indexOf(state.step) - 1] || null; }
@@ -883,19 +1003,14 @@ function renderStep() {
     else if (elIdx >= 0 && elIdx < curIdx) el.classList.add('done');
   });
 
-  const labelMap = { 1: 'Step 1 — Review', 2: 'Step 2 — AI Admin', 3.5: 'Step 3 — Credentials', 3: 'Step 4 — Payment', 4: 'Step 5 — Published' };
+  const labelMap = { 1: 'Step 1 — Review', 3.5: 'Step 2 — Admin Credentials', 3: 'Step 3 — Plan & Payment', 4: 'Step 4 — Published' };
   document.getElementById('step-label').textContent = labelMap[state.step] || '';
 
   document.getElementById('btn-back').style.visibility = prevStep() ? 'visible' : 'hidden';
 
   const btnNext = document.getElementById('btn-next');
   if (state.step === 1) { btnNext.textContent = 'Continue →'; btnNext.className = 'btn btn-primary'; btnNext.style.display = ''; }
-  else if (state.step === 2) {
-    btnNext.textContent = 'Continue to Credentials →';
-    btnNext.className = 'btn btn-primary';
-    btnNext.style.display = (state.adminFiles && Object.keys(state.adminFiles).length) ? '' : 'none';
-  }
-  else if (state.step === 3.5) { btnNext.textContent = 'Continue →'; btnNext.className = 'btn btn-primary'; btnNext.style.display = ''; }
+  else if (state.step === 3.5) { btnNext.textContent = 'Continue to Payment →'; btnNext.className = 'btn btn-primary'; btnNext.style.display = ''; }
   else if (state.step === 3) { btnNext.innerHTML = '🔒 Pay & Publish Now'; btnNext.className = 'btn btn-paypal'; btnNext.style.display = ''; }
   else { btnNext.style.display = 'none'; }
 
@@ -966,10 +1081,18 @@ function bindEvents() {
 }
 
 function updatePackageUI() {
-  const prices = { starter: 9, pro: 19, business: 49 };
-  const labels = { starter: 'Starter', pro: 'Pro', business: 'Business' };
-  document.getElementById('pay-pkg').textContent = labels[state.package];
-  document.getElementById('pay-total').textContent = '$' + prices[state.package].toFixed(2) + ' USD';
+  const selectedPkg = document.querySelector(`#pkg-grid .pkg[data-pkg="${state.package}"]`) || document.querySelector('#pkg-grid .pkg');
+  if (selectedPkg) {
+    const price = parseFloat(selectedPkg.dataset.price) || 19;
+    const label = selectedPkg.dataset.label || 'Pro';
+    document.getElementById('pay-pkg').textContent = label;
+    document.getElementById('pay-total').textContent = '$' + price.toFixed(2) + ' USD';
+  } else {
+    const prices = { starter: 9, pro: 19, business: 49 };
+    const labels = { starter: 'Starter', pro: 'Pro', business: 'Business' };
+    document.getElementById('pay-pkg').textContent = labels[state.package] || 'Pro';
+    document.getElementById('pay-total').textContent = '$' + (prices[state.package] || 19).toFixed(2) + ' USD';
+  }
 }
 
 function updateAdminUrlPreview() {
@@ -1003,17 +1126,7 @@ async function onNext() {
 
   if (state.step === 1) {
     if (!state.html) { showToast('⚠️ No design found'); return; }
-    state.step = state.hasAdmin ? 2 : 3;
-    if (state.hasAdmin) {
-      document.getElementById('req-display').textContent = state.adminRequirements || '(default — AI will decide)';
-    }
-    renderStep();
-    return;
-  }
-
-  if (state.step === 2) {
-    if (!state.adminFiles || !Object.keys(state.adminFiles).length) { showToast('⚠️ Generate the admin panel first'); return; }
-    state.step = 3.5;
+    state.step = state.hasAdmin ? 3.5 : 3;
     renderStep();
     return;
   }
@@ -1249,14 +1362,16 @@ function showPublished(order) {
   document.getElementById('live-url-text').textContent = order.live_url;
 
   if (order.admin_url) {
-    document.getElementById('admin-link').classList.remove('hidden');
-    document.getElementById('admin-link').href = order.admin_url;
-    document.getElementById('admin-url-text').textContent = order.admin_url;
-    document.getElementById('cred-box').classList.remove('hidden');
-    document.getElementById('cred-user').textContent = order.admin_username || '—';
-    document.getElementById('cred-pass').textContent = order.admin_password_plain || '(sent via email)';
-  } else {
-    document.getElementById('admin-heading').style.display = 'none';
+    const autoUrl = order.admin_url + (order.admin_url.includes('?') ? '&' : '?') + 'autologin=1';
+
+    // Show the Admin Panel button
+    document.getElementById('admin-link-btn').classList.remove('hidden');
+
+    // Populate modal fields
+    document.getElementById('modal-cred-user').textContent = order.admin_username || '—';
+    document.getElementById('modal-cred-pass').textContent = order.admin_password_plain || '(sent via email)';
+    document.getElementById('modal-admin-url').textContent = order.admin_url;
+    document.getElementById('modal-admin-open-btn').href = autoUrl;
   }
 
   // Set manager link
@@ -1267,7 +1382,7 @@ function showPublished(order) {
     document.getElementById('manager-url-text').textContent = 'Manage: ' + order.order_id;
   }
 
-  // Build dynamic guide
+  // Build dynamic guide (injected into guide modal's entity steps container)
   const entities = order.admin_entities || [];
   const stepsContainer = document.getElementById('guide-entities-steps');
   if (stepsContainer && entities.length > 0) {
@@ -1278,11 +1393,11 @@ function showPublished(order) {
       const name = entity.name || entity.id || 'Section';
       const icon = entity.icon || '📋';
       html += `<div style="background:#0b0f17;border:1px solid #1e293b;border-left:4px solid ${color};border-radius:12px;padding:1rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
-          <span style="background:${color};color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">${i+2}</span>
-          <strong style="color:#fff;font-size:0.9rem;">${icon} Manage ${name}</strong>
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;">
+          <span style="background:${color};color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0;">${i+2}</span>
+          <strong style="color:#fff;font-size:.9rem;">${icon} Manage ${name}</strong>
         </div>
-        <p style="color:#94a3b8;font-size:0.82rem;line-height:1.55;margin-left:1.85rem;">In your admin panel, click <strong style="color:#c7d2fe;">${name}</strong> in the sidebar → click <strong style="color:#34d399;">+ Add ${entity.singular || name}</strong> → fill in the form → Save. Your data will appear on your live website instantly.</p>
+        <p style="color:#94a3b8;font-size:.82rem;line-height:1.55;margin-left:1.85rem;">In your admin panel, click <strong style="color:#c7d2fe;">${name}</strong> in the sidebar → click <strong style="color:#34d399;">+ Add ${entity.singular || name}</strong> → fill in the form → Save. Your data will appear on your live website instantly.</p>
       </div>`;
     });
     stepsContainer.innerHTML = html;
@@ -1297,6 +1412,30 @@ function showPublished(order) {
     }
   } catch (e) {}
 }
+
+/* ═══════════════ MODAL OPEN / CLOSE ═══════════════ */
+function openAdminModal() {
+  const m = document.getElementById('admin-modal');
+  m.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeAdminModal() {
+  document.getElementById('admin-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+function openGuideModal() {
+  const m = document.getElementById('guide-modal');
+  m.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeGuideModal() {
+  document.getElementById('guide-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+// Close modals on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeAdminModal(); closeGuideModal(); }
+});
 
 
 /* ═══════════════ UI HELPERS ═══════════════ */

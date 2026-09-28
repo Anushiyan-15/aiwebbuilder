@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/config.php';
 $page_title = 'AI Website Builder — 3 Style Variations & AI Co-Pilot';
 $page_desc  = 'Describe your business, choose a mode and a design direction, and get 3 AI-generated style variations.';
@@ -113,13 +113,205 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 .gen-block { margin-top: 1.75rem; padding: 1.75rem; background: linear-gradient(135deg, rgba(16,185,129,0.06), rgba(99,102,241,0.06)); border: 1.5px solid rgba(16,185,129,0.35); border-radius: 16px; text-align: center; }
 .gen-block h3 { font-size: 1.05rem; font-weight: 800; color: #fff; margin-bottom: 0.4rem; }
 .gen-block p  { font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.25rem; line-height: 1.5; }
-.gen-progress { display: none; margin-top: 1rem; padding: 1rem 1.25rem; background: #0a0f1c; border: 1.5px solid #1e293b; border-radius: 12px; }
-.gen-progress.active { display: block; }
-.gen-progress-bar { height: 6px; background: #1e293b; border-radius: 999px; overflow: hidden; margin-bottom: 0.6rem; }
-.gen-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6366f1, #a855f7); transition: width 0.4s ease; }
-.gen-progress-msg { font-size: 0.82rem; color: #cbd5e1; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
-.gen-progress-msg .spinner { width: 14px; height: 14px; border: 2px solid #334155; border-top-color: #818cf8; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+.gen-progress { display: none; }
+.gen-progress.active { display: none; }
+
+/* ══ 3D GENERATION OVERLAY ══ */
+#gen-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 99999;
+  background: #020408;
+  align-items: center; justify-content: center;
+  flex-direction: column;
+  overflow: hidden;
+  perspective: 1000px;
+}
+#gen-overlay.active { display: flex; animation: overlayIn 0.5s cubic-bezier(0.22,1,0.36,1); }
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Grid floor */
+#gen-overlay::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(99,102,241,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,102,241,0.07) 1px, transparent 1px);
+  background-size: 40px 40px;
+  transform: perspective(600px) rotateX(60deg) scale(2.5) translateY(30%);
+  transform-origin: center bottom;
+  animation: gridScroll 4s linear infinite;
+}
+@keyframes gridScroll { from { background-position: 0 0; } to { background-position: 0 40px; } }
+
+/* Ambient glow blobs */
+#gen-overlay::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 30%, rgba(99,102,241,0.18) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 35% at 80% 60%, rgba(168,85,247,0.15) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 30% at 50% 80%, rgba(16,185,129,0.10) 0%, transparent 65%);
+  animation: blobShift 8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes blobShift {
+  0%   { transform: scale(1) translate(0,0); }
+  50%  { transform: scale(1.08) translate(-2%, 1%); }
+  100% { transform: scale(1) translate(2%,-1%); }
+}
+
+/* ── 3D Rotating Cube ── */
+.gen-cube-scene {
+  width: 90px; height: 90px;
+  perspective: 500px;
+  margin-bottom: 2.5rem;
+  position: relative; z-index: 2;
+}
+.gen-cube {
+  width: 90px; height: 90px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: cubeRotate 4s linear infinite;
+}
+@keyframes cubeRotate {
+  0%   { transform: rotateX(0deg) rotateY(0deg); }
+  100% { transform: rotateX(360deg) rotateY(360deg); }
+}
+.gen-cube-face {
+  position: absolute; width: 90px; height: 90px;
+  border: 1.5px solid rgba(99,102,241,0.7);
+  background: rgba(99,102,241,0.06);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem;
+  backdrop-filter: blur(2px);
+}
+.gen-cube-face.front  { transform: rotateY(0deg)   translateZ(45px); }
+.gen-cube-face.back   { transform: rotateY(180deg) translateZ(45px); border-color: rgba(168,85,247,0.7); }
+.gen-cube-face.right  { transform: rotateY(90deg)  translateZ(45px); border-color: rgba(16,185,129,0.6); }
+.gen-cube-face.left   { transform: rotateY(-90deg) translateZ(45px); border-color: rgba(56,189,248,0.6); }
+.gen-cube-face.top    { transform: rotateX(90deg)  translateZ(45px); border-color: rgba(251,191,36,0.5); }
+.gen-cube-face.bottom { transform: rotateX(-90deg) translateZ(45px); border-color: rgba(248,113,113,0.5); }
+
+/* ── Orbiting Rings ── */
+.gen-rings {
+  position: absolute; width: 200px; height: 200px;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 1;
+}
+.gen-ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+}
+.gen-ring-1 {
+  border-top-color: #6366f1;
+  border-right-color: rgba(99,102,241,0.3);
+  animation: ringOrbit1 2.5s linear infinite;
+}
+.gen-ring-2 {
+  inset: 15px;
+  border-bottom-color: #a855f7;
+  border-left-color: rgba(168,85,247,0.3);
+  animation: ringOrbit2 1.8s linear infinite reverse;
+}
+.gen-ring-3 {
+  inset: 30px;
+  border-top-color: #10b981;
+  border-right-color: rgba(16,185,129,0.2);
+  animation: ringOrbit1 3.2s linear infinite;
+}
+@keyframes ringOrbit1 { to { transform: rotate(360deg); } }
+@keyframes ringOrbit2 { to { transform: rotate(-360deg); } }
+
+/* ── Text & Progress ── */
+.gen-overlay-content { position: relative; z-index: 2; text-align: center; display: flex; flex-direction: column; align-items: center; }
+
+.gen-overlay-title {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #fff 30%, #a5b4fc 70%, #c4b5fd 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  animation: titlePulse 3s ease-in-out infinite;
+}
+@keyframes titlePulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.2); } }
+
+.gen-overlay-stage {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  font-weight: 600;
+  min-height: 1.4em;
+  transition: opacity 0.3s;
+  margin-bottom: 2rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.gen-overlay-stage .stage-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #6366f1;
+  box-shadow: 0 0 10px #6366f1;
+  animation: stagePulse 1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes stagePulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.5; } }
+
+/* Progress track */
+.gen-overlay-track {
+  width: min(480px, 80vw);
+  height: 5px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.15);
+}
+.gen-overlay-fill {
+  height: 100%;
+  width: 5%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4f46e5, #8b5cf6, #06b6d4);
+  background-size: 200% 100%;
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  animation: progressShimmer 2s linear infinite;
+  box-shadow: 0 0 12px rgba(99,102,241,0.7), 0 0 24px rgba(99,102,241,0.3);
+}
+@keyframes progressShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+
+/* Steps */
+.gen-overlay-steps {
+  display: flex; gap: 1.5rem; margin-top: 0.5rem;
+}
+.gen-step {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.72rem; font-weight: 700;
+  color: #475569; transition: color 0.4s;
+}
+.gen-step.done  { color: #10b981; }
+.gen-step.active { color: #a5b4fc; }
+.gen-step-icon { font-size: 0.9rem; }
+.gen-step-check { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 0.58rem; flex-shrink: 0; }
+.gen-step.done .gen-step-check { background: #10b981; border-color: #10b981; color: #fff; }
+.gen-step.done .gen-step-check::after { content: '✓'; }
+.gen-step.active .gen-step-check { border-color: #6366f1; animation: stepPing 1.5s ease-in-out infinite; }
+@keyframes stepPing { 0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.6); } 50% { box-shadow: 0 0 0 5px rgba(99,102,241,0); } }
+
+/* Floating particles */
+.gen-particles { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.gen-particle {
+  position: absolute;
+  border-radius: 50%;
+  animation: particleFloat linear infinite;
+}
+@keyframes particleFloat {
+  0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
+
 
 /* ══ DESIGNS SCREEN ══ */
 #designs-screen { display: none; min-height: calc(100vh - 64px); padding: 3rem 1.5rem 5rem; background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0a0d14 60%); }
@@ -339,6 +531,67 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
   </div>
 </div>
 
+<!-- ═══ 3D GENERATION OVERLAY ═══ -->
+<div id="gen-overlay">
+  <!-- Floating particles (injected by JS) -->
+  <div class="gen-particles" id="gen-particles"></div>
+
+  <!-- 3D Cube with orbiting rings -->
+  <div class="gen-cube-scene" style="position:relative;">
+    <div class="gen-rings">
+      <div class="gen-ring gen-ring-1"></div>
+      <div class="gen-ring gen-ring-2"></div>
+      <div class="gen-ring gen-ring-3"></div>
+    </div>
+    <div class="gen-cube">
+      <div class="gen-cube-face front">✦</div>
+      <div class="gen-cube-face back">🎨</div>
+      <div class="gen-cube-face right">⚡</div>
+      <div class="gen-cube-face left">🚀</div>
+      <div class="gen-cube-face top">💡</div>
+      <div class="gen-cube-face bottom">🌐</div>
+    </div>
+  </div>
+
+  <!-- Text content -->
+  <div class="gen-overlay-content">
+    <div class="gen-overlay-title">Crafting Your Website</div>
+    <div class="gen-overlay-stage">
+      <span class="stage-dot"></span>
+      <span id="gen-overlay-text">Initializing AI engine…</span>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="gen-overlay-track">
+      <div class="gen-overlay-fill" id="gen-overlay-fill"></div>
+    </div>
+
+    <!-- Step indicators -->
+    <div class="gen-overlay-steps">
+      <div class="gen-step active" id="gstep-1">
+        <span class="gen-step-check"></span>
+        <span class="gen-step-icon">🔗</span>
+        <span>Connecting</span>
+      </div>
+      <div class="gen-step" id="gstep-2">
+        <span class="gen-step-check"></span>
+        <span class="gen-step-icon">🤖</span>
+        <span>Generating</span>
+      </div>
+      <div class="gen-step" id="gstep-3">
+        <span class="gen-step-check"></span>
+        <span class="gen-step-icon">✨</span>
+        <span>Finalizing</span>
+      </div>
+    </div>
+
+    <!-- Tip text -->
+    <div style="margin-top:2rem;font-size:0.75rem;color:#334155;font-weight:600;max-width:360px;line-height:1.6;text-align:center;" id="gen-overlay-tip">
+      ✦ AI is designing 3 unique style variations — each with your exact content
+    </div>
+  </div>
+</div>
+
 <!-- ═══ WIZARD SCREEN ═══ -->
 <div id="wizard-screen">
   <div class="wizard-card">
@@ -524,6 +777,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
     <div class="tb-divider"></div>
     <button class="tb-btn" onclick="openInNewTab()">👁 Preview</button>
     <button class="tb-btn visual-btn" onclick="openStudioInNewTab()">🎨 Edit in Studio ↗</button>
+    <button class="tb-btn" id="btn-add-function" onclick="openAddFunctionManager()" style="display:none;background:linear-gradient(135deg,#10b981,#059669);border-color:#34d399;color:#fff;font-weight:800;" title="Add new features to your admin panel using AI">&#xFF0B; Add Function</button>
     <button class="tb-btn guide-btn" onclick="openStepByStepGuide()" style="background:rgba(99,102,241,0.18); border:1.5px solid #6366f1; color:#c7d2fe; font-weight:800;" title="How to use admin panel & add functions">📖 Admin &amp; Features Guide</button>
     <button class="tb-btn" onclick="backToDesigns()">← Back to Variations</button>
     <div style="flex:1"></div>
@@ -544,8 +798,17 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
           <button class="tb-btn" onclick="refreshLivePreview()" style="padding:0.28rem 0.7rem; font-size:0.75rem;">↺ Reload</button>
         </div>
       </div>
+      <!-- Admin URL Info Bar (shown when admin tab active) -->
+      <div id="admin-url-bar" style="display:none;background:#0a0f1c;border-bottom:1px solid #1e3a5f;padding:.5rem 1rem;align-items:center;gap:.65rem;flex-wrap:wrap;">
+        <span style="font-size:.72rem;font-weight:700;color:#38bdf8;white-space:nowrap;">&#x1F510; Admin URL:</span>
+        <input id="admin-url-display" type="text" readonly onclick="this.select()" value="Publish your site first to see admin URL"
+          style="flex:1;min-width:180px;max-width:520px;background:#050810;border:1px solid #1e293b;border-radius:7px;padding:.3rem .75rem;color:#67e8f9;font-family:monospace;font-size:.73rem;outline:none;cursor:text;">
+        <button onclick="copyAdminUrlBar()" id="copy-admin-url-btn" style="padding:.3rem .75rem;background:#1e3a5f;border:1px solid #1e4a6f;border-radius:7px;color:#93c5fd;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">&#x1F4CB; Copy URL</button>
+        <a id="admin-url-open-btn" href="#" target="_blank" style="padding:.3rem .75rem;background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;border-radius:7px;color:#fff;font-size:.72rem;font-weight:700;text-decoration:none;white-space:nowrap;">&#x2197; Open Admin Login</a>
+        <span style="font-size:.7rem;color:#475569;font-weight:600;">Login, then edit your site freely</span>
+      </div>
       <div class="preview-container" id="preview-container">
-        <iframe id="live-iframe" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+        <iframe id="live-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-top-navigation-by-user-activation"></iframe>
       </div>
     </div>
   </div>
@@ -639,7 +902,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
         <button class="wbtn wbtn-ghost" onclick="closeFullscreenModal()">✕ Close</button>
       </div>
     </div>
-    <iframe class="modal-iframe" id="modal-iframe" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+    <iframe class="modal-iframe" id="modal-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-top-navigation-by-user-activation"></iframe>
   </div>
 </div>
 
@@ -1125,7 +1388,21 @@ function restoreIntoWorkspace() {
   document.getElementById('current-view-label').textContent = currentViewMode === 'admin' ? '🔐 Admin Panel' : '🌐 Frontend Site';
 
   if (currentViewMode === 'admin') {
-    updateLiveIframe(stabilizeAdminHtml(c.adminHtml));
+    // Check if site is already published
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      const sess = raw ? JSON.parse(raw) : null;
+      const adminUrl = sess?.published?.adminUrl;
+      if (adminUrl) {
+        const autoUrl = adminUrl + (adminUrl.includes('?') ? '&' : '?') + 'autologin=1';
+        const f = document.getElementById('live-iframe');
+        if (f) { f.src = autoUrl; f.removeAttribute('srcdoc'); }
+      } else {
+        updateLiveIframe(stabilizeAdminHtml(c.adminHtml));
+      }
+    } catch (e) {
+      updateLiveIframe(stabilizeAdminHtml(c.adminHtml));
+    }
   } else {
     currentHtml = c.html;
     updateLiveIframe(currentHtml);
@@ -1343,6 +1620,95 @@ function fillAdminPreset(key) {
 /* ══════════════════════════════════════════════════
    GENERATE
 ═════════════════════════════════════════════════ */
+/* ── Overlay helpers ── */
+const GEN_TIPS = [
+  '✦ AI is designing 3 unique style variations — each with your exact content',
+  '🎨 Crafting color palettes, typography, and layout structure…',
+  '⚡ Writing clean, production-ready HTML & CSS…',
+  '🔐 Building your custom admin panel & database schema…',
+  '🌐 Optimizing for mobile, tablet, and desktop screens…',
+  '🚀 Almost there — polishing the final touches…',
+];
+let _tipInterval = null;
+let _particleInterval = null;
+
+function showGenOverlay(bizName) {
+  const overlay = document.getElementById('gen-overlay');
+  const fill    = document.getElementById('gen-overlay-fill');
+  const text    = document.getElementById('gen-overlay-text');
+  const tip     = document.getElementById('gen-overlay-tip');
+
+  // Reset state
+  fill.style.width = '5%';
+  text.textContent = 'Connecting to AI engine…';
+  ['gstep-1','gstep-2','gstep-3'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('done','active');
+  });
+  document.getElementById('gstep-1').classList.add('active');
+
+  // Spawn particles
+  const pc = document.getElementById('gen-particles');
+  pc.innerHTML = '';
+  const colors = ['#6366f1','#a855f7','#10b981','#38bdf8','#f59e0b','#fb7185'];
+  for (let i = 0; i < 28; i++) {
+    const p = document.createElement('div');
+    p.className = 'gen-particle';
+    const size = Math.random() * 5 + 2;
+    const dur  = Math.random() * 8 + 6;
+    const del  = Math.random() * 8;
+    const left = Math.random() * 100;
+    p.style.cssText = `width:${size}px;height:${size}px;left:${left}%;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${dur}s;animation-delay:${del}s;opacity:0.5;`;
+    pc.appendChild(p);
+  }
+
+  // Rotate tips
+  let tipIdx = 0;
+  tip.textContent = GEN_TIPS[0];
+  _tipInterval = setInterval(() => {
+    tipIdx = (tipIdx + 1) % GEN_TIPS.length;
+    tip.style.opacity = '0';
+    setTimeout(() => { tip.textContent = GEN_TIPS[tipIdx]; tip.style.opacity = '1'; }, 300);
+  }, 3500);
+  tip.style.transition = 'opacity 0.3s';
+
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function updateGenOverlay(stage, message, pct) {
+  const fill = document.getElementById('gen-overlay-fill');
+  const text = document.getElementById('gen-overlay-text');
+  if (fill) fill.style.width = pct + '%';
+  if (text) text.textContent = message;
+  // Update step indicators
+  if (stage === 'connecting') {
+    document.getElementById('gstep-1').classList.add('active');
+  } else if (stage === 'generating') {
+    document.getElementById('gstep-1').classList.replace('active','done') || (document.getElementById('gstep-1').classList.remove('active'), document.getElementById('gstep-1').classList.add('done'));
+    document.getElementById('gstep-2').classList.add('active');
+  } else if (stage === 'done') {
+    ['gstep-1','gstep-2'].forEach(id => { const el = document.getElementById(id); el.classList.remove('active'); el.classList.add('done'); });
+    document.getElementById('gstep-3').classList.add('active');
+    if (fill) fill.style.width = '95%';
+  }
+}
+
+function hideGenOverlay(success) {
+  clearInterval(_tipInterval);
+  clearInterval(_particleInterval);
+  const fill = document.getElementById('gen-overlay-fill');
+  const overlay = document.getElementById('gen-overlay');
+  if (success) {
+    ['gstep-1','gstep-2','gstep-3'].forEach(id => { const el = document.getElementById(id); el.classList.remove('active'); el.classList.add('done'); });
+    if (fill) fill.style.width = '100%';
+    setTimeout(() => { overlay.classList.remove('active'); document.body.style.overflow = ''; }, 800);
+  } else {
+    if (fill) { fill.style.background = 'linear-gradient(90deg,#ef4444,#dc2626)'; fill.style.width = '100%'; }
+    setTimeout(() => { overlay.classList.remove('active'); document.body.style.overflow = ''; }, 1200);
+  }
+}
+
 async function generateWithMode(mode) {
   if (!currentAuthUser) { showToast('⚠️ Sign in first'); return; }
   if (!window.WebsiteGenerator) { showToast('⚠️ Generator not loaded'); return; }
@@ -1350,12 +1716,7 @@ async function generateWithMode(mode) {
   const data = collectWizardSnapshot();
   if (!data.biz_name || !data.biz_tagline) { showToast('⚠️ Complete Step 1 first'); return; }
 
-  const progress = document.getElementById('gen-progress');
-  const fill = document.getElementById('gen-progress-fill');
-  const text = document.getElementById('gen-progress-text');
-  progress.classList.add('active');
-  fill.style.width = '5%'; fill.style.background = '';
-  text.textContent = 'Preparing…';
+  showGenOverlay(data.biz_name);
   document.getElementById('wiz-generate-btn').disabled = true;
   document.getElementById('wiz-next').disabled = true;
   document.getElementById('wiz-prev').disabled = true;
@@ -1364,9 +1725,9 @@ async function generateWithMode(mode) {
     const concepts = await window.WebsiteGenerator.generateConcepts(data, mode, {
       model: window.PuterService?.selectedModel || 'deepseek/deepseek-chat',
       onProgress: (p) => {
-        if (p.stage === 'connecting') { fill.style.width = '15%'; text.textContent = p.message; }
-        else if (p.stage === 'generating') { fill.style.width = '50%'; text.textContent = p.message; }
-        else if (p.stage === 'done') { fill.style.width = '100%'; text.textContent = p.message; }
+        if (p.stage === 'connecting')  updateGenOverlay('connecting',  p.message, 15);
+        else if (p.stage === 'generating') updateGenOverlay('generating', p.message, 55);
+        else if (p.stage === 'done')   updateGenOverlay('done',        p.message, 90);
       }
     });
     generatedConcepts = concepts;
@@ -1379,16 +1740,12 @@ async function generateWithMode(mode) {
     currentHtml = generatedDesigns[0]?.html || '';
 
     saveSessionNow();
-
+    hideGenOverlay(true);
     display3Designs(concepts, data.biz_name);
-    fill.style.width = '100%'; text.textContent = '✓ Complete!';
-    setTimeout(() => progress.classList.remove('active'), 1500);
     showToast('✨ 3 style variations ready!');
   } catch (err) {
     console.error(err);
-    fill.style.width = '100%';
-    fill.style.background = 'linear-gradient(90deg,#ef4444,#dc2626)';
-    text.textContent = '⚠️ ' + (err.message || 'Failed');
+    hideGenOverlay(false);
     showToast('Failed: ' + err.message);
   } finally {
     document.getElementById('wiz-generate-btn').disabled = false;
@@ -1397,6 +1754,7 @@ async function generateWithMode(mode) {
     updateGenerateButton();
   }
 }
+
 
 /* ══════════════════════════════════════════════════
    DISPLAY 3 DESIGNS
@@ -1434,10 +1792,117 @@ function display3Designs(concepts, bizName) {
 }
 
 /* ══════════════════════════════════════════════════
-   ADMIN PANEL STABILIZER
+   ADMIN PANEL STABILIZER & INTERACTIVE PREVIEW
 ═════════════════════════════════════════════════ */
+function buildInteractiveAdminPreview(bizName) {
+  bizName = bizName || document.getElementById('biz_name')?.value || 'My Website';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>\${bizName} Admin Panel Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0a0d14;color:#e2e8f0;display:flex;min-height:100vh}
+.sidebar{width:240px;background:#0d121c;border-right:1px solid #1e293b;padding:1.25rem 1rem;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:.75rem;padding:0 .25rem 1.25rem;border-bottom:1px solid #1e293b;margin-bottom:1rem}
+.brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.nav-btn{display:flex;align-items:center;gap:.75rem;padding:.65rem .85rem;border-radius:9px;color:#94a3b8;background:none;border:none;width:100%;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;text-align:left;margin-bottom:.3rem;transition:.2s}
+.nav-btn:hover{background:#111622;color:#fff}
+.nav-btn.active{background:#1e1b4b;color:#a5b4fc;font-weight:700}
+.main{flex:1;padding:2rem;overflow-y:auto}
+.card{background:#111622;border:1px solid #1e293b;border-radius:16px;padding:1.5rem;margin-bottom:1.25rem}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.stat{background:#0b0f17;border:1px solid #1e293b;border-radius:12px;padding:1rem}
+.stat .lbl{font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase}
+.stat .val{font-size:1.6rem;font-weight:800;color:#fff;margin:.3rem 0}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:.76rem;font-weight:700;color:#cbd5e1;margin-bottom:.35rem;text-transform:uppercase}
+.field input,.field textarea{width:100%;padding:.7rem .9rem;border:1.5px solid #283347;border-radius:9px;background:#0b0f17;color:#fff;font-family:inherit;font-size:.88rem}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.25rem;border-radius:9px;font-weight:700;font-size:.84rem;cursor:pointer;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+table{width:100%;border-collapse:collapse}
+th,td{padding:.75rem;text-align:left;border-bottom:1px solid #1e293b;font-size:.84rem}
+th{color:#64748b;font-weight:700;text-transform:uppercase;font-size:.74rem}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="brand"><div class="logo">⚡</div><div><div style="font-weight:800;font-size:.9rem;color:#fff">\${bizName}</div><div style="font-size:.7rem;color:#64748b">Admin Preview</div></div></div>
+  <button class="nav-btn active" onclick="tab('dash')">📊 Dashboard</button>
+  <button class="nav-btn" onclick="tab('content')">📝 Edit Content</button>
+  <button class="nav-btn" onclick="tab('data')">📋 Manage Data</button>
+  <button class="nav-btn" onclick="tab('settings')">⚙️ Settings &amp; Password</button>
+</div>
+<div class="main">
+  <div id="sec-dash">
+    <h1 style="font-size:1.6rem;font-weight:900;color:#fff;margin-bottom:.3rem">Dashboard Overview 👋</h1>
+    <p style="color:#64748b;font-size:.85rem;margin-bottom:1.5rem">Live preview of your customer CMS administration portal.</p>
+    <div class="grid4">
+      <div class="stat"><div class="lbl">Status</div><div class="val" style="color:#10b981">Live 🟢</div><div>Hosted &amp; Active</div></div>
+      <div class="stat"><div class="lbl">SSL Security</div><div class="val" style="color:#a5b4fc">Active 🔒</div><div>HTTPS Protected</div></div>
+      <div class="stat"><div class="lbl">Content Sections</div><div class="val">6</div><div>Ready to Edit</div></div>
+      <div class="stat"><div class="lbl">Data Items</div><div class="val">3</div><div>In Database</div></div>
+    </div>
+    <div class="card">
+      <h3 style="color:#fff;font-size:1rem;margin-bottom:.5rem">⚡ Full Admin Features Auto-Installed Upon Publish</h3>
+      <p style="color:#94a3b8;font-size:.84rem;line-height:1.6">When you publish this site, the complete CMS admin panel will be installed at <code>/admin/</code>. You get 1-Click login, content editing, record management, and you can change your password anytime in Settings.</p>
+    </div>
+  </div>
+  <div id="sec-content" style="display:none">
+    <h1 style="font-size:1.6rem;font-weight:900;color:#fff;margin-bottom:.3rem">Website Content Editor 📝</h1>
+    <div class="card">
+      <div class="field"><label>Business Name</label><input type="text" value="\${bizName}"></div>
+      <div class="field"><label>Tagline</label><input type="text" value="Quality &amp; Excellence Delivered"></div>
+      <div class="field"><label>Phone</label><input type="text" value="+1 (555) 019-2834"></div>
+      <div class="field"><label>Email</label><input type="email" value="contact@\${bizName.toLowerCase().replace(/[^a-z0-9]/g,'')}.com"></div>
+      <button class="btn">💾 Save Content Changes</button>
+    </div>
+  </div>
+  <div id="sec-data" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h1 style="font-size:1.6rem;font-weight:900;color:#fff">Manage Records 📋</h1>
+      <button class="btn">➕ Add New Item</button>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Title</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr><td>Premium Consultation</td><td>Consulting</td><td>$150.00</td><td><button style="background:none;border:none;color:#818cf8;cursor:pointer">✏️ Edit</button></td></tr>
+          <tr><td>Standard Package</td><td>Services</td><td>$99.00</td><td><button style="background:none;border:none;color:#818cf8;cursor:pointer">✏️ Edit</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div id="sec-settings" style="display:none">
+    <h1 style="font-size:1.6rem;font-weight:900;color:#fff;margin-bottom:.3rem">Settings &amp; Password ⚙️</h1>
+    <div class="card" style="max-width:500px">
+      <div class="field"><label>Current Password</label><input type="password" value="••••••••"></div>
+      <div class="field"><label>New Password</label><input type="password" placeholder="Enter new password"></div>
+      <div class="field"><label>Confirm New Password</label><input type="password" placeholder="Confirm new password"></div>
+      <button class="btn">Update Password</button>
+    </div>
+  </div>
+</div>
+<script>
+function tab(id) {
+  ['dash','content','data','settings'].forEach(t => {
+    document.getElementById('sec-' + t).style.display = (t === id) ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['dash','content','data','settings'][i] === id);
+  });
+}
+<\/script>
+</body>
+</html>`;
+}
+
 function stabilizeAdminHtml(html) {
-  if (!html) return '';
+  if (!html || html.includes('<?php') || !html.includes('<html')) {
+    const bizName = document.getElementById('biz_name')?.value || 'My Website';
+    return buildInteractiveAdminPreview(bizName);
+  }
   const stabilizer = `
 <style id="__wc_admin_stabilizer__">
 html, body {
@@ -1470,7 +1935,7 @@ canvas, iframe { max-width: 100%; }
 </style>
 `;
   if (/<head[^>]*>/i.test(html)) {
-    return html.replace(/<head([^>]*)>/i, `<head$1>${stabilizer}`);
+    return html.replace(/<head([^>]*)>/i, `<head$1>\${stabilizer}`);
   }
   return stabilizer + html;
 }
@@ -1568,8 +2033,24 @@ function switchWorkspaceView(view) {
   document.getElementById('current-view-label').textContent = view === 'admin' ? '🔐 Admin Panel' : '🌐 Frontend Site';
 
   if (view === 'admin') {
+    // If site is already published, load the real admin panel directly
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      const sess = raw ? JSON.parse(raw) : null;
+      const adminUrl = sess?.published?.adminUrl;
+      if (adminUrl) {
+        const autoUrl = adminUrl + (adminUrl.includes('?') ? '&' : '?') + 'autologin=1';
+        const f = document.getElementById('live-iframe');
+        if (f) { f.src = autoUrl; f.removeAttribute('srcdoc'); }
+        saveSessionNow();
+        return;
+      }
+    } catch (e) {}
+    // Not yet published — show interactive mock preview
     updateLiveIframe(stabilizeAdminHtml(c.adminHtml || ''));
   } else {
+    const f = document.getElementById('live-iframe');
+    if (f) { f.removeAttribute('src'); }
     updateLiveIframe(c.html);
   }
   saveSessionNow();
