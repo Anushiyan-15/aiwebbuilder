@@ -286,6 +286,30 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 .toast { position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 10000; background: #111622; border: 1.5px solid #283347; border-radius: 12px; padding: 0.85rem 1.4rem; color: #fff; font-size: 0.88rem; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.6); transform: translateY(100px); opacity: 0; transition: all 0.3s ease; max-width: 90vw; }
 .toast.show { transform: translateY(0); opacity: 1; }
 
+/* ══ GUIDE MODAL ══ */
+.generate-modal-backdrop {
+  display: none;
+  position: fixed; inset: 0; z-index: 100000;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(12px);
+  align-items: center; justify-content: center;
+  padding: 1.5rem;
+}
+.generate-modal-backdrop.open {
+  display: flex !important;
+  animation: guideIn 0.3s cubic-bezier(0.22,1,0.36,1);
+}
+@keyframes guideIn { from { opacity:0; transform:scale(0.96) translateY(16px); } to { opacity:1; transform:scale(1) translateY(0); } }
+.generate-modal-card {
+  background: #111622;
+  border: 1.5px solid #283347;
+  border-radius: 22px;
+  width: 100%;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  cursor: default;
+}
+
 /* ══ ADMIN REQUIREMENTS (in modal) ══ */
 .admin-req-section { display: none; padding: 1.5rem; border-top: 1px solid #1e293b; background: linear-gradient(180deg, #0a0f1c, #0d121c); }
 .admin-req-section.active { display: block; animation: fadeIn 0.3s ease; }
@@ -318,9 +342,14 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 <!-- ═══ WIZARD SCREEN ═══ -->
 <div id="wizard-screen">
   <div class="wizard-card">
-    <div class="wizard-header">
-      <h1>✦ AI Website Generator</h1>
-      <p>Tell us about your business and design direction. We'll generate <strong>3 style variations</strong> — you pick your favorite.</p>
+    <div class="wizard-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+      <div style="flex:1; min-width:260px;">
+        <h1>✦ AI Website Generator</h1>
+        <p>Tell us about your business and design direction. We'll generate <strong>3 style variations</strong> — you pick your favorite.</p>
+      </div>
+      <button type="button" class="wbtn" onclick="openStepByStepGuide()" style="background:rgba(255,255,255,0.18); border:1.5px solid rgba(255,255,255,0.35); color:#fff; font-size:0.82rem; font-weight:800; padding:0.55rem 1.15rem; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:0.45rem; white-space:nowrap; transition:all 0.15s; flex-shrink:0;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'" title="Click to view full-stack development guide">
+        <span>📖</span><span>Admin &amp; Features Guide</span>
+      </button>
     </div>
 
     <div class="wizard-progress">
@@ -495,6 +524,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
     <div class="tb-divider"></div>
     <button class="tb-btn" onclick="openInNewTab()">👁 Preview</button>
     <button class="tb-btn visual-btn" onclick="openStudioInNewTab()">🎨 Edit in Studio ↗</button>
+    <button class="tb-btn guide-btn" onclick="openStepByStepGuide()" style="background:rgba(99,102,241,0.18); border:1.5px solid #6366f1; color:#c7d2fe; font-weight:800;" title="How to use admin panel & add functions">📖 Admin &amp; Features Guide</button>
     <button class="tb-btn" onclick="backToDesigns()">← Back to Variations</button>
     <div style="flex:1"></div>
     <button class="tb-btn undo-btn" id="btn-undo-ai" onclick="undoLastAiChange()" style="display:none">↶ Undo AI</button>
@@ -623,7 +653,10 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
           Each mode produces <strong style="color:#a5b4fc">3 AI-generated style variations</strong> — all following your design direction.
         </div>
       </div>
-      <button class="wbtn wbtn-ghost" onclick="closeGenerateModal()">✕ Close</button>
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <button type="button" class="wbtn" onclick="openStepByStepGuide()" style="background:rgba(99,102,241,0.18); border:1.5px solid #6366f1; color:#c7d2fe; font-size:0.78rem; font-weight:700; padding:0.45rem 0.9rem; border-radius:8px; cursor:pointer;" title="How full stack and admin work">📖 View Guide</button>
+        <button type="button" class="wbtn wbtn-ghost" onclick="closeGenerateModal()">✕ Close</button>
+      </div>
     </div>
     <div class="mode-grid">
       <button class="gen-mode-card selected" data-mode="static" onclick="pickGenerateMode('static', this)">
@@ -684,11 +717,35 @@ Be specific about fields you need!"></textarea>
         </div>
       </div>
 
+      <!-- Customize Admin Credentials -->
+      <div class="w-group" style="margin-top:1.25rem; padding-top:1.25rem; border-top:1px dashed #283347;">
+        <label class="w-label" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>🔐 Customize Admin Login Credentials</span>
+          <span style="font-size:0.75rem; color:#10b981; font-weight:700;">✓ Fully Customizable</span>
+        </label>
+        <p style="font-size:0.76rem; color:#94a3b8; margin-bottom:0.75rem;">Set the username and password you want to use for logging into your admin panel:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+          <div>
+            <label class="w-label" style="font-size:0.75rem;" for="admin_custom_user">Admin Username</label>
+            <input type="text" class="w-input" id="admin_custom_user" placeholder="e.g. admin_apex" style="font-size:0.85rem;" autocomplete="off">
+            <div style="font-size:0.7rem; color:#64748b; margin-top:0.25rem;">Letters, numbers, underscore (min 4 chars)</div>
+          </div>
+          <div>
+            <label class="w-label" style="font-size:0.75rem;" for="admin_custom_pass">Admin Password</label>
+            <div style="position:relative;">
+              <input type="password" class="w-input" id="admin_custom_pass" placeholder="Min 8 chars" style="font-size:0.85rem; padding-right:2.2rem;" autocomplete="new-password">
+              <button type="button" onclick="togglePassVisibility('admin_custom_pass', this)" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.9rem;" title="Show/Hide">👁️</button>
+            </div>
+            <div style="font-size:0.7rem; color:#64748b; margin-top:0.25rem;">Min 8 characters</div>
+          </div>
+        </div>
+      </div>
+
       <div class="admin-ai-note">
         <span class="note-icon">💡</span>
         <div>
           <strong>How it works:</strong> After you publish, the AI generates your complete admin panel (login, dashboard, forms, tables).
-          You'll see the full file tree and can even <em>fix any file with AI</em> before paying.
+          You'll see the full file tree, log in with your customized credentials above, and can even <em>fix any file with AI</em> before paying.
         </div>
       </div>
     </div>
@@ -703,6 +760,142 @@ Be specific about fields you need!"></textarea>
         <button class="wbtn wbtn-primary" onclick="confirmGenerate()"><span>✦</span><span>Generate Now</span></button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ═══ FULL-STACK DEVELOPMENT GUIDE MODAL ═══ -->
+<div class="generate-modal-backdrop" id="step-guide-modal">
+  <div class="generate-modal-card" style="max-width:800px; max-height:90vh; display:flex; flex-direction:column;">
+
+    <!-- Header -->
+    <div style="padding:1.4rem 1.75rem; background:linear-gradient(135deg,#1e1b4b,#0d121c); border-bottom:1px solid #283347; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-shrink:0;">
+      <div style="display:flex; align-items:center; gap:0.85rem;">
+        <div style="width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,#4f46e5,#a855f7); display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; box-shadow:0 6px 18px rgba(99,102,241,0.4);">📖</div>
+        <div>
+          <div style="font-size:1.05rem; font-weight:900; color:#fff; letter-spacing:-0.02em;">Full-Stack Development Guide</div>
+          <div style="font-size:0.75rem; color:#818cf8; font-weight:700; margin-top:0.1rem;">How to use your AI-built website &amp; admin panel</div>
+        </div>
+      </div>
+      <button type="button" onclick="closeStepByStepGuide()" title="Close guide"
+        style="width:36px;height:36px;border-radius:10px;border:1.5px solid #334155;background:#0b0f17;color:#cbd5e1;font-size:1.15rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;"
+        onmouseover="this.style.borderColor='#ef4444';this.style.color='#fff';this.style.background='#7f1d1d'" onmouseout="this.style.borderColor='#334155';this.style.color='#cbd5e1';this.style.background='#0b0f17'">✕</button>
+    </div>
+
+    <!-- Scrollable Content -->
+    <div style="overflow-y:auto; flex:1; padding:1.5rem 1.75rem;">
+
+      <p style="color:#94a3b8; font-size:0.87rem; line-height:1.65; margin-bottom:1.5rem; padding:0.9rem 1rem; background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.25); border-radius:10px;">
+        💡 Your website was <strong style="color:#a5b4fc">AI-generated as a full-stack application</strong> — a public-facing website <em>and</em> a real PHP admin backend. This guide explains everything you need to know step by step.
+      </p>
+
+      <div style="display:flex; flex-direction:column; gap:1.1rem;">
+
+        <!-- Step 1 -->
+        <div style="background:#0b0f17; border:1px solid #1e293b; border-left:4px solid #6366f1; border-radius:14px; padding:1.2rem;">
+          <div style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.5rem;">
+            <span style="background:#6366f1; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800; flex-shrink:0;">1</span>
+            <h3 style="color:#fff; font-size:0.95rem; font-weight:800;">🌐 Switch Between Website &amp; Admin Panel</h3>
+          </div>
+          <p style="color:#94a3b8; font-size:0.83rem; line-height:1.6; margin-left:2.3rem;">
+            In the toolbar at the top, you'll see two tabs: <strong style="color:#67e8f9">🌐 Site</strong> (your public website) and <strong style="color:#67e8f9">🔐 Admin Panel</strong> (your backend). Click either tab to instantly switch the preview between them — both are fully live.
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="background:#0b0f17; border:1px solid #1e293b; border-left:4px solid #10b981; border-radius:14px; padding:1.2rem;">
+          <div style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.5rem;">
+            <span style="background:#10b981; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800; flex-shrink:0;">2</span>
+            <h3 style="color:#fff; font-size:0.95rem; font-weight:800;">🎨 Visually Edit in Studio (Drag &amp; Drop)</h3>
+          </div>
+          <p style="color:#94a3b8; font-size:0.83rem; line-height:1.6; margin-left:2.3rem;">
+            Click <strong style="color:#10b981">🎨 Edit in Studio ↗</strong> in the toolbar. Studio is a Canva-style drag-and-drop editor. Inside it, you can switch between <strong style="color:#fff">🌐 Site</strong> and <strong style="color:#fff">🔐 Admin Panel</strong> views — drag, resize, edit text and images on <em>both</em> without writing any code.
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="background:#0b0f17; border:1px solid #1e293b; border-left:4px solid #a855f7; border-radius:14px; padding:1.2rem;">
+          <div style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.5rem;">
+            <span style="background:#a855f7; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800; flex-shrink:0;">3</span>
+            <h3 style="color:#fff; font-size:0.95rem; font-weight:800;">🤖 Add New Functions Anytime with AI Co-Pilot</h3>
+          </div>
+          <p style="color:#94a3b8; font-size:0.83rem; line-height:1.6; margin-left:2.3rem;">
+            Click the <strong style="color:#c084fc">✦ WebCraft AI</strong> floating button (bottom-right). Tell the AI what you want to add — in plain English or Tanglish:
+          </p>
+          <div style="margin:0.6rem 0 0.6rem 2.3rem; background:#111622; border:1px solid #283347; border-radius:10px; padding:0.75rem; font-family:'Fira Code',monospace; font-size:0.76rem; color:#a5b4fc; line-height:1.8;">
+            💬 "Add employee management with name, position, photo — show team on website"<br>
+            💬 "Add a products section with name, price, image, category"<br>
+            💬 "Add a testimonials section with star rating"
+          </div>
+          <p style="color:#94a3b8; font-size:0.83rem; line-height:1.6; margin-left:2.3rem;">
+            ⚡ AI automatically writes the code, updates your <strong>public website</strong> section, and adds the full <strong>admin management module</strong> — all in one go.
+          </p>
+        </div>
+
+        <!-- Step 4 -->
+        <div style="background:#0b0f17; border:1px solid #1e293b; border-left:4px solid #f59e0b; border-radius:14px; padding:1.2rem;">
+          <div style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.5rem;">
+            <span style="background:#f59e0b; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800; flex-shrink:0;">4</span>
+            <h3 style="color:#fff; font-size:0.95rem; font-weight:800;">🔐 Set Your Own Admin Username &amp; Password</h3>
+          </div>
+          <p style="color:#94a3b8; font-size:0.83rem; line-height:1.6; margin-left:2.3rem;">
+            Your admin credentials are 100% yours to choose. Set them inside the <strong style="color:#fff">Generate Mode modal</strong> (when selecting Admin/Database mode) or in <strong style="color:#fff">Step 3 of the Publish wizard</strong>. Username: letters &amp; numbers, min 4 chars. Password: min 8 chars.
+          </p>
+        </div>
+
+        <!-- Step 5 -->
+        <div style="background:#0b0f17; border:1px solid #1e293b; border-left:4px solid #38bdf8; border-radius:14px; padding:1.2rem;">
+          <div style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.5rem;">
+            <span style="background:#38bdf8; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800; flex-shrink:0;">5</span>
+            <h3 style="color:#fff; font-size:0.95rem; font-weight:800;">🚀 Publish &amp; Log In to Your Live Admin Panel</h3>
+          </div>
+          <p style="color:#94a3b8; font-size:0.83rem; line-height:1.6; margin-left:2.3rem;">
+            Click <strong style="color:#f59e0b">🚀 Save &amp; Publish</strong>. After payment, your site goes live at:
+          </p>
+          <code style="display:block; margin:0.5rem 0 0.5rem 2.3rem; color:#38bdf8; font-size:0.76rem; background:#111622; border:1px solid #1e293b; border-radius:8px; padding:0.55rem 0.85rem; font-family:'Fira Code',monospace;">
+            /published/&lt;your-site&gt;/admin/login.php
+          </code>
+          <p style="color:#94a3b8; font-size:0.83rem; line-height:1.6; margin-left:2.3rem;">
+            Log in with your custom credentials to add records, manage content, and run your site. Changes appear on your public website instantly.
+          </p>
+        </div>
+
+        <!-- Step 6 -->
+        <div style="background:#0b0f17; border:1px solid #1e293b; border-left:4px solid #10b981; border-radius:14px; padding:1.2rem;">
+          <div style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.5rem;">
+            <span style="background:#10b981; color:#fff; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800; flex-shrink:0;">6</span>
+            <h3 style="color:#fff; font-size:0.95rem; font-weight:800;">⚙️ Manage Your Site After Publishing</h3>
+          </div>
+          <p style="color:#94a3b8; font-size:0.83rem; line-height:1.6; margin-left:2.3rem;">
+            After publishing, use your <strong style="color:#a5b4fc">⚙️ Website Manager</strong> (link shown on the publish confirmation page) to:
+          </p>
+          <ul style="color:#94a3b8; font-size:0.82rem; line-height:2; margin-left:2.9rem; margin-top:0.35rem;">
+            <li>➕ Add new features with AI (e.g. "Add a Gallery section")</li>
+            <li>🔔 View notifications &amp; payment reminders from support</li>
+            <li>📋 See step-by-step guide for your specific admin sections</li>
+            <li>🌐 Quick-access to your live site &amp; admin panel</li>
+          </ul>
+        </div>
+
+        <!-- Tip box -->
+        <div style="background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(5,150,105,0.04)); border:1.5px solid rgba(16,185,129,0.3); border-radius:12px; padding:1rem 1.1rem; display:flex; gap:0.85rem; align-items:flex-start;">
+          <span style="font-size:1.4rem; flex-shrink:0;">💡</span>
+          <div style="font-size:0.82rem; color:#a7f3d0; line-height:1.6;">
+            <strong style="color:#34d399; display:block; margin-bottom:0.2rem;">Pro Tip — Use Tanglish!</strong>
+            You can talk to the AI Co-Pilot in <strong>Tanglish</strong> or use the <strong>🎤 voice button</strong> to speak instead of type. For example: <em style="color:#6ee7b7">"Bro, admin la employee section add pannu, name phone photo ellam vendum"</em> — it works perfectly!
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:1.1rem 1.75rem; background:#0d121c; border-top:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; flex-wrap:wrap; gap:0.75rem;">
+      <span style="font-size:0.75rem; color:#64748b; font-weight:700;">6 steps · Full-Stack guide</span>
+      <button type="button" class="wbtn wbtn-primary" onclick="closeStepByStepGuide()" style="padding:0.65rem 1.4rem; font-size:0.88rem; font-weight:800; cursor:pointer;">
+        <span>✕</span><span>Close Guide</span>
+      </button>
+    </div>
+
   </div>
 </div>
 
@@ -778,7 +971,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Escape') {
       closeFullscreenModal();
       closeGenerateModal();
+      closeStepByStepGuide();
       stopVoiceInput();
+    }
+  });
+
+  // Close guide modal on backdrop click
+  document.getElementById('step-guide-modal')?.addEventListener('click', e => {
+    if (e.target.id === 'step-guide-modal') {
+      closeStepByStepGuide();
     }
   });
 
@@ -1068,6 +1269,25 @@ async function clearAndSwitchAccount() {
   await refreshAccountUI();
   showToast('🧹 Cleared. Please sign in.');
   setTimeout(() => handlePuterSignIn(), 400);
+}
+
+/* ══════════════════════════════════════════════════
+   STEP-BY-STEP FULL STACK GUIDE MODAL
+═════════════════════════════════════════════════ */
+function openStepByStepGuide() {
+  const m = document.getElementById('step-guide-modal');
+  if (m) {
+    m.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeStepByStepGuide() {
+  const m = document.getElementById('step-guide-modal');
+  if (m) {
+    m.classList.remove('open');
+    document.body.style.overflow = '';
+  }
 }
 
 /* ══════════════════════════════════════════════════

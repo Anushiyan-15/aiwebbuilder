@@ -55,11 +55,15 @@ if (isset($_GET['action'])) {
         echo json_encode([
             'success' => true,
             'order' => [
-                'order_id'       => $order['order_id'],
-                'live_url'       => $order['live_url'],
-                'admin_url'      => $order['admin_url'],
-                'admin_username' => $order['admin_username'],
+                'order_id'             => $order['order_id'],
+                'live_url'             => $order['live_url'],
+                'admin_url'            => $order['admin_url'],
+                'admin_username'       => $order['admin_username'],
                 'admin_password_plain' => $order['admin_password_plain'] ?? null,
+                'site_active'          => $order['site_active'] ?? true,
+                'next_payment_due'     => $order['next_payment_due'] ?? null,
+                'admin_entities'       => $order['admin_entities'] ?? [],
+                'gen_mode'             => $order['gen_mode'] ?? 'static',
             ]
         ]);
         exit;
@@ -332,6 +336,36 @@ if (($_GET['action'] ?? '') === 'do_publish') {
             "From: noreply@" . ($_SERVER['HTTP_HOST'] ?? 'localhost')
         );
     }
+
+    // 7. Save customer record
+    $customerDir = __DIR__ . '/storage/customers';
+    if (!is_dir($customerDir)) @mkdir($customerDir, 0755, true);
+
+    $customerEmail = $order['admin_email'] ?: 'anonymous';
+    $customerFile = $customerDir . '/' . md5($customerEmail) . '.json';
+    $customerData = file_exists($customerFile) ? json_decode(file_get_contents($customerFile), true) : [];
+
+    $customerData['email'] = $customerEmail;
+    $customerData['name'] = $order['admin_username'] ?? '';
+    $customerData['sites'][$slug] = [
+        'order_id'        => $oid,
+        'site_name'       => $order['site_name'],
+        'slug'            => $slug,
+        'package'         => $order['package'],
+        'amount'          => $order['amount'],
+        'live_url'        => $order['live_url'],
+        'admin_url'       => $adminUrl,
+        'published_at'    => date('Y-m-d H:i:s'),
+        'next_payment_due'=> date('Y-m-d', strtotime('+30 days')),
+        'site_active'     => true,
+    ];
+
+    file_put_contents($customerFile, json_encode($customerData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+    // Also update order with next_payment_due and site_active
+    $order['next_payment_due'] = date('Y-m-d', strtotime('+30 days'));
+    $order['site_active'] = true;
+    saveOrder($order);
 
     header('Location: ' . SITE_URL . '/publish.php?step=done&order_id=' . urlencode($oid));
     exit;
@@ -661,6 +695,11 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:radial-grad
           <span class="ic">🔐</span><span id="admin-url-text">Loading…</span><span class="arrow">↗</span>
         </a>
 
+        <h3 style="color:#fff;font-size:1rem;margin:.5rem 0 .75rem">⚙️ Manage Your Website</h3>
+        <a class="link-big" id="manager-link" href="#" target="_blank" style="border-color:#a855f7;">
+          <span class="ic">⚙️</span><span id="manager-url-text">Open Website Manager</span><span class="arrow">→</span>
+        </a>
+
         <div class="cred-box hidden" id="cred-box">
           <h4 style="color:#a7f3d0;font-size:.85rem;margin-bottom:.85rem;font-weight:800">🔑 Your Credentials</h4>
           <div class="cred-row">
@@ -678,11 +717,27 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:radial-grad
           </div>
         </div>
 
-        <h3 style="color:#fff;font-size:1rem;margin:1.25rem 0 .75rem">🎯 What's Next?</h3>
-        <div class="summary">
-          <div class="summary-row"><span class="k">1. Open your admin panel</span><span class="v">Edit any content</span></div>
-          <div class="summary-row"><span class="k">2. Share your live URL</span><span class="v">Social / Business cards</span></div>
-          <div class="summary-row"><span class="k">3. Contact support</span><span class="v"><?= defined('CONTACT_EMAIL') ? CONTACT_EMAIL : 'info@webbuilder.lk' ?></span></div>
+        <!-- ═══ STEP-BY-STEP CUSTOMER ONBOARDING GUIDE ═══ -->
+        <h3 style="color:#fff;font-size:1.1rem;margin:1.75rem 0 .75rem;display:flex;align-items:center;gap:0.5rem;">
+          <span>🚀</span> Step-by-Step Guide: What to Do Next
+        </h3>
+        <div id="dynamic-guide" style="display:flex;flex-direction:column;gap:0.9rem;margin-bottom:1.5rem;">
+          <!-- Dynamically filled by JS -->
+          <div style="background:#0b0f17;border:1px solid #1e293b;border-left:4px solid #6366f1;border-radius:12px;padding:1rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
+              <span style="background:#6366f1;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">1</span>
+              <strong style="color:#fff;font-size:0.9rem;">Log In to Your Admin Panel</strong>
+            </div>
+            <p style="color:#94a3b8;font-size:0.82rem;line-height:1.55;margin-left:1.85rem;" id="guide-login-text">Click the 🔐 Admin Panel button above. Enter your username and password.</p>
+          </div>
+          <div id="guide-entities-steps"></div>
+          <div style="background:#0b0f17;border:1px solid #1e293b;border-left:4px solid #a855f7;border-radius:12px;padding:1rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
+              <span style="background:#a855f7;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">+</span>
+              <strong style="color:#fff;font-size:0.9rem;">Add New Features Anytime with AI</strong>
+            </div>
+            <p style="color:#94a3b8;font-size:0.82rem;line-height:1.55;margin-left:1.85rem;">Go to <strong style="color:#c7d2fe;">⚙️ Website Manager</strong> → AI Feature Adder tab → type what you need in plain English → AI builds it automatically!</p>
+          </div>
         </div>
       </section>
 
@@ -758,6 +813,29 @@ function loadFromSession() {
     state.hasAdmin    = state.genMode !== 'static';
     state.bizType     = p.wizard?.biz_type || 'business';
     state.adminRequirements = p.wizard?.admin_requirements || '';
+    state.adminUsername = p.adminUsername || '';
+    state.adminPassword = p.adminPassword || '';
+    state.adminEmail    = p.adminEmail || p.wizard?.biz_email || '';
+
+    // Pre-populate credentials inputs if previously customized
+    const uInp = document.getElementById('adm-user');
+    const pInp = document.getElementById('adm-pass');
+    const p2Inp = document.getElementById('adm-pass2');
+    const eInp = document.getElementById('adm-email');
+    if (uInp && state.adminUsername) {
+      uInp.value = state.adminUsername;
+      updateAdminUrlPreview();
+    }
+    if (pInp && state.adminPassword) {
+      pInp.value = state.adminPassword;
+      if (p2Inp) p2Inp.value = state.adminPassword;
+      const s = scorePassword(state.adminPassword);
+      const bar = document.getElementById('pw-bar');
+      if (bar) bar.className = 'pw-strength-fill s' + s;
+    }
+    if (eInp && state.adminEmail) {
+      eInp.value = state.adminEmail;
+    }
 
     const d = (p.designs || [])[state.conceptIndex] || {};
     state.html = d.html || '';
@@ -1181,6 +1259,35 @@ function showPublished(order) {
     document.getElementById('admin-heading').style.display = 'none';
   }
 
+  // Set manager link
+  const managerLink = document.getElementById('manager-link');
+  if (managerLink) {
+    const mUrl = SITE_URL + '/site-manager.php?order_id=' + encodeURIComponent(order.order_id);
+    managerLink.href = mUrl;
+    document.getElementById('manager-url-text').textContent = 'Manage: ' + order.order_id;
+  }
+
+  // Build dynamic guide
+  const entities = order.admin_entities || [];
+  const stepsContainer = document.getElementById('guide-entities-steps');
+  if (stepsContainer && entities.length > 0) {
+    const colors = ['#10b981','#f59e0b','#38bdf8','#fb7185','#a3e635'];
+    let html = '';
+    entities.forEach((entity, i) => {
+      const color = colors[i % colors.length];
+      const name = entity.name || entity.id || 'Section';
+      const icon = entity.icon || '📋';
+      html += `<div style="background:#0b0f17;border:1px solid #1e293b;border-left:4px solid ${color};border-radius:12px;padding:1rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
+          <span style="background:${color};color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">${i+2}</span>
+          <strong style="color:#fff;font-size:0.9rem;">${icon} Manage ${name}</strong>
+        </div>
+        <p style="color:#94a3b8;font-size:0.82rem;line-height:1.55;margin-left:1.85rem;">In your admin panel, click <strong style="color:#c7d2fe;">${name}</strong> in the sidebar → click <strong style="color:#34d399;">+ Add ${entity.singular || name}</strong> → fill in the form → Save. Your data will appear on your live website instantly.</p>
+      </div>`;
+    });
+    stepsContainer.innerHTML = html;
+  }
+
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
@@ -1190,6 +1297,7 @@ function showPublished(order) {
     }
   } catch (e) {}
 }
+
 
 /* ═══════════════ UI HELPERS ═══════════════ */
 function copyText(txt, btn) {

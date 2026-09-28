@@ -1256,6 +1256,11 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         <button class="c-tab" id="tab-c1" onclick="switchStudioConcept(1)" title="Switch to Concept 2"><span class="c-full">Concept 2</span><span class="c-short">C2</span></button>
         <button class="c-tab" id="tab-c2" onclick="switchStudioConcept(2)" title="Switch to Concept 3"><span class="c-full">Concept 3</span><span class="c-short">C3</span></button>
       </div>
+      <div class="header-divider" id="st-view-divider" style="display:none;"></div>
+      <div class="concept-tabs" id="studio-view-tabs" style="display:none; gap:0.25rem;">
+        <button class="c-tab active" id="st-vtab-site" onclick="switchStudioView('site')" title="Edit Frontend Public Site"><span class="c-full">🌐 Site</span><span class="c-short">🌐</span></button>
+        <button class="c-tab" id="st-vtab-admin" onclick="switchStudioView('admin')" title="Edit Admin Panel (Backoffice)" style="border-color:#0891b2;"><span class="c-full">🔐 Admin Panel</span><span class="c-short">🔐</span></button>
+      </div>
     </div>
     <div class="header-right">
       <button class="hdr-btn mobile-mode-btn" id="mobile-mode-btn" onclick="toggleMobileEditMode()" title="Edit mobile-only styles">📱 <span class="lbl">Mobile</span></button>
@@ -2300,6 +2305,7 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
     ══════════════════════════════════════════════════ */
     let grapesEditor = null;
     let activeConceptIndex = 0;
+    let currentStudioView = 'site'; // 'site' | 'admin'
     let projectData = null;
     let currentHtml = '';
     let selectedComponent = null;
@@ -3511,6 +3517,7 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       const urlParams = new URLSearchParams(window.location.search);
       const p = parseInt(urlParams.get('concept') || '0', 10);
       activeConceptIndex = isNaN(p) ? 0 : p;
+      currentStudioView = (urlParams.get('view') === 'admin') ? 'admin' : 'site';
 
       try {
         const raw = localStorage.getItem('webcraft_saved_project');
@@ -3540,7 +3547,13 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       document.getElementById('project-name-input').value = projectData.bizName || 'My Website';
 
       const design = projectData.designs[activeConceptIndex] || projectData.designs[0];
-      const rawHtml = (design && typeof design.html === 'string') ? design.html.trim() : '';
+      let rawHtml = '';
+      if (currentStudioView === 'admin' && design && design.adminHtml) {
+        rawHtml = design.adminHtml.trim();
+      } else {
+        currentStudioView = 'site';
+        rawHtml = (design && typeof design.html === 'string') ? design.html.trim() : '';
+      }
       currentHtml = rawHtml || (projectData.designs[0] && projectData.designs[0].html) || WC_FALLBACK_HTML;
 
       if (!currentHtml || !currentHtml.trim()) {
@@ -3558,7 +3571,16 @@ p{color:#64748b;max-width:520px;line-height:1.6}
         }
       });
 
-      console.log('[studio] Project loaded. concept=' + activeConceptIndex + ', html length=' + currentHtml.length);
+      // Show view tabs if adminHtml is present in any design
+      const hasAdmin = projectData.designs.some(d => d && !!d.adminHtml);
+      const vTabs = document.getElementById('studio-view-tabs');
+      const vDiv = document.getElementById('st-view-divider');
+      if (vTabs) vTabs.style.display = hasAdmin ? 'flex' : 'none';
+      if (vDiv) vDiv.style.display = hasAdmin ? 'block' : 'none';
+      document.getElementById('st-vtab-site')?.classList.toggle('active', currentStudioView === 'site');
+      document.getElementById('st-vtab-admin')?.classList.toggle('active', currentStudioView === 'admin');
+
+      console.log('[studio] Project loaded. concept=' + activeConceptIndex + ', view=' + currentStudioView + ', html length=' + currentHtml.length);
     }
 
     function updateProjectName(val) {
@@ -3577,11 +3599,40 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       if (!projectData.designs[index]) return;
       syncCanvasToHtml();
       activeConceptIndex = index;
-      currentHtml = projectData.designs[index].html || WC_FALLBACK_HTML;
+      const d = projectData.designs[index];
+      if (currentStudioView === 'admin' && d.adminHtml) {
+        currentHtml = d.adminHtml;
+      } else {
+        currentStudioView = 'site';
+        currentHtml = d.html || WC_FALLBACK_HTML;
+      }
       lockTheme(currentHtml, true);
       [0, 1, 2].forEach(i => document.getElementById(`tab-c${i}`).classList.toggle('active', i === index));
+      document.getElementById('st-vtab-site')?.classList.toggle('active', currentStudioView === 'site');
+      document.getElementById('st-vtab-admin')?.classList.toggle('active', currentStudioView === 'admin');
       loadHtmlIntoStudioCanvas();
       showToast(`Switched to Concept ${index + 1}`);
+    }
+
+    function switchStudioView(view) {
+      if (view === currentStudioView) return;
+      const d = projectData?.designs?.[activeConceptIndex];
+      if (view === 'admin' && (!d || !d.adminHtml)) {
+        showToast('⚠️ No admin panel exists for this concept yet.');
+        return;
+      }
+      syncCanvasToHtml();
+      currentStudioView = view;
+      document.getElementById('st-vtab-site')?.classList.toggle('active', view === 'site');
+      document.getElementById('st-vtab-admin')?.classList.toggle('active', view === 'admin');
+      if (view === 'admin') {
+        currentHtml = d.adminHtml || WC_FALLBACK_HTML;
+      } else {
+        currentHtml = d.html || WC_FALLBACK_HTML;
+      }
+      lockTheme(currentHtml, true);
+      loadHtmlIntoStudioCanvas();
+      showToast(`✏️ Now editing: ${view === 'admin' ? '🔐 Admin Panel' : '🌐 Frontend Site'}`);
     }
 
     function loadUserUploads() {
@@ -4506,7 +4557,11 @@ ${WC_ANIMATION_RUNTIME}
 </body>
 </html>`;
       if (projectData && projectData.designs && projectData.designs[activeConceptIndex]) {
-        projectData.designs[activeConceptIndex].html = currentHtml;
+        if (currentStudioView === 'admin') {
+          projectData.designs[activeConceptIndex].adminHtml = currentHtml;
+        } else {
+          projectData.designs[activeConceptIndex].html = currentHtml;
+        }
         saveProjectData();
       }
       setTimeout(refreshSectionDragHandles, 0);
@@ -6401,7 +6456,7 @@ ${WC_ANIMATION_RUNTIME}
       saveProjectData();
       saveLanguageState();
       showToast('💾 Saving…');
-      setTimeout(() => window.location.href = '<?= SITE_URL ?>/builder.php?resume=1&concept=' + activeConceptIndex, 350);
+      setTimeout(() => window.location.href = '<?= SITE_URL ?>/builder.php?resume=1&concept=' + activeConceptIndex + '&view=' + currentStudioView, 350);
     }
 
     function saveAndReturnToBuilder() {
@@ -6410,7 +6465,7 @@ ${WC_ANIMATION_RUNTIME}
       saveProjectData();
       saveLanguageState();
       showToast('✓ Saved! Returning to builder…');
-      setTimeout(() => window.location.href = '<?= SITE_URL ?>/builder.php?resume=1&concept=' + activeConceptIndex, 500);
+      setTimeout(() => window.location.href = '<?= SITE_URL ?>/builder.php?resume=1&concept=' + activeConceptIndex + '&view=' + currentStudioView, 500);
     }
 
     function escapeHtml(s) {
