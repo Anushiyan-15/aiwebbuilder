@@ -9,6 +9,10 @@
    ALSO:  editViaPrompt() — full-analysis AI edit (analyze whole document
           first, then apply ONLY the requested change).
 
+   ALSO:  28-SKILL SYSTEM (open-source AI-FlowCraft workflow, integrated) —
+          SKILLS registry + runSkill(n)/runSkillChain() + GUARDRAILS + formatAC.
+          Setup 1-18 → Feature 19-21 → Testing 22-26 → Always-on 27-28.
+
    Post-generation live editing stays on puter.js (PuterService) — untouched.
    Admin panels per company + new AI features stay server-side — untouched.
    ═══════════════════════════════════════════════════════════════ */
@@ -139,6 +143,9 @@ window.AIFlowCraft = (function () {
   about, services) includes at least one real photo via
   https://images.unsplash.com/photo-XXXX?auto=format&fit=crop&w=1200&q=70
   (never grey placeholder boxes) with descriptive alt text.
+- If PASTED REVIEWS appear in CLIENT REQUIREMENTS, render them verbatim
+  (reviewer name + exact text) in the testimonials section — never invent
+  fake reviews when real ones are supplied.
 
 ## ZENITH STANDARD (the reference quality bar — match it or beat it)
 - Design tokens first: :root with --bg, --panel (rgba white .045), --line,
@@ -189,6 +196,18 @@ window.AIFlowCraft = (function () {
   - Clicking the map/button opens full Google Maps with directions to the address.
 - Show the raw address text + phone + email beside the map.
 
+## SHOP & CART CONTRACT ( follow ONLY when PRODUCTS list is non-empty )
+- Render a <section id="shop"> "Shop Our Products" grid AFTER services/showcase, BEFORE contact.
+- Each product card: photo (the given ImageURL or an Unsplash image), name, price label, and:
+  - Priced product → button data-wc-add="{index}" ("Add to Cart").
+  - Unpriced ("Ask price") → plain <a href="#contact">Enquire →</a> link.
+- Embed a PRODUCTS JS array + delegated cart engine (no frameworks):
+  - Fixed cart drawer (open/close), floating 🛒 button with count badge.
+  - Quantity +/-, remove per line, live total, localStorage persistence (try/catch).
+  - Checkout A: WhatsApp deep link wa.me/<digits-from-CONTACT-PHONE>?text=<order lines + total> (omit if phone is "(unspecified)").
+  - Checkout B: "Order via Contact Form" — fills #contact-form message with the order + scrolls there.
+- Prices display verbatim; totals parse digits only. NEVER a dead cart button.
+
 If ANY checkbox fails, fix it BEFORE responding. Output only the fixed HTML.`;
 
   /* ═════════ ANALYZE SYSTEM — full-analysis brief before generating ═════════ */
@@ -203,6 +222,7 @@ SECTIONS: <comma list — exact sections to build, in order>
 PALETTE: <3 hex codes primary/secondary/accent mapped from the brand color>
 TYPE: <display font + body font pairing>
 DIFFERENTIATORS: <3 bullets — what makes this site feel premium, not generic>
+PRODUCTS: <if shop: "Name | Price" lines verbatim, else NONE>
 ADMIN_ENTITIES: <if mode needs admin: entity list with 3-4 fields each, else NONE>
 RISKS: <one line — what to avoid for this business type>`;
 
@@ -364,6 +384,9 @@ Industry / Niche   : ${d.biz_type}
 Core Mission       : ${d.biz_tagline}
 Target Audience    : ${d.biz_audience || '(unspecified)'}
 Services / Products: ${d.biz_services || '(unspecified)'}
+Client Reviews   : ${(d.biz_reviews || '').trim() ? ('\n' + d.biz_reviews.trim().split('\n').map(s => '  • ' + s.trim()).join('\n')) : '(none — use tasteful placeholder testimonials)'}
+Shop Products    : ${(d.biz_products || '').trim() ? ('\n' + d.biz_products.trim().split('\n').map(s => '  • ' + s.trim()).join('\n')) : '(none — no shop section)'}
+Shop Mode        : ${((d.biz_products || '').trim() || (d.sections || []).includes('shop')) ? 'ON — build PRODUCTS section + working cart per SHOP & CART CONTRACT' : 'OFF'}
 Primary Design Dir : ${styleDescription}
 ${extraDirection ? `Additional Notes   : ${extraDirection}` : ''}
 Brand Color Accent : ${d.color_palette}  (map to a real hex: purple #6366f1, blue #2563eb, green #059669, red #dc2626, gold #d97706, slate #334155)
@@ -680,6 +703,35 @@ VALUES ('admin', '$2y$10$e0NRz1Fz7Lb3FfVfLJp1ZeDLqEjZk3lqk4F6Xn6yJ6pWz8QhA3Kq2')
   }
 
   /* ═══════════════════════════════════════════════════
+     SOLO QUICK SITE — one-page professional site via server engine.
+     Server falls back to templates on ANY failure; `fallback` flag
+     tells the UI which engine actually produced the design.
+     ═══════════════════════════════════════════════════ */
+  async function generateSolo(data, options) {
+    options = options || {};
+    const onProgress = options.onProgress;
+    dispatchProgress(onProgress, { stage: 'solo', message: 'Building your Solo professional site…', pct: 40 });
+    const siteUrl = (typeof SITE_URL !== 'undefined') ? SITE_URL : '';
+    const endpoint = siteUrl ? (siteUrl + '/api/generate.php') : 'api/generate.php';
+    let json = null;
+    try {
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'solo_generate', data })
+      });
+      if (resp.ok) json = await resp.json();
+    } catch (e) {
+      console.warn('[AI-FlowCraft] solo_generate unreachable:', e);
+    }
+    if (!json || !json.success || !Array.isArray(json.designs) || !json.designs[0]?.html) {
+      throw new Error('Solo engine unreachable. Try the 3-variation flow instead.');
+    }
+    dispatchProgress(onProgress, { stage: 'done', message: '✓ Solo site ready!', pct: 100 });
+    return json;
+  }
+
+  /* ═══════════════════════════════════════════════════
      PROMPT EDIT — full-analysis edit via AI
      1. AI analyzes the FULL document, 2. applies ONLY the
      requested change, 3. returns the complete document.
@@ -719,6 +771,175 @@ Return the COMPLETE updated HTML document now.`.trim();
       }
     }
     throw new Error('AI edit did not return a complete document. Try a more specific instruction.');
+  }
+
+  /* ═══════════════════════════════════════════════════
+     AI-FlowCraft 28-SKILL SYSTEM (open-source workflow, integrated)
+     Setup 1-18 (once) → Feature 19-21 (per feature) →
+     Testing 22-26 (five layers) → Always-on 27-28 (anytime)
+     ═══════════════════════════════════════════════════ */
+  const SKILLS = [
+    { n: 1,  phase: 'setup',   key: 'requirements',  name: 'Requirements Discussion', role: 'Requirements Analyst',    output: 'Requirements discussion record' },
+    { n: 2,  phase: 'setup',   key: 'prd',           name: 'PRD Generation',          role: 'Product Planner',         output: 'PRD + Acceptance Criteria' },
+    { n: 3,  phase: 'setup',   key: 'architecture',  name: 'System Architecture',     role: 'System Architect',        output: 'Tech stack + architecture design' },
+    { n: 4,  phase: 'setup',   key: 'ia',            name: 'Information Architecture', role: 'Information Architect',   output: 'Site map / IA diagram' },
+    { n: 5,  phase: 'setup',   key: 'data-conv',     name: 'Data Model Convention',   role: 'Data Model Designer',     output: 'Field naming conventions' },
+    { n: 6,  phase: 'setup',   key: 'interaction',   name: 'Interaction Design',      role: 'Interaction Designer',    output: 'Interaction design document' },
+    { n: 7,  phase: 'setup',   key: 'database',      name: 'Database Design',         role: 'Database Architect',      output: 'ER diagram + DDL SQL' },
+    { n: 8,  phase: 'setup',   key: 'api',           name: 'API Design',              role: 'API Designer',            output: 'API interface document' },
+    { n: 9,  phase: 'setup',   key: 'design-spec',   name: 'Design Spec',             role: 'Visual Designer',         output: 'Design tokens + visual spec' },
+    { n: 10, phase: 'setup',   key: 'backend-tech',  name: 'Backend Tech Design',     role: 'Backend Architect',       output: 'Backend technical spec' },
+    { n: 11, phase: 'setup',   key: 'frontend-tech', name: 'Frontend Tech Design',    role: 'Frontend Architect',      output: 'Frontend technical spec' },
+    { n: 12, phase: 'setup',   key: 'structure',     name: 'Project Structure',       role: 'Structure Engineer',      output: 'Directory structure definition' },
+    { n: 13, phase: 'setup',   key: 'fe-standards',  name: 'Frontend Standards',      role: 'Frontend Standards Engineer', output: 'Frontend coding standards' },
+    { n: 14, phase: 'setup',   key: 'be-standards',  name: 'Backend Standards',       role: 'Backend Standards Engineer',  output: 'Backend coding standards' },
+    { n: 15, phase: 'setup',   key: 'collab',        name: 'Collaboration Standards', role: 'Collaboration Engineer',  output: 'Front-back collaboration standards' },
+    { n: 16, phase: 'setup',   key: 'env',           name: 'Environment Config',      role: 'Environment Config Engineer', output: 'Environment & config document' },
+    { n: 17, phase: 'setup',   key: 'roadmap',       name: 'Roadmap Planning',        role: 'Technical Product Manager', output: 'Milestones + development order' },
+    { n: 18, phase: 'setup',   key: 'init',          name: 'Project Initialization',  role: 'Project Init Engineer',   output: 'Project scaffold code' },
+    { n: 19, phase: 'feature', key: 'task-plan',     name: 'Task Planning',           role: 'Task Planning Engineer',  output: 'Vertical-slice task list' },
+    { n: 20, phase: 'feature', key: 'implement',     name: 'Implementation',          role: 'Senior Developer',        output: 'Code + tests (TDD)' },
+    { n: 21, phase: 'feature', key: 'stage-report',  name: 'Stage Report',            role: 'Quality Report Analyst',  output: 'Stage completion report' },
+    { n: 22, phase: 'test',    key: 'unit',          name: 'Unit Testing',            role: 'Test Engineer',           output: 'Unit test plan + cases' },
+    { n: 23, phase: 'test',    key: 'component',     name: 'Component Testing',       role: 'Test Engineer',           output: 'Component test plan + cases' },
+    { n: 24, phase: 'test',    key: 'integration',   name: 'Integration Testing',     role: 'Test Engineer',           output: 'API+DB integration tests' },
+    { n: 25, phase: 'test',    key: 'e2e',           name: 'E2E Testing',             role: 'Test Engineer',           output: 'User-flow E2E scenarios' },
+    { n: 26, phase: 'test',    key: 'system',        name: 'System Testing',          role: 'Test Engineer',           output: 'Security/perf/compat report' },
+    { n: 27, phase: 'always',  key: 'evolve',        name: 'Feature Evolution',       role: 'Senior Developer',        output: 'Incremental update plan + patch' },
+    { n: 28, phase: 'always',  key: 'bugfix',        name: 'Bug Fix',                 role: 'Senior Developer',        output: 'Root cause + minimal fix' }
+  ];
+
+  /* Boundary guardrails + AC traceability (applies to every skill) */
+  const GUARDRAILS = `AI-FlowCraft BOUNDARY GUARDRAILS (hard rules for this skill):
+- Stay inside the current skill's role. No code during requirements/design skills. No spec or architecture changes during coding/testing skills.
+- Every requirement maps to Acceptance Criteria IDs in the exact format {FEATURE}-AC-{NNN} covering Happy Path, Edge & Error, and Business Rules.
+- If project context is missing, FIRST restate the known docs (PRD, architecture, tech spec), mark anything invented as ASSUMPTION — never silently invent.
+- Quality loop: deepen the artifact first (min 2 passes), then bug-check internal + cross-doc consistency.`;
+
+  function formatAC(feature, num) {
+    const f = String(feature || 'FEAT').toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '') || 'FEAT';
+    return f + '-AC-' + String(num).padStart(3, '0');
+  }
+
+  /* One focused system prompt per skill — role, must-do, output shape, boundary */
+  const SKILL_SYSTEM = {
+    1: `You are a Requirements Analyst doing Socratic questioning (AI-FlowCraft Skill 1).
+Ask sharp, one-topic-at-a-time questions that turn the user's vague idea into: problem, users, core features, non-goals, constraints.
+RULES: questions only — zero code, zero architecture, zero estimates. End with a consolidated REQUIREMENTS RECORD (bullets) + open questions list.`,
+    2: `You are a Product Planner writing a PRD (AI-FlowCraft Skill 2).
+From the requirements record produce: Overview, User Roles, Feature list, and Acceptance Criteria with IDs in exact format {FEATURE}-AC-{NNN} (Happy Path / Edge & Error / Business Rules each).
+RULES: no code, no API shapes, no DB tables. Every feature MUST have at least one AC.`,
+    3: `You are a System Architect (AI-FlowCraft Skill 3).
+Produce: tech stack choice with reasons, system topology (frontend/backend/db/auth), module boundaries, key risks.
+RULES: no code, no file trees, no API endpoints yet. Reference every PRD feature ID.`,
+    4: `You are an Information Architect (AI-FlowCraft Skill 4).
+Produce: site map / page tree with routes, per-page purpose + primary CTA, navigation hierarchy.
+RULES: no visual design, no copy beyond labels. Cover every PRD feature with a page or state.`,
+    5: `You are a Data Model Designer (AI-FlowCraft Skill 5).
+Produce: entity list, field naming conventions (case, id/timestamp rules), enum vocabularies, ID formats.
+RULES: conventions only — no DDL, no SQL, no API.`,
+    6: `You are an Interaction Designer (AI-FlowCraft Skill 6).
+Produce: per-page interaction spec — states (empty/loading/error/success), validation rules, transitions, keyboard/ARIA notes.
+RULES: no visual tokens, no code. Map each behavior to an AC ID.`,
+    7: `You are a Database Architect (AI-FlowCraft Skill 7).
+Produce: ER description + executable DDL SQL (tables, keys, indexes) following the Skill 5 conventions.
+RULES: schema only — no API, no app code. Every table maps to PRD entities.`,
+    8: `You are an API Designer (AI-FlowCraft Skill 8).
+Produce: endpoint table (method, path, auth, request/response JSON shapes, error codes) mapped to AC IDs.
+RULES: contract only — no implementation code. Response shapes must match Skill 7 fields exactly.`,
+    9: `You are a Visual Designer (AI-FlowCraft Skill 9).
+Produce: design tokens (:root CSS variables — colors, fonts, radii, shadows, spacing) + component visual spec (buttons, cards, nav, forms).
+RULES: tokens + spec only — no page code. Tokens must be directly usable in CSS.`,
+    10: `You are a Backend Architect (AI-FlowCraft Skill 10).
+Produce: feature-level backend tech spec — file-by-feature breakdown, function signatures, DB queries, API wiring per endpoint.
+RULES: spec only, minimal illustrative snippets at most — full implementation belongs to Skill 20. No spec changes to API/DB without flagging CONFLICT.`,
+    11: `You are a Frontend Architect (AI-FlowCraft Skill 11).
+Produce: feature-level frontend tech spec — component tree, state management, routes, API calls per component.
+RULES: spec only — full code belongs to Skill 20. Must consume Skill 8/9 exactly as specified.`,
+    12: `You are a Project Structure Engineer (AI-FlowCraft Skill 12).
+Produce: the exact directory/file tree with one-line purpose per entry, following Skills 10-11.
+RULES: tree only — no file contents.`,
+    13: `You are a Frontend Standards Engineer (AI-FlowCraft Skill 13).
+Produce: frontend coding standards — naming, component patterns, styling rules, a11y + responsive minimums, forbidden patterns.
+RULES: standards doc only — no feature code.`,
+    14: `You are a Backend Standards Engineer (AI-FlowCraft Skill 14).
+Produce: backend coding standards — error format, validation, auth checks, logging, SQL safety (prepared statements), forbidden patterns.
+RULES: standards doc only — no feature code.`,
+    15: `You are a Collaboration Engineer (AI-FlowCraft Skill 15).
+Produce: frontend-backend collaboration standards — contract ownership, mock strategy, breaking-change process, shared types location.
+RULES: process doc only. Must reference Skill 8 endpoint IDs.`,
+    16: `You are an Environment Config Engineer (AI-FlowCraft Skill 16).
+Produce: environment & config document — required env vars table, local/dev/prod differences, secrets handling, setup steps.
+RULES: config only — never invent real secrets; use placeholders.`,
+    17: `You are a Technical Product Manager (AI-FlowCraft Skill 17).
+Produce: roadmap — milestones in dependency order with entry/exit criteria per milestone, mapped to PRD features.
+RULES: plan only — no code, no estimates in hours; use T-shirt sizes.`,
+    18: `You are a Project Init Engineer (AI-FlowCraft Skill 18).
+Produce: the minimal runnable project scaffold (config, entry files, folder skeleton with READMEs) for the approved stack.
+RULES: scaffold only — no feature code. Must match Skills 12-16 exactly.`,
+    19: `You are a Task Planning Engineer (AI-FlowCraft Skill 19).
+Break ONE feature into vertical-slice tasks, each independently shippable and each inheriting its AC IDs with a verify step.
+RULES: plan only — no implementation. Order by dependency; flag blockers.`,
+    20: `You are a Senior Developer doing TDD (AI-FlowCraft Skill 20).
+For each task: RED (failing test first) → GREEN (minimal code) → REFACTOR. Follow Skills 10-16 exactly.
+RULES: code + tests only. No architecture/spec changes — flag conflicts as BLOCKER instead. UI changes must include how to verify in a real browser.`,
+    21: `You are a Quality Report Analyst (AI-FlowCraft Skill 21).
+Produce: stage completion report — tasks done, AC verified (ID checklist pass/fail), tests run + results, known gaps, next stage input.
+RULES: report only — no new code, no scope changes.`,
+    22: `You are a Test Engineer writing UNIT tests (AI-FlowCraft Skill 22).
+Produce: unit test plan + cases for pure business logic, utilities, data transforms — inputs, expected outputs, edge cases per AC ID.
+RULES: unit scope only — no UI, no DB, no network.`,
+    23: `You are a Test Engineer writing COMPONENT tests (AI-FlowCraft Skill 23).
+Produce: component test plan + cases — render output, user interaction, state changes per component.
+RULES: component scope only — mock API/DB layers.`,
+    24: `You are a Test Engineer writing INTEGRATION tests (AI-FlowCraft Skill 24).
+Produce: API+database integration tests — request/response conformance to Skill 8, data consistency, transaction rollback cases.
+RULES: integration scope only — no full user flows.`,
+    25: `You are a Test Engineer writing E2E tests (AI-FlowCraft Skill 25).
+Produce: end-to-end user-flow scenarios (core business flows, navigation, critical paths) with step-by-step scripts + assertions.
+RULES: flow scope only — assume unit/component/integration already green.`,
+    26: `You are a Test Engineer doing SYSTEM testing (AI-FlowCraft Skill 26).
+Produce: full-chain report — security checklist (auth, injection, XSS), performance smoke (load targets), compatibility matrix (browsers/devices).
+RULES: report only — fixes go through Skill 28, never inline.`,
+    27: `You are a Senior Developer evolving a feature (AI-FlowCraft Skill 27).
+For the requested change: impact analysis first; if the change exceeds ~30% of the feature, RECOMMEND a full Skill 19-21 re-run instead of patching.
+RULES: incremental patch + updated AC/task notes only. No drive-by refactors, no spec drift.`,
+    28: `You are a Senior Developer fixing a bug (AI-FlowCraft Skill 28).
+Protocol: 1) reproduce + quote the failing AC/behavior, 2) decide REAL BUG vs spec gap (spec gaps go back to Skill 2, not code), 3) root cause, 4) MINIMAL fix + regression test.
+RULES: smallest possible diff. No unrelated changes.`
+  };
+
+  function getSkill(n) {
+    return SKILLS.find(s => s.n === Number(n)) || null;
+  }
+
+  /* Generic single-skill runner: runSkill(2, prdInput, {model, temperature, onProgress}) */
+  async function runSkill(n, input, options) {
+    options = options || {};
+    const skill = getSkill(n);
+    if (!skill) throw new Error('Unknown AI-FlowCraft skill: ' + n + ' (valid: 1-28)');
+    const sys = (SKILL_SYSTEM[skill.n] || '') + '\n\n' + GUARDRAILS;
+    const user = `PROJECT CONTEXT (prior skill outputs — treat as approved source of truth):\n${String(options.context || '(none — first skill in chain)')}\n\nTASK INPUT for Skill ${skill.n} (${skill.name}):\n${String(input || '')}`.trim();
+    dispatchProgress(options.onProgress, { stage: 'skill-' + skill.n, message: `Skill ${skill.n}/28 · ${skill.name} (${skill.role})…`, pct: null });
+    const out = await callAI(sys, user, options.model, (options.temperature == null ? 0.4 : options.temperature));
+    dispatchProgress(options.onProgress, { stage: 'skill-' + skill.n + '-done', message: `✓ Skill ${skill.n} · ${skill.name} complete`, pct: null });
+    return { skill: skill.n, name: skill.name, output: String(out || '').trim() };
+  }
+
+  /* Sequential chain: runSkillChain([1,2,3], firstInput, opts) — each skill
+     receives the previous skill's output as context. Returns array of results. */
+  async function runSkillChain(numbers, firstInput, options) {
+    options = options || {};
+    const results = [];
+    let ctx = '';
+    let pendingInput = firstInput;
+    for (const n of (numbers || [])) {
+      const r = await runSkill(n, pendingInput, { ...options, context: ctx });
+      results.push(r);
+      ctx = (ctx ? ctx + '\n\n--- SKILL ' + r.skill + ' OUTPUT ---\n' : '') + r.output;
+      pendingInput = '(continue from prior skill output above)';
+    }
+    return results;
   }
 
   /* ═══════════════════════════════════════════════════
@@ -791,7 +1012,14 @@ Return the COMPLETE updated HTML document now.`.trim();
 
   return {
     VARIATIONS,
+    SKILLS,
+    GUARDRAILS,
+    getSkill,
+    runSkill,
+    runSkillChain,
+    formatAC,
     generateConcepts,
+    generateSolo,
     editViaPrompt,
     getAuthState,
     signIn,

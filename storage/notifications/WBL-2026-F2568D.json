@@ -18,5 +18,17 @@
         "message": "[Email queued] \ud83d\udcb3 Your Monthly Website Hosting Renewal is Due\n\npoi udampa kuraiaya da kunda",
         "sent_by": "superadmin (superadmin)",
         "sent_at": "2026-09-29 14:52:02"
+    },
+    {
+        "type": "info",
+        "message": "[Email queued] \ud83d\udcb3 Your Monthly Website Hosting Renewal is Due\n\npoda summa",
+        "sent_by": "superadmin (superadmin)",
+        "sent_at": "2026-09-30 12:55:31"
+    },
+    {
+        "type": "payment_reminder",
+        "message": "Dear customer,\n\nThis is a friendly reminder that your \"Zenith Studio\" subscription renewal is due on Oct 29, 2026 (30 day(s) from today). Please ensure your payment method is up to date to avoid any interruption to your service.\n\nThank you for using WebCraft AI Builder!",
+        "sent_by": "superadmin (superadmin)",
+        "sent_at": "2026-09-30 12:55:50"
     }
 ]

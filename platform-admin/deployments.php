@@ -261,11 +261,13 @@ function openRollbackModal(slug, orderId) {
   
   const sel = document.getElementById('rbSnapshotSelect');
   sel.innerHTML = '<option value="">Loading available snapshots…</option>';
+  const doneLoad = (window.paAjaxLoad ? paAjaxLoad('Loading snapshots…', 'Reading build history', 'radar') : () => {});
 
   // Fetch snapshots for this order
   fetch('api.php?action=get_snapshots&order_id=' + encodeURIComponent(orderId))
     .then(r => r.json())
     .then(j => {
+      doneLoad();
       sel.innerHTML = '';
       if (j.snapshots && j.snapshots.length > 0) {
         j.snapshots.forEach(s => {
@@ -282,6 +284,7 @@ function openRollbackModal(slug, orderId) {
       }
     })
     .catch(() => {
+      doneLoad();
       sel.innerHTML = '<option value="default">Original generation build snapshot</option>';
     });
 

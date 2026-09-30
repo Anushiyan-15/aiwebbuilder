@@ -341,15 +341,17 @@ function toggleSite(orderId, action) {
   const btn = document.querySelector('#siteActionWrap button');
   btn.disabled = true;
   btn.innerHTML = '<span class="wcl-bblocks"><i></i><i></i><i></i></span>Working…';
+  const doneLoad = (window.paAjaxLoad ? paAjaxLoad('Updating site…', 'Syncing site status', 'db') : () => {});
 
   fetch('api.php?action=toggle_site&order_id=' + encodeURIComponent(orderId) + '&status=' + action)
     .then(r => r.json())
     .then(d => {
+      doneLoad();
       showToast(d.message || 'Done!', d.success ? 'success' : 'error');
       if (d.success) setTimeout(() => location.reload(), 1400);
       else btn.disabled = false;
     })
-    .catch(() => { showToast('Network error.', 'error'); btn.disabled = false; });
+    .catch(() => { doneLoad(); showToast('Network error.', 'error'); btn.disabled = false; });
 }
 </script>
 </html>

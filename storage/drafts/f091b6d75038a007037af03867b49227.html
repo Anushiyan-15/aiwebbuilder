@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dr. Meera — Therapist</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Plus Jakarta Sans',sans-serif;color:#1e293b;background:#fff;line-height:1.6}
+:root{--primary:#059669;--primary-light:#d1fae5}
+.nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #e2e8f0}
+.nav-in{max-width:1150px;margin:0 auto;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:800;font-size:1.25rem;color:#0f172a}
+.nav-links{display:flex;gap:1.5rem;align-items:center}
+.nav-links a{font-size:.9rem;font-weight:600;color:#475569}
+.btn{display:inline-block;padding:.85rem 2rem;border-radius:999px;background:linear-gradient(135deg, #059669 0%, #10b981 100%);color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 25px -5px #059669}
+.hero{max-width:1150px;margin:0 auto;padding:5rem 1.5rem 4rem;display:grid;grid-template-columns:1.05fr .95fr;gap:3rem;align-items:center}
+.hero-badge{display:inline-block;padding:.35rem 1rem;background:#d1fae5;color:#059669;border-radius:999px;font-weight:700;font-size:.8rem;margin-bottom:1.25rem}
+.hero h1{font-size:clamp(2.2rem,4.6vw,3.4rem);font-weight:800;color:#0f172a;line-height:1.15;margin-bottom:1.1rem;letter-spacing:-.02em}
+.hero p{font-size:1.08rem;color:#64748b;margin-bottom:2rem}
+.hero-img{border-radius:24px;overflow:hidden;box-shadow:0 20px 45px rgba(0,0,0,.1)}
+.hero-img img{width:100%;height:380px;object-fit:cover;display:block}
+.trust{display:flex;gap:2rem;flex-wrap:wrap;justify-content:center;padding:1.25rem;background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;font-size:.85rem;font-weight:700;color:#475569}
+.section{max-width:1150px;margin:0 auto;padding:5rem 1.5rem}
+.sec-head{text-align:center;margin-bottom:2.75rem}
+.sec-tag{font-size:.78rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#059669;margin-bottom:.5rem}
+.sec-title{font-size:2.1rem;font-weight:800;color:#0f172a}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem}
+.about{display:grid;grid-template-columns:1fr 1fr;gap:3.5rem;align-items:center;background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0}
+.about img{border-radius:24px;width:100%;height:420px;object-fit:cover}
+.contact{background:#0f172a;color:#e2e8f0}
+.contact-grid{max-width:1150px;margin:0 auto;padding:5rem 1.5rem;display:grid;grid-template-columns:1fr 1.2fr;gap:3rem}
+.c-form input,.c-form textarea{width:100%;padding:.85rem 1rem;border:1.5px solid #334155;border-radius:12px;margin-bottom:1rem;font-family:inherit;background:#0b1220;color:#fff}
+.fab-call{position:fixed;bottom:5.5rem;right:1.5rem;z-index:999;width:56px;height:56px;border-radius:50%;background:#25D366;color:#fff;font-size:1.5rem;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 12px 30px rgba(0,0,0,.3)}
+#back-to-top{display:none;position:fixed;bottom:2rem;right:2rem;z-index:90;width:44px;height:44px;border-radius:50%;background:#0f172a;color:#fff;border:none;cursor:pointer;align-items:center;justify-content:center;font-size:1.2rem}
+#mobile-drawer{display:none;flex-direction:column;background:#fff;padding:1.5rem;gap:1rem;font-weight:600;border-bottom:1px solid #e2e8f0}
+#mobile-drawer.open{display:flex}
+.hamburger{display:none;background:none;border:none;font-size:1.5rem;cursor:pointer}
+footer{background:#0f172a;color:#94a3b8;padding:2.5rem 1.5rem;text-align:center;border-top:1px solid #1e293b}
+
+@media(max-width:900px){.hero,.about,.contact-grid{grid-template-columns:1fr}.nav-links{display:none}.hamburger{display:block}}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="nav-in">
+  <div class="brand">Dr. Meera</div>
+  <div class="nav-links"><a href="#services">Services</a><a href="#reviews">Reviews</a><a href="#about">About</a><a href="#contact">Contact</a><a href="tel:+919000011111" class="btn" style="padding:.55rem 1.3rem;font-size:.85rem;">Book a Confidential Session</a></div>
+  <button class="hamburger" onclick="toggleMobileMenu()">☰</button>
+</div><div id="mobile-drawer"><a href="#services">Services</a><a href="#reviews">Reviews</a><a href="#about">About</a><a href="#contact">Contact</a></div></nav>
+
+<header class="hero">
+  <div>
+    <span class="hero-badge">🌿 Licensed Mental Health Professional</span>
+    <h1>Healing minds</h1>
+    <p>Confidential individual therapy, couples counseling and online sessions — at your pace.</p>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+      <a href="tel:+919000011111" class="btn">Book a Confidential Session →</a>
+      <a href="#services" class="btn" style="background:#fff;color:#0f172a;border:1.5px solid #cbd5e1;box-shadow:none;">Explore Services</a>
+    </div>
+  </div>
+  <div class="hero-img"><img src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&amp;fit=crop&amp;w=1200&amp;q=80" alt="Dr. Meera" onerror="this.onerror=null;this.src='https://picsum.photos/seed/solohero/1200/800'"></div>
+</header>
+
+<div class="trust"><span>★ 5-Star Rated</span><span>✓ Verified Professional</span><span>⚡ Fast Response</span><span>🛡️ Satisfaction Guaranteed</span></div>
+
+<section class="section" id="services">
+  <div class="sec-head"><div class="sec-tag">What I Do</div><h2 class="sec-title">Services</h2></div>
+  <div class="grid"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:2rem;box-shadow:0 6px 22px rgba(0,0,0,0.04);"><div style="width:46px;height:46px;border-radius:13px;background:#d1fae5;color:#059669;display:flex;align-items:center;justify-content:center;font-size:1.35rem;font-weight:800;margin-bottom:1rem;">🌿</div><h3 style="font-size:1.15rem;color:#0f172a;font-weight:800;margin-bottom:0.5rem;">Individual Therapy</h3><p style="font-size:0.92rem;color:#64748b;line-height:1.65;">A safe space to work through anxiety, stress and life transitions.</p></div><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:2rem;box-shadow:0 6px 22px rgba(0,0,0,0.04);"><div style="width:46px;height:46px;border-radius:13px;background:#d1fae5;color:#059669;display:flex;align-items:center;justify-content:center;font-size:1.35rem;font-weight:800;margin-bottom:1rem;">🌿</div><h3 style="font-size:1.15rem;color:#0f172a;font-weight:800;margin-bottom:0.5rem;">Couples Counseling</h3><p style="font-size:0.92rem;color:#64748b;line-height:1.65;">Rebuild trust and communication, together.</p></div></div>
+</section>
+
+<section id="about" style="background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+  <div class="section about" style="border:none;background:none;">
+    <div><img src="https://images.unsplash.com/photo-1573497620053-ea5300f94f21?auto=format&amp;fit=crop&amp;w=1000&amp;q=80" alt="About Dr. Meera" onerror="this.onerror=null;this.src='https://picsum.photos/seed/soloabout/1000/800'"></div>
+    <div>
+      <div class="sec-tag">About</div>
+      <h2 class="sec-title" style="margin-bottom:1rem;">Hi, I'm Dr. Meera</h2>
+      <p style="color:#64748b;font-size:1.05rem;line-height:1.75;margin-bottom:1.5rem;">Adults trust me for Therapist work done with care, honesty and skill. Every client gets personal attention — no hand-offs, no surprises.</p>
+      <a href="#contact" class="btn">Work With Me →</a>
+    </div>
+  </div>
+</section>
+
+<section id="reviews" style="padding:5rem 1.5rem;background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:2.75rem;">
+      <div style="font-size:0.78rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#059669;margin-bottom:0.5rem;">⭐ Client Reviews</div>
+      <h2 style="font-size:2.1rem;font-weight:800;color:#0f172a;">Loved by Clients</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:1.75rem;box-shadow:0 6px 22px rgba(0,0,0,0.04);"><div style="color:#f59e0b;letter-spacing:2px;margin-bottom:0.8rem;">★★★★★</div><p style="font-size:0.95rem;color:#64748b;line-height:1.7;font-style:italic;margin-bottom:1.25rem;">&quot;Life-changing sessions, felt heard!&quot;</p><div style="display:flex;align-items:center;gap:0.8rem;"><div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg, #059669 0%, #10b981 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;">AR</div><div><strong style="display:block;font-size:0.92rem;color:#0f172a;">Anitha R</strong><span style="font-size:0.78rem;color:#94a3b8;">Client</span></div></div></div><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:1.75rem;box-shadow:0 6px 22px rgba(0,0,0,0.04);"><div style="color:#f59e0b;letter-spacing:2px;margin-bottom:0.8rem;">★★★★★</div><p style="font-size:0.95rem;color:#64748b;line-height:1.7;font-style:italic;margin-bottom:1.25rem;">&quot;Very professional and kind.&quot;</p><div style="display:flex;align-items:center;gap:0.8rem;"><div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg, #059669 0%, #10b981 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;">KS</div><div><strong style="display:block;font-size:0.92rem;color:#0f172a;">Kumar S</strong><span style="font-size:0.78rem;color:#94a3b8;">Client</span></div></div></div></div>
+  </div>
+</section>
+
+<section class="contact" id="contact">
+  <div class="contact-grid">
+    <div>
+      <div class="sec-tag">Get In Touch</div>
+      <h2 style="font-size:2.1rem;font-weight:800;color:#fff;margin-bottom:1rem;">Let's talk</h2>
+      <p style="color:#94a3b8;margin-bottom:1.5rem;">Call, message or send the form — I reply within 24 hours.</p>
+      <div style="margin-bottom:.8rem;">📞 <strong>+91 90000 11111</strong></div>
+      <div style="margin-bottom:.8rem;">✉️ m@x.com</div>
+      <div>📍 Chennai</div>
+      <div style="margin-top:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap;">
+        <a href="tel:+919000011111" class="btn">📞 Call Now</a>
+      </div>
+    </div>
+    <form class="c-form" id="contact-form" method="POST" onsubmit="handleContactSubmit(event)">
+      <input name="name" placeholder="Your name" required>
+      <input type="email" name="email" placeholder="Email address" required>
+      <input name="phone" placeholder="Phone (optional)">
+      <textarea name="message" placeholder="How can I help?" required></textarea>
+      <button type="submit" class="btn" style="border:none;cursor:pointer;width:100%;">Send Message →</button>
+    </form>
+  </div>
+  <div class="map-card" style="margin-top:1.75rem; border-radius:18px; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 8px 24px rgba(0,0,0,0.06);">
+  <iframe title="Business location" width="100%" height="220" style="border:0; display:block;" loading="lazy" allowfullscreen src="https://www.google.com/maps?q=Chennai&output=embed"></iframe>
+  <div style="padding:0.75rem 1rem; background:#f8fafc; display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:600; color:#475569;">
+    <span>📍 Chennai</span>
+    <a href="https://www.google.com/maps/dir/?api=1&destination=Chennai" target="_blank" rel="noopener" style="color:var(--primary); font-weight:700;">Get Directions &rarr;</a>
+  </div>
+</div>
+</section>
+
+<footer>© 2026 Dr. Meera · Therapist · All rights reserved.</footer>
+<a class="fab-call" href="tel:+919000011111">📞</a>
+<button id="back-to-top">↑</button>
+<script>
+document.querySelectorAll('a').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    let targetId = this.getAttribute('href') || '';
+    let targetEl = null;
+    if (targetId && targetId.startsWith('#') && targetId.length > 1) {
+      try { targetEl = document.querySelector(targetId); } catch(err) {}
+    }
+    if (!targetEl) {
+      const rawText = this.innerText.trim().toLowerCase();
+      const cleanSlug = rawText.replace(/[^a-z0-9]/g, '');
+      if (cleanSlug.length >= 2) {
+        targetEl = document.getElementById(cleanSlug) ||
+                   document.getElementById(cleanSlug.replace('us', '')) ||
+                   document.querySelector('section[id*="' + cleanSlug + '"]');
+        if (!targetEl) {
+          const headings = document.querySelectorAll('section h1, section h2, section h3, header h1, header h2');
+          for (const h of headings) {
+            const hText = h.innerText.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (hText.includes(cleanSlug) || cleanSlug.includes(hText)) {
+              targetEl = h.closest('section') || h.closest('header') || h;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (targetEl) {
+      e.preventDefault();
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (targetId === '#contact' || targetEl.id === 'contact') {
+        const firstInput = targetEl.querySelector('input, textarea');
+        if (firstInput) setTimeout(() => firstInput.focus(), 600);
+      }
+      const mob = document.getElementById('mobile-drawer');
+      if (mob) mob.classList.remove('open');
+    }
+  });
+});
+function toggleMobileMenu() {
+  const drawer = document.getElementById('mobile-drawer');
+  if (drawer) drawer.classList.toggle('open');
+}
+const btt = document.getElementById('back-to-top');
+if (btt) {
+  window.addEventListener('scroll', () => {
+    btt.style.display = (window.scrollY > 400) ? 'flex' : 'none';
+  });
+  btt.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+function handleContactSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+  const name = form.querySelector('[name="name"], [type="text"]')?.value || 'Friend';
+  const email = form.querySelector('[type="email"]')?.value || '';
+  const btn = form.querySelector('button[type="submit"]');
+  if (btn) {
+    const origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Sending Message…';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+      form.reset();
+      let modal = document.getElementById('form-success-banner');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'form-success-banner';
+        modal.style.cssText = 'position:fixed;bottom:2rem;right:2rem;z-index:9999;background:#059669;color:#fff;padding:1.25rem 1.75rem;border-radius:14px;box-shadow:0 15px 35px rgba(0,0,0,0.3);display:flex;align-items:center;gap:1rem;font-size:0.95rem;font-weight:600;transition:all 0.3s;max-width:420px;';
+        document.body.appendChild(modal);
+      }
+      modal.innerHTML = '<div style="font-size:1.8rem">🎉</div><div><div style="font-weight:700">Thank you, ' + name + '!</div><div style="font-size:0.85rem;opacity:0.9">Your message was delivered to Dr. Meera. We will reply to ' + (email || 'your email') + ' within 24 hours.</div></div>';
+      modal.style.opacity = '1';
+      modal.style.transform = 'translateY(0)';
+      setTimeout(() => {
+        modal.style.opacity = '0';
+        modal.style.transform = 'translateY(20px)';
+      }, 5000);
+    }, 800);
+  }
+}
+function toggleFaq(el) {
+  const body = el.nextElementSibling;
+  const icon = el.querySelector('.faq-icon');
+  if (body) {
+    const isOpen = body.style.display === 'block';
+    body.style.display = isOpen ? 'none' : 'block';
+    if (icon) icon.textContent = isOpen ? '+' : '−';
+  }
+}
+</script>
+</body>
+</html>

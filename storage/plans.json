@@ -2,7 +2,7 @@
     "starter": {
         "id": "starter",
         "label": "Starter",
-        "price": 1,
+        "price": 3,
         "period": "month",
         "popular": false,
         "features": [

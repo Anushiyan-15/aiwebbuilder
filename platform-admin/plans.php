@@ -425,6 +425,7 @@ async function savePlans() {
   const btn = document.getElementById('btn-save');
   btn.disabled = true;
   btn.innerHTML = '⏳ Saving…';
+  const doneLoad = (window.paAjaxLoad ? paAjaxLoad('Saving plans…', 'Updating pricing tables', 'save') : () => {});
 
   const data = collectPlansData();
   const formData = new FormData();
@@ -434,6 +435,7 @@ async function savePlans() {
   try {
     const res = await fetch('plans.php', { method: 'POST', body: formData });
     const j = await res.json();
+    doneLoad();
     if (j.success) {
       showToast('✅ Plans saved! Publish page updated.');
       document.getElementById('last-saved').textContent = j.saved_at;
@@ -441,6 +443,7 @@ async function savePlans() {
       showToast('❌ ' + (j.error || 'Failed to save'), true);
     }
   } catch (err) {
+    doneLoad();
     showToast('❌ Network error', true);
   } finally {
     btn.disabled = false;

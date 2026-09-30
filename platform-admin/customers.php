@@ -286,14 +286,16 @@ function showToast(msg, type) {
 function sendReminder(orderId, btn) {
   btn.disabled    = true;
   btn.innerHTML = '<span class="wcl-bblocks"><i></i><i></i><i></i></span>Sending…';
+  const doneLoad = (window.paAjaxLoad ? paAjaxLoad('Sending reminder…', 'Mailing the customer', 'mail') : () => {});
   fetch('api.php?action=send_reminder&order_id=' + encodeURIComponent(orderId))
     .then(r => r.json())
     .then(d => {
+      doneLoad();
       showToast(d.message || 'Reminder sent!', d.success ? 'success' : 'error');
       btn.disabled    = false;
       btn.innerHTML   = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Remind';
     })
-    .catch(() => { showToast('Network error.', 'error'); btn.disabled = false; });
+    .catch(() => { doneLoad(); showToast('Network error.', 'error'); btn.disabled = false; });
 }
 
 function toggleSite(orderId, action, btn) {
@@ -301,14 +303,16 @@ function toggleSite(orderId, action, btn) {
   if (!confirm('Are you sure you want to ' + label + ' this site?')) return;
   btn.disabled    = true;
   btn.innerHTML = '<span class="wcl-bblocks"><i></i><i></i><i></i></span>Working…';
+  const doneLoad = (window.paAjaxLoad ? paAjaxLoad('Updating site…', 'Syncing site status', 'db') : () => {});
   fetch('api.php?action=toggle_site&order_id=' + encodeURIComponent(orderId) + '&status=' + action)
     .then(r => r.json())
     .then(d => {
+      doneLoad();
       showToast(d.message || 'Done!', d.success ? 'success' : 'error');
       if (d.success) setTimeout(() => location.reload(), 1200);
       else { btn.disabled = false; }
     })
-    .catch(() => { showToast('Network error.', 'error'); btn.disabled = false; });
+    .catch(() => { doneLoad(); showToast('Network error.', 'error'); btn.disabled = false; });
 }
 </script>
 </html>

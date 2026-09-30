@@ -52,6 +52,8 @@ $palette     = $sanitize($d['color_palette'] ?? $req['color_palette'] ?? $req['p
 $bizPhone    = $sanitize($d['biz_phone'] ?? $req['biz_phone'] ?? '+1 (555) 234-5678');
 $bizEmail    = $sanitize($d['biz_email'] ?? $req['biz_email'] ?? ('contact@' . strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $bizName)) . '.com'));
 $bizAddress  = $sanitize($d['biz_address'] ?? $req['biz_address'] ?? '100 Innovation Blvd, Suite 400, Tech City');
+// Pasted customer reviews (Solo-style import) — shared by every generator path
+$customReviews = parseReviews($d['biz_reviews'] ?? $req['biz_reviews'] ?? '');
 
 $colorPresets = [
     'purple' => ['primary' => '#6366f1', 'secondary' => '#a855f7', 'accent' => '#38bdf8', 'gradient' => 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', 'light' => '#ede9fe'],
@@ -299,6 +301,554 @@ MAP;
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  SHOP SYSTEM — product detection, products section + working cart
+//  (Add-to-cart, drawer, qty, totals, WhatsApp + contact checkout)
+// ═══════════════════════════════════════════════════════════════
+
+function isShopSite($bizType, $sections, $productsRaw) {
+    if (!empty(trim((string)($productsRaw ?? '')))) return true;
+    if (is_array($sections) && in_array('shop', array_map('strtolower', $sections), true)) return true;
+    $t = strtolower((string)($bizType ?? ''));
+    return (bool) preg_match('/shop|store|product|retail|e-?commerce|boutique|mart|trading|enterprise|fashion|jewelry|grocery|bakery|furniture|electronics|pharma/i', $t);
+}
+
+function parseShopProducts($raw, $assets) {
+    $fallbacks = array_values(array_filter([
+        $assets['showcase1'] ?? null, $assets['showcase2'] ?? null,
+        $assets['about'] ?? null, $assets['hero'] ?? null
+    ]));
+    if (empty($fallbacks)) $fallbacks = ['https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80'];
+    $out = [];
+    $i = 0;
+    foreach (preg_split('/\r\n|\r|\n/', (string)($raw ?? '')) as $line) {
+        $line = trim($line);
+        if ($line === '') continue;
+        $parts = array_map('trim', explode('|', $line));
+        $name = $parts[0] ?? '';
+        if ($name === '') continue;
+        $priceLabel = $parts[1] ?? '';
+        $img = $parts[2] ?? '';
+        if (!preg_match('~^https?://~i', $img)) {
+            $img = $fallbacks[$i % count($fallbacks)];
+        }
+        $num = (float) str_replace(',', '', preg_replace('/[^0-9.,]/', '', $priceLabel));
+        $out[] = [
+            'name'  => $name,
+            'price' => $priceLabel,
+            'num'   => $num,
+            'img'   => $img
+        ];
+        $i++;
+    }
+    return $out;
+}
+
+function getShopCurrency($products) {
+    foreach ($products as $p) {
+        if (!empty($p['price']) && ($p['num'] ?? 0) > 0) {
+            $sym = preg_replace('/[\d\s.,]/', '', (string)$p['price']);
+            if ($sym !== '') {
+                $chars = preg_split('//u', $sym, -1, PREG_SPLIT_NO_EMPTY);
+                return implode('', array_slice($chars ?: [$sym], 0, 3));
+            }
+        }
+    }
+    return '';
+}
+
+function getShopHtml($products, $cp, $bizPhone, $style) {
+    if (empty($products)) return '';
+    $primary = $cp['primary'] ?? '#6366f1';
+    $grad    = $cp['gradient'] ?? 'linear-gradient(135deg,#6366f1,#a855f7)';
+    $light   = $cp['light'] ?? '#ede9fe';
+    $digits  = preg_replace('/[^0-9]/', '', (string)($bizPhone ?? ''));
+    $hasWa   = (strlen($digits) >= 7);
+    $cur     = getShopCurrency($products);
+    $isDark  = ($style === 'dark');
+    $isBold  = ($style === 'bold' || $style === 'vibrant');
+
+    // ── Product cards ──
+    $cards = '';
+    foreach ($products as $idx => $p) {
+        $nm  = htmlspecialchars($p['name'], ENT_QUOTES, 'UTF-8');
+        $pr  = htmlspecialchars($p['price'] !== '' ? $p['price'] : 'Ask price', ENT_QUOTES, 'UTF-8');
+        $img = htmlspecialchars($p['img'], ENT_QUOTES, 'UTF-8');
+        $btn = ((float)($p['num'] ?? 0) > 0)
+            ? "<button type=\"button\" data-wc-add=\"{$idx}\" style=\"width:100%;margin-top:1rem;padding:0.8rem 1rem;border-radius:12px;border:none;cursor:pointer;font-weight:800;font-size:0.9rem;font-family:inherit;background:{$grad};color:#fff;box-shadow:0 8px 20px -6px {$primary};\">🛒 Add to Cart</button>"
+            : "<a href=\"#contact\" style=\"display:block;text-align:center;width:100%;margin-top:1rem;padding:0.8rem 1rem;border-radius:12px;font-weight:800;font-size:0.9rem;border:1.5px solid {$primary};color:{$primary};\">Enquire →</a>";
+        if ($isDark) {
+            $cards .= "<div style=\"background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:18px;overflow:hidden;backdrop-filter:blur(12px);\">"
+                . "<img src=\"{$img}\" alt=\"{$nm}\" loading=\"lazy\" style=\"width:100%;height:210px;object-fit:cover;display:block;\">"
+                . "<div style=\"padding:1.5rem;\"><h3 style=\"font-size:1.15rem;color:#fff;font-weight:800;margin-bottom:0.3rem;\">{$nm}</h3>"
+                . "<div style=\"font-size:1.25rem;font-weight:800;color:{$primary};margin-bottom:0.25rem;\">{$pr}</div>{$btn}</div></div>";
+        } elseif ($isBold) {
+            $cards .= "<div style=\"background:#fff;border:2.5px solid #0f172a;border-radius:18px;overflow:hidden;box-shadow:5px 5px 0px #0f172a;\">"
+                . "<img src=\"{$img}\" alt=\"{$nm}\" loading=\"lazy\" style=\"width:100%;height:210px;object-fit:cover;display:block;border-bottom:2.5px solid #0f172a;\">"
+                . "<div style=\"padding:1.5rem;\"><h3 style=\"font-size:1.2rem;font-weight:800;color:#0f172a;margin-bottom:0.3rem;\">{$nm}</h3>"
+                . "<div style=\"font-size:1.25rem;font-weight:800;color:{$primary};margin-bottom:0.25rem;\">{$pr}</div>{$btn}</div></div>";
+        } else {
+            $cards .= "<div style=\"background:#fff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.05);\">"
+                . "<img src=\"{$img}\" alt=\"{$nm}\" loading=\"lazy\" style=\"width:100%;height:210px;object-fit:cover;display:block;\">"
+                . "<div style=\"padding:1.5rem;\"><h3 style=\"font-size:1.15rem;font-weight:800;color:#0f172a;margin-bottom:0.3rem;\">{$nm}</h3>"
+                . "<div style=\"font-size:1.25rem;font-weight:800;color:{$primary};margin-bottom:0.25rem;\">{$pr}</div>{$btn}</div></div>";
+        }
+    }
+
+    $secBg = $isDark
+        ? 'background:#0a0f1c;'
+        : 'background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;';
+    $hColor = $isDark ? '#fff' : '#0f172a';
+    $pColor = $isDark ? '#94a3b8' : '#64748b';
+
+    $productsJson = json_encode($products, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+    $waBtn = $hasWa
+        ? '<button type="button" data-wc-checkout-wa style="width:100%;padding:0.85rem;border-radius:12px;border:none;cursor:pointer;font-weight:800;font-size:0.92rem;font-family:inherit;background:#25D366;color:#fff;margin-bottom:0.6rem;">💬 Order on WhatsApp</button>'
+        : '';
+
+    // ── NOWDOC cart engine (no PHP interpolation inside) ──
+    $cartJs = <<<'WCJS'
+<script>
+(function(){
+var PRODUCTS=__PRODUCTS__;
+var PHONE='__PHONE__';
+var CUR='__CUR__';
+var KEY='wc_cart_v1';
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||[];}catch(e){return[];}}
+function save(c){try{localStorage.setItem(KEY,JSON.stringify(c));}catch(e){}}
+function money(n){var s=Number(n||0).toFixed(2).replace(/\.00$/,'');return CUR+s;}
+function count(c){var n=0;c.forEach(function(i){n+=i.qty;});return n;}
+function total(c){var t=0;c.forEach(function(i){t+=(i.num||0)*i.qty;});return t;}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function render(){
+  var c=load();
+  var badge=document.getElementById('wc-cart-count');
+  if(badge)badge.textContent=count(c);
+  var box=document.getElementById('wc-cart-items');
+  if(!box)return;
+  if(!c.length){box.innerHTML='<div style="text-align:center;color:#94a3b8;padding:2rem 1rem;font-size:0.9rem;">Your cart is empty.<br>Add something you love 🛍️</div>';}
+  else{
+    var h='';
+    c.forEach(function(i,idx){
+      var p=PRODUCTS[i.pi]||{name:i.name,num:0};
+      h+='<div style="display:flex;gap:0.75rem;align-items:center;padding:0.7rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">'
+        +'<div style="flex:1;min-width:0;"><div style="font-weight:700;color:#fff;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(i.name)+'</div>'
+        +'<div style="font-size:0.8rem;color:#94a3b8;">'+esc(i.label||money(i.num))+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:0.4rem;">'
+        +'<button type="button" data-wc-dec="'+idx+'" style="width:26px;height:26px;border-radius:7px;border:1px solid #334155;background:#0f172a;color:#fff;cursor:pointer;font-weight:800;">−</button>'
+        +'<span style="min-width:20px;text-align:center;color:#fff;font-weight:700;font-size:0.85rem;">'+i.qty+'</span>'
+        +'<button type="button" data-wc-inc="'+idx+'" style="width:26px;height:26px;border-radius:7px;border:1px solid #334155;background:#0f172a;color:#fff;cursor:pointer;font-weight:800;">+</button>'
+        +'</div>'
+        +'<button type="button" data-wc-rm="'+idx+'" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:1rem;">✕</button>'
+        +'</div>';
+    });
+    box.innerHTML=h;
+  }
+  var t=document.getElementById('wc-cart-total');
+  if(t)t.textContent='Total: '+money(total(c));
+  var wa=document.querySelector('[data-wc-checkout-wa]');
+  if(wa)wa.style.display=c.length?'block':'none';
+  var cf=document.querySelector('[data-wc-checkout-form]');
+  if(cf)cf.style.display=c.length?'block':'none';
+}
+window.wcAddToCart=function(pi){
+  var p=PRODUCTS[pi];if(!p)return;
+  var c=load();
+  var f=null;
+  c.forEach(function(i){if(i.pi===pi)f=i;});
+  if(f)f.qty+=1;
+  else c.push({pi:pi,name:p.name,num:p.num||0,label:p.price||'',qty:1});
+  save(c);render();openCart();
+};
+function openCart(){var d=document.getElementById('wc-cart-drawer');if(d)d.style.display='flex';}
+function closeCart(){var d=document.getElementById('wc-cart-drawer');if(d)d.style.display='none';}
+function orderText(){
+  var c=load();var lines=['Hello! I would like to order:',''];
+  c.forEach(function(i,n){lines.push((n+1)+'. '+i.name+' x'+i.qty+' — '+(i.label||money(i.num)));});
+  lines.push('','Total: '+money(total(c)));
+  return lines.join('\n');
+}
+document.addEventListener('click',function(e){
+  var t=e.target&&e.target.closest?e.target.closest('[data-wc-add],[data-wc-cart-open],[data-wc-cart-close],[data-wc-inc],[data-wc-dec],[data-wc-rm],[data-wc-checkout-wa],[data-wc-checkout-form]'):null;
+  if(!t)return;
+  if(t.hasAttribute('data-wc-add')){window.wcAddToCart(parseInt(t.getAttribute('data-wc-add'),10));return;}
+  if(t.hasAttribute('data-wc-cart-open')){render();openCart();return;}
+  if(t.hasAttribute('data-wc-cart-close')){closeCart();return;}
+  var c=load();var i;
+  if(t.hasAttribute('data-wc-inc')){i=parseInt(t.getAttribute('data-wc-inc'),10);if(c[i])c[i].qty+=1;save(c);render();return;}
+  if(t.hasAttribute('data-wc-dec')){i=parseInt(t.getAttribute('data-wc-dec'),10);if(c[i]){c[i].qty-=1;if(c[i].qty<=0)c.splice(i,1);}save(c);render();return;}
+  if(t.hasAttribute('data-wc-rm')){i=parseInt(t.getAttribute('data-wc-rm'),10);c.splice(i,1);save(c);render();return;}
+  if(t.hasAttribute('data-wc-checkout-wa')){
+    if(!PHONE){closeCart();return;}
+    window.open('https://wa.me/'+PHONE+'?text='+encodeURIComponent(orderText()),'_blank');return;
+  }
+  if(t.hasAttribute('data-wc-checkout-form')){
+    var msg=orderText()+'\n\nName:\nPhone:';
+    var sec=document.getElementById('contact')||document.querySelector('#contact-form');
+    if(sec&&sec.scrollIntoView)sec.scrollIntoView({behavior:'smooth'});
+    setTimeout(function(){
+      var ta=document.querySelector('#contact-form textarea,#contact-form [name="message"]')||document.querySelector('#contact textarea');
+      if(ta){ta.value=msg;ta.focus();}
+    },700);
+    closeCart();return;
+  }
+});
+render();
+})();
+</script>
+WCJS;
+    $cartJs = str_replace(
+        ['__PRODUCTS__', '__PHONE__', '__CUR__'],
+        [$productsJson, $digits, $cur],
+        $cartJs
+    );
+
+    $drawer = <<<DRAWER
+<div id="wc-cart-drawer" style="display:none;position:fixed;inset:0;z-index:9990;">
+  <div data-wc-cart-close style="position:absolute;inset:0;background:rgba(0,0,0,0.55);"></div>
+  <aside style="position:absolute;top:0;right:0;bottom:0;width:min(380px,92vw);background:#0f172a;border-left:1px solid #1e293b;display:flex;flex-direction:column;box-shadow:-20px 0 50px rgba(0,0,0,0.4);">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:1.1rem 1.25rem;border-bottom:1px solid #1e293b;">
+      <strong style="color:#fff;font-size:1.05rem;">🛒 Your Cart</strong>
+      <button type="button" data-wc-cart-close style="background:none;border:none;color:#94a3b8;font-size:1.3rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="wc-cart-items" style="flex:1;overflow-y:auto;padding:0.5rem 1.25rem;"></div>
+    <div style="padding:1.1rem 1.25rem;border-top:1px solid #1e293b;">
+      <div id="wc-cart-total" style="color:#fff;font-weight:800;font-size:1.05rem;margin-bottom:0.9rem;">Total: {$cur}0</div>
+      {$waBtn}
+      <button type="button" data-wc-checkout-form style="width:100%;padding:0.85rem;border-radius:12px;cursor:pointer;font-weight:800;font-size:0.92rem;font-family:inherit;background:transparent;border:1.5px solid #475569;color:#e2e8f0;">📝 Order via Contact Form</button>
+    </div>
+  </aside>
+</div>
+<button type="button" data-wc-cart-open aria-label="Open cart" style="position:fixed;bottom:5.5rem;right:1.5rem;z-index:9989;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:{$grad};color:#fff;font-size:1.5rem;box-shadow:0 12px 30px rgba(0,0,0,0.35);">🛒<span id="wc-cart-count" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;border-radius:11px;background:#ef4444;color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px;">0</span></button>
+DRAWER;
+
+    $section = <<<SHOP
+<section id="shop" style="padding:5rem 1.5rem;{$secBg}">
+  <div style="max-width:1150px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:2.75rem;">
+      <div style="font-size:0.78rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:{$primary};margin-bottom:0.5rem;">🛍️ Our Products</div>
+      <h2 style="font-size:2.2rem;font-weight:800;color:{$hColor};letter-spacing:-0.02em;">Shop Our Products</h2>
+      <p style="color:{$pColor};margin-top:0.5rem;">Add to cart and check out in seconds — WhatsApp or contact form.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.75rem;">
+      {$cards}
+    </div>
+  </div>
+</section>
+SHOP;
+
+    return $section . "\n" . $drawer . "\n" . $cartJs;
+}
+
+function injectShopIntoHtml($html, $shopHtml) {
+    if (empty($shopHtml) || empty($html)) return $html;
+    if (stripos($html, '</body>') !== false) {
+        return str_ireplace('</body>', $shopHtml . "\n</body>", $html);
+    }
+    return $html . "\n" . $shopHtml;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SOLO-STYLE ENGINE — one-page professional sites for solo
+//  consultants / coaches / therapists / tradespeople.
+//  Pasted reviews render verbatim; any failure falls back to the
+//  standard server template engine (buildDesign1).
+// ═══════════════════════════════════════════════════════════════
+
+function parseReviews($raw) {
+    $out = [];
+    foreach (preg_split('/\r\n|\r|\n/', (string)($raw ?? '')) as $line) {
+        $line = trim($line);
+        if ($line === '') continue;
+        $parts = array_map('trim', explode('|', $line));
+        $name = $parts[0] ?? '';
+        $text = $parts[1] ?? '';
+        if ($name === '' || $text === '') continue;
+        $out[] = ['name' => $name, 'text' => $text, 'role' => ($parts[2] ?? 'Verified Client')];
+        if (count($out) >= 6) break;
+    }
+    return $out;
+}
+
+function getSoloProfession($bizType) {
+    $t = strtolower((string)($bizType ?? ''));
+    $map = [
+        'coach' => [
+            'label' => 'Coach', 'emoji' => '🎯',
+            'headline' => 'Unlock the next level of your life & work',
+            'sub' => '1-on-1 coaching, group programs and workshops — practical change you can feel in weeks.',
+            'services' => [['1-on-1 Coaching', 'Private sessions tailored to your goals, with clear action steps every week.'], ['Group Programs', 'Small cohorts, big momentum — learn alongside driven peers.'], ['Workshops', 'Half-day intensives for teams and communities.']],
+            'cta' => 'Book a Free Discovery Call', 'tag' => 'Certified Professional Coach',
+            'hero' => 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1000&q=80'
+        ],
+        'therapist' => [
+            'label' => 'Therapist', 'emoji' => '🌿',
+            'headline' => 'A calmer mind starts with one conversation',
+            'sub' => 'Confidential individual therapy, couples counseling and online sessions — at your pace.',
+            'services' => [['Individual Therapy', 'A safe space to work through anxiety, stress and life transitions.'], ['Couples Counseling', 'Rebuild trust and communication, together.'], ['Online Sessions', 'Same quality of care, from the comfort of your home.']],
+            'cta' => 'Book a Confidential Session', 'tag' => 'Licensed Mental Health Professional',
+            'hero' => 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1573497620053-ea5300f94f21?auto=format&fit=crop&w=1000&q=80'
+        ],
+        'trade' => [
+            'label' => 'Tradesperson', 'emoji' => '🔧',
+            'headline' => 'Fixed right, the first time — guaranteed',
+            'sub' => 'Repairs, installations and emergency callouts. Upfront pricing, tidy work, on time.',
+            'services' => [['Repairs & Fixes', 'Fast diagnosis and durable repairs for home and office.'], ['Installations', 'Clean, code-compliant installs with full testing.'], ['Emergency Callout', 'Urgent problem? Same-day response when it matters.']],
+            'cta' => 'Call Now for a Free Quote', 'tag' => 'Licensed & Insured Tradesperson',
+            'hero' => 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1000&q=80'
+        ],
+        'cleaning' => [
+            'label' => 'Cleaning Pro', 'emoji' => '✨',
+            'headline' => 'Spotless spaces, zero hassle',
+            'sub' => 'Home cleaning, office contracts and deep cleans — vetted pros, eco products.',
+            'services' => [['Home Cleaning', 'Recurring or one-off cleans that keep your home shining.'], ['Office Contracts', 'Reliable after-hours service for workplaces.'], ['Deep Cleaning', 'Top-to-bottom detail for move-ins, events and seasons.']],
+            'cta' => 'Get an Instant Quote', 'tag' => 'Vetted 5-Star Cleaning Team',
+            'hero' => 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1528740561666-dc2479dc08ab?auto=format&fit=crop&w=1000&q=80'
+        ],
+        'salon' => [
+            'label' => 'Stylist', 'emoji' => '💇',
+            'headline' => 'Look sharp, feel sharper',
+            'sub' => 'Precision cuts, color artistry and bridal styling — book in under a minute.',
+            'services' => [['Haircuts & Styling', 'Consultation-first cuts shaped to you.'], ['Color & Balayage', 'Dimensional color with healthy-shine finish.'], ['Bridal & Events', 'Trial + day-of styling for unforgettable days.']],
+            'cta' => 'Book Your Chair', 'tag' => 'Top-Rated Salon Professional',
+            'hero' => 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1000&q=80'
+        ],
+        'tutor' => [
+            'label' => 'Tutor', 'emoji' => '📚',
+            'headline' => 'Grades up, stress down',
+            'sub' => 'Personalized 1-on-1 tutoring in maths, science and languages — online or at home.',
+            'services' => [['1-on-1 Tutoring', 'Lessons built around how your child learns best.'], ['Exam Prep', 'Structured revision plans that raise scores.'], ['Homework Help', 'Daily support that builds independent study habits.']],
+            'cta' => 'Book a Free Trial Lesson', 'tag' => 'Experienced Private Tutor',
+            'hero' => 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1000&q=80'
+        ],
+        'consultant' => [
+            'label' => 'Consultant', 'emoji' => '💼',
+            'headline' => 'Strategy that moves your numbers',
+            'sub' => 'Advisory for growth, operations and digital — senior expertise, no fluff.',
+            'services' => [['Business Strategy', 'Clarity on where to play and how to win.'], ['Operations Audit', 'Find the leaks, fix the bottlenecks.'], ['Growth Advisory', 'Quarterly guidance that compounds.']],
+            'cta' => 'Schedule a Strategy Call', 'tag' => 'Independent Strategy Consultant',
+            'hero' => 'https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=1000&q=80'
+        ]
+    ];
+    if (preg_match('/coach/i', $t)) return $map['coach'];
+    if (preg_match('/therap| counsel|psycholog/i', $t)) return $map['therapist'];
+    if (preg_match('/plumb|electric|handyman|carpent|trade|technician|repair/i', $t)) return $map['trade'];
+    if (preg_match('/clean|housekeep|maid/i', $t)) return $map['cleaning'];
+    if (preg_match('/salon|beauty|barber|spa|styl/i', $t)) return $map['salon'];
+    if (preg_match('/tutor|coach|train|mentor|teach|music teacher/i', $t) && !preg_match('/fitness|gym/i', $t)) return $map['coach'];
+    if (preg_match('/tutor|tuition|teacher/i', $t)) return $map['tutor'];
+    if (preg_match('/consult|advisor|agency|freelance|creator|portfolio/i', $t)) return $map['consultant'];
+    return $map['consultant'];
+}
+
+function buildSoloDesign($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $reviews = [], $style = 'light') {
+    $prof = getSoloProfession($bizType);
+    $primary = $cp['primary'] ?? '#059669';
+    $grad    = $cp['gradient'] ?? 'linear-gradient(135deg,#059669,#10b981)';
+    $light   = $cp['light'] ?? '#d1fae5';
+    $digits  = preg_replace('/[^0-9]/', '', (string)($bizPhone ?? ''));
+    $callHref = (strlen($digits) >= 7) ? ('tel:+' . $digits) : '#contact';
+    $esc = function ($v) { return htmlspecialchars((string)($v ?? ''), ENT_QUOTES, 'UTF-8'); };
+    $fb1 = 'https://picsum.photos/seed/solohero/1200/800';
+    $fb2 = 'https://picsum.photos/seed/soloabout/1000/800';
+    $heroImg  = $esc($prof['hero']);
+    $aboutImg = $esc($prof['about']);
+    // ★ Style themes: light (clean) / bold (neo-brutal) / dark (luxury)
+    $isDark = ($style === 'dark');
+    $isBold = ($style === 'bold');
+    $cardBg = $isDark ? 'rgba(255,255,255,0.04)' : '#fff';
+    $cardBd = $isDark ? '1px solid rgba(255,255,255,0.1)' : ($isBold ? '2.5px solid #0f172a' : '1px solid #e2e8f0');
+    $cardSh = $isDark ? 'none' : ($isBold ? '5px 5px 0px #0f172a' : '0 6px 22px rgba(0,0,0,0.04)');
+    $hCol  = $isDark ? '#ffffff' : '#0f172a';
+    $tCol  = $isDark ? '#94a3b8' : '#64748b';
+    $bandBg = $isDark ? '#0f172a' : '#f8fafc';
+    $bandBd = $isDark ? '#1e293b' : '#e2e8f0';
+    $testiStyle = $isDark ? 'dark' : ($isBold ? 'bold' : 'light');
+    $themeCss = '';
+    if ($isDark) {
+        $themeCss = 'body{background:#0a0f1c!important;color:#e2e8f0}.nav{background:rgba(10,15,28,.92)!important;border-color:#1e293b}.brand{color:#fff!important}.nav-links a{color:#cbd5e1!important}.hero h1{color:#fff!important}.hero p{color:#94a3b8!important}.trust{background:#0f172a!important;border-color:#1e293b;color:#94a3b8!important}.sec-title{color:#fff!important}#mobile-drawer{background:#0f172a!important}.hamburger{color:#fff!important}';
+    } elseif ($isBold) {
+        $themeCss = '.sec-title,.hero h1{letter-spacing:-.03em}';
+    }
+
+    $svcList = array_filter(array_map('trim', explode(',', (string)$bizServices)));
+    if (empty($svcList)) {
+        foreach ($prof['services'] as $s) $svcList[] = $s[0];
+    }
+    $svcCards = '';
+    $i = 0;
+    foreach (array_slice($svcList, 0, 6) as $s) {
+        $desc = $prof['services'][$i % count($prof['services'])][1] ?? 'Professional, reliable service with transparent pricing.';
+        $i++;
+        $svcCards .= "<div style=\"background:{$cardBg};border:{$cardBd};border-radius:18px;padding:2rem;box-shadow:{$cardSh};\">"
+            . "<div style=\"width:46px;height:46px;border-radius:13px;background:{$light};color:{$primary};display:flex;align-items:center;justify-content:center;font-size:1.35rem;font-weight:800;margin-bottom:1rem;\">{$prof['emoji']}</div>"
+            . "<h3 style=\"font-size:1.15rem;color:{$hCol};font-weight:800;margin-bottom:0.5rem;\">" . $esc($s) . "</h3>"
+            . "<p style=\"font-size:0.92rem;color:{$tCol};line-height:1.65;\">" . $esc($desc) . "</p></div>";
+    }
+
+    if (!empty($reviews)) {
+        $revCards = '';
+        foreach (array_slice($reviews, 0, 6) as $r) {
+            $w0 = preg_split('/\s+/', trim((string)$r['name']));
+            $ch0 = preg_split('//u', (string)($w0[0] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+            $ch1 = preg_split('//u', (string)($w0[1] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+            $initials = strtoupper((($ch0[0] ?? '') . ($ch1[0] ?? '')));
+            if ($initials === '') $initials = '★';
+            $revCards .= "<div style=\"background:{$cardBg};border:{$cardBd};border-radius:18px;padding:1.75rem;box-shadow:{$cardSh};\">"
+                . "<div style=\"color:#f59e0b;letter-spacing:2px;margin-bottom:0.8rem;\">★★★★★</div>"
+                . "<p style=\"font-size:0.95rem;color:{$tCol};line-height:1.7;font-style:italic;margin-bottom:1.25rem;\">" . $esc('"' . $r['text'] . '"') . "</p>"
+                . "<div style=\"display:flex;align-items:center;gap:0.8rem;\">"
+                . "<div style=\"width:44px;height:44px;border-radius:50%;background:{$grad};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;\">" . $esc($initials) . "</div>"
+                . "<div><strong style=\"display:block;font-size:0.92rem;color:{$hCol};\">" . $esc($r['name']) . "</strong>"
+                . "<span style=\"font-size:0.78rem;color:#94a3b8;\">" . $esc($r['role'] ?? 'Verified Client') . "</span></div></div></div>";
+        }
+        $reviewsHtml = <<<REV
+<section id="reviews" style="padding:5rem 1.5rem;background:{$bandBg};border-top:1px solid {$bandBd};border-bottom:1px solid {$bandBd};">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:2.75rem;">
+      <div style="font-size:0.78rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:{$primary};margin-bottom:0.5rem;">⭐ Client Reviews</div>
+      <h2 style="font-size:2.1rem;font-weight:800;color:{$hCol};">Loved by Clients</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;">{$revCards}</div>
+  </div>
+</section>
+REV;
+    } else {
+        $reviewsHtml = getTestimonialsHtml($bizName, $bizType, $testiStyle, $cp);
+    }
+
+    $mapEmbed = getMapEmbed($bizAddress);
+    $sharedJs = getSharedJS($bizName);
+    $year = date('Y');
+    $tagline = $bizTagline ?: $prof['headline'];
+
+    return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{$esc($bizName)} — {$esc($prof['label'])}</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Plus Jakarta Sans',sans-serif;color:#1e293b;background:#fff;line-height:1.6}
+:root{--primary:{$primary};--primary-light:{$light}}
+.nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #e2e8f0}
+.nav-in{max-width:1150px;margin:0 auto;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:800;font-size:1.25rem;color:#0f172a}
+.nav-links{display:flex;gap:1.5rem;align-items:center}
+.nav-links a{font-size:.9rem;font-weight:600;color:#475569}
+.btn{display:inline-block;padding:.85rem 2rem;border-radius:999px;background:{$grad};color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 25px -5px {$primary}}
+.hero{max-width:1150px;margin:0 auto;padding:5rem 1.5rem 4rem;display:grid;grid-template-columns:1.05fr .95fr;gap:3rem;align-items:center}
+.hero-badge{display:inline-block;padding:.35rem 1rem;background:{$light};color:{$primary};border-radius:999px;font-weight:700;font-size:.8rem;margin-bottom:1.25rem}
+.hero h1{font-size:clamp(2.2rem,4.6vw,3.4rem);font-weight:800;color:#0f172a;line-height:1.15;margin-bottom:1.1rem;letter-spacing:-.02em}
+.hero p{font-size:1.08rem;color:#64748b;margin-bottom:2rem}
+.hero-img{border-radius:24px;overflow:hidden;box-shadow:0 20px 45px rgba(0,0,0,.1)}
+.hero-img img{width:100%;height:380px;object-fit:cover;display:block}
+.trust{display:flex;gap:2rem;flex-wrap:wrap;justify-content:center;padding:1.25rem;background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;font-size:.85rem;font-weight:700;color:#475569}
+.section{max-width:1150px;margin:0 auto;padding:5rem 1.5rem}
+.sec-head{text-align:center;margin-bottom:2.75rem}
+.sec-tag{font-size:.78rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:{$primary};margin-bottom:.5rem}
+.sec-title{font-size:2.1rem;font-weight:800;color:#0f172a}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem}
+.about{display:grid;grid-template-columns:1fr 1fr;gap:3.5rem;align-items:center;background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0}
+.about img{border-radius:24px;width:100%;height:420px;object-fit:cover}
+.contact{background:#0f172a;color:#e2e8f0}
+.contact-grid{max-width:1150px;margin:0 auto;padding:5rem 1.5rem;display:grid;grid-template-columns:1fr 1.2fr;gap:3rem}
+.c-form input,.c-form textarea{width:100%;padding:.85rem 1rem;border:1.5px solid #334155;border-radius:12px;margin-bottom:1rem;font-family:inherit;background:#0b1220;color:#fff}
+.fab-call{position:fixed;bottom:5.5rem;right:1.5rem;z-index:999;width:56px;height:56px;border-radius:50%;background:#25D366;color:#fff;font-size:1.5rem;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 12px 30px rgba(0,0,0,.3)}
+#back-to-top{display:none;position:fixed;bottom:2rem;right:2rem;z-index:90;width:44px;height:44px;border-radius:50%;background:#0f172a;color:#fff;border:none;cursor:pointer;align-items:center;justify-content:center;font-size:1.2rem}
+#mobile-drawer{display:none;flex-direction:column;background:#fff;padding:1.5rem;gap:1rem;font-weight:600;border-bottom:1px solid #e2e8f0}
+#mobile-drawer.open{display:flex}
+.hamburger{display:none;background:none;border:none;font-size:1.5rem;cursor:pointer}
+footer{background:#0f172a;color:#94a3b8;padding:2.5rem 1.5rem;text-align:center;border-top:1px solid #1e293b}
+{$themeCss}
+@media(max-width:900px){.hero,.about,.contact-grid{grid-template-columns:1fr}.nav-links{display:none}.hamburger{display:block}}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="nav-in">
+  <div class="brand">{$esc($bizName)}</div>
+  <div class="nav-links"><a href="#services">Services</a><a href="#reviews">Reviews</a><a href="#about">About</a><a href="#contact">Contact</a><a href="{$callHref}" class="btn" style="padding:.55rem 1.3rem;font-size:.85rem;">{$esc($prof['cta'])}</a></div>
+  <button class="hamburger" onclick="toggleMobileMenu()">☰</button>
+</div><div id="mobile-drawer"><a href="#services">Services</a><a href="#reviews">Reviews</a><a href="#about">About</a><a href="#contact">Contact</a></div></nav>
+
+<header class="hero">
+  <div>
+    <span class="hero-badge">{$prof['emoji']} {$esc($prof['tag'])}</span>
+    <h1>{$esc($tagline)}</h1>
+    <p>{$esc($prof['sub'])}</p>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+      <a href="{$callHref}" class="btn">{$esc($prof['cta'])} →</a>
+      <a href="#services" class="btn" style="background:#fff;color:#0f172a;border:1.5px solid #cbd5e1;box-shadow:none;">Explore Services</a>
+    </div>
+  </div>
+  <div class="hero-img"><img src="{$heroImg}" alt="{$esc($bizName)}" onerror="this.onerror=null;this.src='{$fb1}'"></div>
+</header>
+
+<div class="trust"><span>★ 5-Star Rated</span><span>✓ Verified Professional</span><span>⚡ Fast Response</span><span>🛡️ Satisfaction Guaranteed</span></div>
+
+<section class="section" id="services">
+  <div class="sec-head"><div class="sec-tag">What I Do</div><h2 class="sec-title">Services</h2></div>
+  <div class="grid">{$svcCards}</div>
+</section>
+
+<section id="about" style="background:{$bandBg};border-top:1px solid {$bandBd};border-bottom:1px solid {$bandBd};">
+  <div class="section about" style="border:none;background:none;">
+    <div><img src="{$aboutImg}" alt="About {$esc($bizName)}" onerror="this.onerror=null;this.src='{$fb2}'"></div>
+    <div>
+      <div class="sec-tag">About</div>
+      <h2 class="sec-title" style="margin-bottom:1rem;">Hi, I'm {$esc($bizName)}</h2>
+      <p style="color:{$tCol};font-size:1.05rem;line-height:1.75;margin-bottom:1.5rem;">{$esc($bizAudience)} trust me for {$esc($prof['label'])} work done with care, honesty and skill. Every client gets personal attention — no hand-offs, no surprises.</p>
+      <a href="#contact" class="btn">Work With Me →</a>
+    </div>
+  </div>
+</section>
+
+{$reviewsHtml}
+
+<section class="contact" id="contact">
+  <div class="contact-grid">
+    <div>
+      <div class="sec-tag">Get In Touch</div>
+      <h2 style="font-size:2.1rem;font-weight:800;color:#fff;margin-bottom:1rem;">Let's talk</h2>
+      <p style="color:#94a3b8;margin-bottom:1.5rem;">Call, message or send the form — I reply within 24 hours.</p>
+      <div style="margin-bottom:.8rem;">📞 <strong>{$esc($bizPhone)}</strong></div>
+      <div style="margin-bottom:.8rem;">✉️ {$esc($bizEmail)}</div>
+      <div>📍 {$esc($bizAddress)}</div>
+      <div style="margin-top:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap;">
+        <a href="{$callHref}" class="btn">📞 Call Now</a>
+      </div>
+    </div>
+    <form class="c-form" id="contact-form" method="POST" onsubmit="handleContactSubmit(event)">
+      <input name="name" placeholder="Your name" required>
+      <input type="email" name="email" placeholder="Email address" required>
+      <input name="phone" placeholder="Phone (optional)">
+      <textarea name="message" placeholder="How can I help?" required></textarea>
+      <button type="submit" class="btn" style="border:none;cursor:pointer;width:100%;">Send Message →</button>
+    </form>
+  </div>
+  {$mapEmbed}
+</section>
+
+<footer>© {$year} {$esc($bizName)} · {$esc($prof['label'])} · All rights reserved.</footer>
+<a class="fab-call" href="{$callHref}">📞</a>
+<button id="back-to-top">↑</button>
+{$sharedJs}
+</body>
+</html>
+HTML;
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  Premium Helpers: Showcase, Testimonials, FAQ Accordion
 // ═══════════════════════════════════════════════════════════════
 
@@ -392,7 +942,17 @@ SHOW;
     }
 }
 
-function getTestimonialsHtml($bizName, $bizType, $style, $cp) {
+function testimonialAvatarHtml($r, $roundPx, $border, $size = 46) {
+    $nm = htmlspecialchars($r['author'] ?? '', ENT_QUOTES, 'UTF-8');
+    if (!empty($r['avatar'])) {
+        $av = htmlspecialchars($r['avatar'], ENT_QUOTES, 'UTF-8');
+        return "<img src=\"{$av}\" alt=\"{$nm}\" loading=\"lazy\" style=\"width:{$size}px;height:{$size}px;border-radius:{$roundPx};object-fit:cover;{$border}\">";
+    }
+    $ini = htmlspecialchars($r['initials'] ?? '★', ENT_QUOTES, 'UTF-8');
+    return "<div style=\"width:{$size}px;height:{$size}px;border-radius:{$roundPx};background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.95rem;flex-shrink:0;{$border}\">{$ini}</div>";
+}
+
+function getTestimonialsHtml($bizName, $bizType, $style, $cp, $customReviews = null) {
     $reviews = [
         [
             'quote' => "Partnering with {$bizName} was a game-changer. Their strategic mastery in {$bizType} and obsessive attention to detail doubled our conversion rates within weeks.",
@@ -417,9 +977,32 @@ function getTestimonialsHtml($bizName, $bizType, $style, $cp) {
         ]
     ];
 
+    // ★ Pasted customer reviews (Solo-style import) override defaults
+    if (is_array($customReviews) && !empty($customReviews)) {
+        $mapped = [];
+        foreach (array_slice($customReviews, 0, 6) as $cr) {
+            if (empty($cr['name']) || empty($cr['text'])) continue;
+            $w0 = preg_split('/\s+/', trim((string)$cr['name']));
+            $c0 = preg_split('//u', (string)($w0[0] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+            $c1 = preg_split('//u', (string)($w0[1] ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+            $ini = strtoupper((($c0[0] ?? '') . ($c1[0] ?? '')));
+            if ($ini === '') $ini = '★';
+            $mapped[] = [
+                'quote' => $cr['text'],
+                'author' => $cr['name'],
+                'role' => ($cr['role'] ?? 'Verified Client'),
+                'rating' => '★★★★★',
+                'avatar' => '',
+                'initials' => $ini
+            ];
+        }
+        if (!empty($mapped)) $reviews = $mapped;
+    }
+
     if ($style === 'light') {
         $cards = '';
         foreach ($reviews as $r) {
+            $av = testimonialAvatarHtml($r, '50%', 'border:2px solid var(--primary);', 46);
             $cards .= <<<CARD
             <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:18px; padding:2rem; box-shadow:0 6px 24px rgba(0,0,0,0.04); display:flex; flex-direction:column; justify-content:space-between;">
               <div>
@@ -427,7 +1010,7 @@ function getTestimonialsHtml($bizName, $bizType, $style, $cp) {
                 <p style="font-size:0.95rem; color:#475569; line-height:1.7; font-style:italic; margin-bottom:1.5rem;">"{$r['quote']}"</p>
               </div>
               <div style="display:flex; align-items:center; gap:0.9rem; border-top:1px solid #f1f5f9; padding-top:1rem;">
-                <img src="{$r['avatar']}" alt="{$r['author']}" style="width:46px; height:46px; border-radius:50%; object-fit:cover; border:2px solid var(--primary);">
+                {$av}
                 <div>
                   <strong style="display:block; font-size:0.92rem; color:#0f172a;">{$r['author']}</strong>
                   <span style="font-size:0.8rem; color:#94a3b8;">{$r['role']}</span>
@@ -453,6 +1036,7 @@ SEC;
     } elseif ($style === 'bold') {
         $cards = '';
         foreach ($reviews as $r) {
+            $av = testimonialAvatarHtml($r, '12px', 'border:2px solid #0f172a;', 48);
             $cards .= <<<CARD
             <div style="background:#ffffff; border:2.5px solid #0f172a; border-radius:18px; padding:2.2rem; box-shadow:6px 6px 0px #0f172a; display:flex; flex-direction:column; justify-content:space-between;">
               <div>
@@ -463,7 +1047,7 @@ SEC;
                 <p style="font-size:1rem; color:#0f172a; font-weight:500; line-height:1.6; margin-bottom:1.5rem;">"{$r['quote']}"</p>
               </div>
               <div style="display:flex; align-items:center; gap:0.9rem; border-top:2px solid #e2e8f0; padding-top:1rem;">
-                <img src="{$r['avatar']}" alt="{$r['author']}" style="width:48px; height:48px; border-radius:12px; object-fit:cover; border:2px solid #0f172a;">
+                {$av}
                 <div>
                   <strong style="display:block; font-size:1rem; font-family:'Space Grotesk';">{$r['author']}</strong>
                   <span style="font-size:0.82rem; color:#64748b;">{$r['role']}</span>
@@ -484,6 +1068,7 @@ SEC;
     } else {
         $cards = '';
         foreach ($reviews as $r) {
+            $av = testimonialAvatarHtml($r, '50%', 'border:1px solid rgba(255,255,255,0.25);', 46);
             $cards .= <<<CARD
             <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.09); border-radius:14px; padding:2.2rem; backdrop-filter:blur(14px); display:flex; flex-direction:column; justify-content:space-between;">
               <div>
@@ -491,7 +1076,7 @@ SEC;
                 <p style="font-size:0.95rem; color:#cbd5e1; font-weight:300; line-height:1.8; margin-bottom:1.8rem; font-style:italic;">"{$r['quote']}"</p>
               </div>
               <div style="display:flex; align-items:center; gap:1rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:1.2rem;">
-                <img src="{$r['avatar']}" alt="{$r['author']}" style="width:46px; height:46px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,0.25);">
+                {$av}
                 <div>
                   <strong style="display:block; font-size:0.92rem; color:#fff; font-family:'Cinzel',serif; letter-spacing:0.04em;">{$r['author']}</strong>
                   <span style="font-size:0.8rem; color:#94a3b8;">{$r['role']}</span>
@@ -615,7 +1200,7 @@ SEC;
 //  Design 1: Modern Minimal & Crisp (Light Theme)
 //  Supports Sub-Variants: A (Conversion), B (Bento Grid), C (Editorial Authority)
 // ═══════════════════════════════════════════════════════════════
-function buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets = null, $mapEmbed = null, $subVariant = 'A') {
+function buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets = null, $mapEmbed = null, $subVariant = 'A', $customReviews = null) {
     if (!$assets) $assets = getNicheAssets($bizType, $bizName);
     if ($mapEmbed === null) $mapEmbed = getMapEmbed($bizAddress);
     $servicesList = array_filter(array_map('trim', explode(',', $bizServices)));
@@ -630,7 +1215,7 @@ function buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizService
     }
 
     $showcaseHtml = getShowcaseHtml($bizName, $bizType, 'light', $cp, $assets);
-    $testimonialsHtml = getTestimonialsHtml($bizName, $bizType, 'light', $cp);
+    $testimonialsHtml = getTestimonialsHtml($bizName, $bizType, 'light', $cp, $customReviews);
     $faqHtml = getFaqHtml($bizName, $bizType, 'light', $cp);
     $sharedJs = getSharedJS($bizName);
     $year = date('Y');
@@ -874,7 +1459,7 @@ HTML;
 //  Design 2: Bold Dynamic & High-Converting
 //  Supports Sub-Variants: A (Neo-Brutalist), B (Cyber Aurora), C (Velocity Growth)
 // ═══════════════════════════════════════════════════════════════
-function buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets = null, $mapEmbed = null, $subVariant = 'A') {
+function buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets = null, $mapEmbed = null, $subVariant = 'A', $customReviews = null) {
     if (!$assets) $assets = getNicheAssets($bizType, $bizName);
     if ($mapEmbed === null) $mapEmbed = getMapEmbed($bizAddress);
     $servicesList = array_filter(array_map('trim', explode(',', $bizServices)));
@@ -888,7 +1473,7 @@ function buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizService
     }
 
     $showcaseHtml = getShowcaseHtml($bizName, $bizType, 'bold', $cp, $assets);
-    $testimonialsHtml = getTestimonialsHtml($bizName, $bizType, 'bold', $cp);
+    $testimonialsHtml = getTestimonialsHtml($bizName, $bizType, 'bold', $cp, $customReviews);
     $faqHtml = getFaqHtml($bizName, $bizType, 'bold', $cp);
     $sharedJs = getSharedJS($bizName);
     $year = date('Y');
@@ -1063,7 +1648,7 @@ HTML;
 //  Design 3: Executive Luxury & Dark Mode
 //  Supports Sub-Variants: A (Obsidian Gold), B (Frosted Aurora), C (Private Office)
 // ═══════════════════════════════════════════════════════════════
-function buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets = null, $mapEmbed = null, $subVariant = 'A') {
+function buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets = null, $mapEmbed = null, $subVariant = 'A', $customReviews = null) {
     if (!$assets) $assets = getNicheAssets($bizType, $bizName);
     if ($mapEmbed === null) $mapEmbed = getMapEmbed($bizAddress);
     $servicesList = array_filter(array_map('trim', explode(',', $bizServices)));
@@ -1077,7 +1662,7 @@ function buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizService
     }
 
     $showcaseHtml = getShowcaseHtml($bizName, $bizType, 'dark', $cp, $assets);
-    $testimonialsHtml = getTestimonialsHtml($bizName, $bizType, 'dark', $cp);
+    $testimonialsHtml = getTestimonialsHtml($bizName, $bizType, 'dark', $cp, $customReviews);
     $faqHtml = getFaqHtml($bizName, $bizType, 'dark', $cp);
     $sharedJs = getSharedJS($bizName);
     $year = date('Y');
@@ -1224,7 +1809,7 @@ HTML;
 // ═══════════════════════════════════════════════════════════════
 //  Helper: getSubDesigns (3 specialized sub-designs for chosen concept)
 // ═══════════════════════════════════════════════════════════════
-function getSubDesigns($conceptIndex, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed) {
+function getSubDesigns($conceptIndex, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, $customReviews = null) {
     if ($conceptIndex === 0 || $conceptIndex === 'classic' || $conceptIndex === '1') {
         return [
             [
@@ -1232,21 +1817,21 @@ function getSubDesigns($conceptIndex, $bizName, $bizType, $bizTagline, $bizAudie
                 'name' => '1A · Conversion & Split Hero',
                 'badge' => 'High Conversion',
                 'description' => 'Direct value proposition, floating metrics bar, split-screen storytelling, and high-converting contact flow.',
-                'html' => buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A')
+                'html' => buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A', $customReviews)
             ],
             [
                 'id' => '1B',
                 'name' => '1B · Bento Grid & Media Showcase',
                 'badge' => 'Media Rich',
                 'description' => 'Modern asymmetric bento layout, featured showcase cards, interactive hover states, and dynamic visual rhythm.',
-                'html' => buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'B')
+                'html' => buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'B', $customReviews)
             ],
             [
                 'id' => '1C',
                 'name' => '1C · Editorial Authority & Trust',
                 'badge' => 'Brand Authority',
                 'description' => 'Magazine-style typography, trust proof credentials, narrative feature rows, and prestigious client endorsements.',
-                'html' => buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'C')
+                'html' => buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'C', $customReviews)
             ]
         ];
     } elseif ($conceptIndex === 1 || $conceptIndex === 'bold' || $conceptIndex === '2') {
@@ -1256,21 +1841,21 @@ function getSubDesigns($conceptIndex, $bizName, $bizType, $bizTagline, $bizAudie
                 'name' => '2A · Neo-Brutalist High Impact',
                 'badge' => 'High Impact',
                 'description' => 'Solid dark borders, vibrant drop-shadow badges, energetic neo-cards, and high-visibility CTAs.',
-                'html' => buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A')
+                'html' => buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A', $customReviews)
             ],
             [
                 'id' => '2B',
                 'name' => '2B · Gradient Aurora & Cyber Fluid',
                 'badge' => 'Cyber Fluid',
                 'description' => 'Vibrant gradient mesh backdrop, glowing bento panels, 3D hover scale, and tech-forward atmosphere.',
-                'html' => buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'B')
+                'html' => buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'B', $customReviews)
             ],
             [
                 'id' => '2C',
                 'name' => '2C · High-Velocity Growth Funnel',
                 'badge' => 'Growth Funnel',
                 'description' => 'Sticky top announcement, conversion mockup card, metric badges, and fast-action lead capture.',
-                'html' => buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'C')
+                'html' => buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'C', $customReviews)
             ]
         ];
     } else {
@@ -1280,21 +1865,21 @@ function getSubDesigns($conceptIndex, $bizName, $bizType, $bizTagline, $bizAudie
                 'name' => '3A · Midnight Obsidian & Gold',
                 'badge' => 'Prestige Gold',
                 'description' => 'Deep obsidian backdrop, gold accents, Cinzel typography, and signature flagship showcase.',
-                'html' => buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A')
+                'html' => buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A', $customReviews)
             ],
             [
                 'id' => '3B',
                 'name' => '3B · Ambient Frosted Glass & Aurora',
                 'badge' => 'Frosted Glass',
                 'description' => 'Subtle ambient glows, frosted glass cards with 1px border highlights, and luxury accolades.',
-                'html' => buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'B')
+                'html' => buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'B', $customReviews)
             ],
             [
                 'id' => '3C',
                 'name' => '3C · Bespoke Private Office',
                 'badge' => 'Private Concierge',
                 'description' => 'Split executive layout, portfolio case studies, white-glove direct inquiry form, and headquarters map.',
-                'html' => buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'C')
+                'html' => buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'C', $customReviews)
             ]
         ];
     }
@@ -1324,9 +1909,61 @@ if ($action === 'flowcraft_generate') {
     $assets = getNicheAssets($bizType, $bizName);
     $mapEmbed = getMapEmbed($bizAddress);
 
-    $subdesigns1 = getSubDesigns(0, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed);
-    $subdesigns2 = getSubDesigns(1, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed);
-    $subdesigns3 = getSubDesigns(2, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed);
+    // ★ Shop detection: products textarea / shop checkbox / product-type business
+    $sectionsReq = $d['sections'] ?? [];
+    $productsRaw = $d['biz_products'] ?? '';
+    $shopOn = isShopSite($bizType, $sectionsReq, $productsRaw);
+    $shopProducts = $shopOn ? parseShopProducts($productsRaw, $assets) : [];
+    if ($shopOn && empty($shopProducts)) {
+        $svcLines = array_filter(array_map('trim', explode(',', $bizServices)));
+        $svcLines = array_slice(array_values($svcLines), 0, 6);
+        $fallbackLines = [];
+        foreach ($svcLines as $s) $fallbackLines[] = $s . ' | Ask price';
+        $shopProducts = parseShopProducts(implode("\n", $fallbackLines), $assets);
+    }
+    $shopHtmlByStyle = [];
+    if (!empty($shopProducts)) {
+        $shopHtmlByStyle = [
+            'light'   => getShopHtml($shopProducts, $cp, $bizPhone, 'light'),
+            'vibrant' => getShopHtml($shopProducts, $cp, $bizPhone, 'bold'),
+            'dark'    => getShopHtml($shopProducts, $cp, $bizPhone, 'dark')
+        ];
+    }
+    $injectShop = function ($html, $style) use ($shopHtmlByStyle) {
+        $sh = $shopHtmlByStyle[$style] ?? '';
+        return injectShopIntoHtml($html, $sh);
+    };
+
+    $subdesigns1 = $subdesigns2 = $subdesigns3 = [];
+    $flowcraftFallback = false;
+    try {
+        $subdesigns1 = getSubDesigns(0, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, $customReviews);
+        $subdesigns2 = getSubDesigns(1, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, $customReviews);
+        $subdesigns3 = getSubDesigns(2, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, $customReviews);
+        if (empty($subdesigns1) || empty($subdesigns2) || empty($subdesigns3)) throw new Exception('Empty subdesign set');
+    } catch (Throwable $e) {
+        // ★ Fallback: server template engine takes over (plain trio, no sub-variants)
+        error_log('[generate.php] flowcraft subdesigns failed, template fallback: ' . $e->getMessage());
+        $flowcraftFallback = true;
+        $mkFallback = function ($n, $fn) use ($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, $customReviews) {
+            return [[
+                'id' => $n . 'A',
+                'name' => 'Concept ' . $n . ' (Template Fallback)',
+                'badge' => 'Server Template',
+                'description' => 'Generated by the server template engine.',
+                'html' => $fn($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A', $customReviews)
+            ]];
+        };
+        $subdesigns1 = $mkFallback(1, 'buildDesign1');
+        $subdesigns2 = $mkFallback(2, 'buildDesign2');
+        $subdesigns3 = $mkFallback(3, 'buildDesign3');
+    }
+    foreach ($subdesigns1 as &$sd) { $sd['html'] = $injectShop($sd['html'], 'light'); }
+    unset($sd);
+    foreach ($subdesigns2 as &$sd) { $sd['html'] = $injectShop($sd['html'], 'vibrant'); }
+    unset($sd);
+    foreach ($subdesigns3 as &$sd) { $sd['html'] = $injectShop($sd['html'], 'dark'); }
+    unset($sd);
 
     $design1 = $subdesigns1[0]['html'];
     $design2 = $subdesigns2[0]['html'];
@@ -1334,6 +1971,7 @@ if ($action === 'flowcraft_generate') {
 
     echo json_encode([
         'success' => true,
+        'fallback' => $flowcraftFallback,
         'skills_pipeline' => [
             'phase1' => 'Skills 1-2: Requirements & PRD Discussion',
             'phase2' => 'Skills 3-9: System Architecture, DB/API & Visual Tokens (HTML5/CSS3)',
@@ -1348,7 +1986,9 @@ if ($action === 'flowcraft_generate') {
             'palette'  => $palette,
             'mode'     => $mode,
             'tag'      => $assets['tag'],
-            'brief'    => "AI-FlowCraft 28-Skill Engine analyzed {$bizName} ({$bizType}) for target audience: {$bizAudience}. Synthesized 3 master concepts, each equipped with 3 bespoke HTML5/CSS3 sub-designs."
+            'shop'     => !empty($shopProducts),
+            'products' => count($shopProducts),
+            'brief'    => "AI-FlowCraft 28-Skill Engine analyzed {$bizName} ({$bizType}) for target audience: {$bizAudience}. Synthesized 3 master concepts, each equipped with 3 bespoke HTML5/CSS3 sub-designs." . (!empty($shopProducts) ? " Shop mode ON (" . count($shopProducts) . " products) with working add-to-cart, drawer, quantities and WhatsApp/contact checkout." : "")
         ],
         'designs' => [
             [
@@ -1385,13 +2025,92 @@ if ($action === 'flowcraft_generate') {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  ACTION: solo_generate (Solo-style one-page professional site)
+//  Falls back to the server template engine on ANY failure.
+// ═══════════════════════════════════════════════════════════════
+if ($action === 'solo_generate') {
+    $assets = getNicheAssets($bizType, $bizName);
+    $mapEmbed = getMapEmbed($bizAddress);
+    $reviews = parseReviews($d['biz_reviews'] ?? '');
+    // ★ 3 Solo variations (light / bold / dark) — EACH with its own
+    // fallback: if Solo fails for a style, the server template engine
+    // stands in for that slot. Nothing ever comes back empty.
+    $soloStyles = [
+        ['key' => 'light', 'name' => 'Solo Light — Clean Professional',  'badge' => 'Solo · Light',  'desc' => 'Airy one-pager: services, real reviews, booking contact.', 'fn' => 'buildDesign1'],
+        ['key' => 'bold',  'name' => 'Solo Bold — High Impact',          'badge' => 'Solo · Bold',    'desc' => 'Neo-brutal cards, vibrant energy, call-first flow.',                 'fn' => 'buildDesign2'],
+        ['key' => 'dark',  'name' => 'Solo Dark — Luxury Night',         'badge' => 'Solo · Dark',    'desc' => 'Dark glassmorphism, glowing CTA, premium night feel.',                'fn' => 'buildDesign3']
+    ];
+    $designs = [];
+    $anyFallback = false;
+    foreach ($soloStyles as $sv) {
+        $html = '';
+        $fb = false;
+        try {
+            $html = buildSoloDesign($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $reviews, $sv['key']);
+            if (strpos($html, '</html>') === false) throw new Exception('Solo build incomplete (' . $sv['key'] . ')');
+        } catch (Throwable $e) {
+            error_log('[generate.php] solo_generate style ' . $sv['key'] . ' failed, template fallback: ' . $e->getMessage());
+            $fb = true;
+            $anyFallback = true;
+            $fn = $sv['fn'];
+            $html = $fn($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A', $reviews);
+        }
+        $designs[] = [
+            'id' => 'solo-' . $sv['key'],
+            'name' => $bizName . ' — ' . $sv['name'],
+            'badge' => $fb ? 'Server Template' : $sv['badge'],
+            'description' => $sv['desc'] . ($fb ? ' (Template fallback stood in.)' : ''),
+            'style' => $sv['key'],
+            'html' => $html
+        ];
+    }
+    echo json_encode([
+        'success' => true,
+        'fallback' => $anyFallback,
+        'analysis' => [
+            'biz_name' => $bizName,
+            'biz_type' => $bizType,
+            'audience' => $bizAudience,
+            'palette'  => $palette,
+            'mode'     => 'solo',
+            'tag'      => $assets['tag'],
+            'reviews'  => count($reviews),
+            'brief'    => "Solo-style professional trio for {$bizName} ({$bizType}): light, bold & dark one-pagers with real reviews." . ($anyFallback ? ' Server template engine stood in for at least one slot.' : '')
+        ],
+        'designs' => $designs
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  ACTION: flowcraft_subdesigns (3 Layout Sub-Designs for Chosen Concept)
 // ═══════════════════════════════════════════════════════════════
 if ($action === 'flowcraft_subdesigns') {
     $conceptIndex = $req['concept_index'] ?? $req['concept_id'] ?? 0;
     $assets = getNicheAssets($bizType, $bizName);
     $mapEmbed = getMapEmbed($bizAddress);
-    $subdesigns = getSubDesigns($conceptIndex, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed);
+    $subdesigns = getSubDesigns($conceptIndex, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, $customReviews);
+    // ★ Shop injection for on-demand sub-design loads
+    $sectionsReq = $d['sections'] ?? [];
+    $productsRaw = $d['biz_products'] ?? '';
+    if (isShopSite($bizType, $sectionsReq, $productsRaw)) {
+        $sp = parseShopProducts($productsRaw, $assets);
+        if (empty($sp)) {
+            $svcLines = array_filter(array_map('trim', explode(',', $bizServices)));
+            $fl = [];
+            foreach (array_slice(array_values($svcLines), 0, 6) as $s) $fl[] = $s . ' | Ask price';
+            $sp = parseShopProducts(implode("\n", $fl), $assets);
+        }
+        if (!empty($sp)) {
+            $ci = (is_string($conceptIndex) && !is_numeric($conceptIndex))
+                ? strtolower($conceptIndex)
+                : (int)$conceptIndex;
+            $sty = ($ci === 1 || $ci === 'bold' || $ci === '2') ? 'bold' : (($ci === 2 || $ci === 'editorial' || $ci === '3') ? 'dark' : 'light');
+            $sh = getShopHtml($sp, $cp, $bizPhone, $sty);
+            foreach ($subdesigns as &$sd) { $sd['html'] = injectShopIntoHtml($sd['html'], $sh); }
+            unset($sd);
+        }
+    }
 
     echo json_encode([
         'success' => true,
@@ -1407,9 +2126,26 @@ if ($action === 'flowcraft_subdesigns') {
 if ($action === 'generate_3' || $action === 'generate') {
     $assets = getNicheAssets($bizType, $bizName);
     $mapEmbed = getMapEmbed($bizAddress);
-    $design1 = buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A');
-    $design2 = buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A');
-    $design3 = buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A');
+    $design1 = buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A', $customReviews);
+    $design2 = buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A', $customReviews);
+    $design3 = buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A', $customReviews);
+    // ★ Shop injection (legacy generate path)
+    $sectionsReq = $d['sections'] ?? [];
+    $productsRaw = $d['biz_products'] ?? '';
+    if (isShopSite($bizType, $sectionsReq, $productsRaw)) {
+        $sp = parseShopProducts($productsRaw, $assets);
+        if (empty($sp)) {
+            $svcLines = array_filter(array_map('trim', explode(',', $bizServices)));
+            $fl = [];
+            foreach (array_slice(array_values($svcLines), 0, 6) as $s) $fl[] = $s . ' | Ask price';
+            $sp = parseShopProducts(implode("\n", $fl), $assets);
+        }
+        if (!empty($sp)) {
+            $design1 = injectShopIntoHtml($design1, getShopHtml($sp, $cp, $bizPhone, 'light'));
+            $design2 = injectShopIntoHtml($design2, getShopHtml($sp, $cp, $bizPhone, 'bold'));
+            $design3 = injectShopIntoHtml($design3, getShopHtml($sp, $cp, $bizPhone, 'dark'));
+        }
+    }
 
     echo json_encode([
         'success' => true,

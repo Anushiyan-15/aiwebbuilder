@@ -59,6 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/loader-3d.css">
+<script src="../assets/js/loader-3d.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -414,6 +416,11 @@ function fillRole(u, p) {
   document.getElementById('pwInput').value = p;
   document.getElementById('usernameInput').focus();
 }
+
+// ★ Secure sign-in loader (lock scene — page reloads after POST)
+document.getElementById('loginForm').addEventListener('submit', function () {
+  try { if (window.Loader3D) Loader3D.show('Authenticating…', 'Verifying admin credentials', 'lock'); } catch (e) {}
+});
 </script>
 </body>
 </html>

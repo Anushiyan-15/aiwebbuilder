@@ -2,7 +2,7 @@
    assets/js/loader-3d.js — Shared fullscreen 3D loader helper
    Usage: Loader3D.show('Crafting…', 'Please wait') · Loader3D.text('…') · Loader3D.hide()
    ═══════════════════════════════════════════════════════════════ */
-window.Loader3D = (function () {
+window.Loader3D = window.Loader3D || (function () {
   'use strict';
 
   var overlay = null;
@@ -52,16 +52,30 @@ window.Loader3D = (function () {
       '</div>',
     save:
       '<div class="wcl-save">' +
+      '<div class="halo"></div>' +
       '<div class="paper"></div>' +
       '<div class="wline"></div>' +
+      '<div class="wline l2"></div>' +
       '<div class="pencil"></div>' +
       '<div class="done"></div>' +
+      '<div class="spark s1">✦</div>' +
+      '<div class="spark s2">✦</div>' +
+      '<div class="spark s3">✦</div>' +
       '</div>',
     radar:
       '<div class="wcl-radar">' +
       '<div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div>' +
       '<div class="sweep"></div>' +
       '<div class="blip b1"></div><div class="blip b2"></div>' +
+      '</div>',
+    db:
+      '<div class="wcl-db">' +
+      '<div class="cyl-top"></div>' +
+      '<div class="cyl-body"></div>' +
+      '<div class="cyl-base"></div>' +
+      '<div class="orbit"><i></i><i></i></div>' +
+      '<div class="pkt"><i></i><i></i><i></i></div>' +
+      '<div class="ok"></div>' +
       '</div>'
   };
 

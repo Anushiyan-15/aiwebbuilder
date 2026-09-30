@@ -545,6 +545,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 .design-badge-top { position: absolute; top: 1rem; left: 1rem; z-index: 10; background: rgba(15,23,42,0.85); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; font-size: 0.75rem; font-weight: 700; padding: 0.3rem 0.75rem; border-radius: 999px; }
 .design-number-badge { position: absolute; top: 1rem; right: 1rem; z-index: 10; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; font-size: 0.82rem; font-weight: 900; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(79,70,229,0.5); }
 .design-preview-box { height: 300px; background: #0b0f17; position: relative; overflow: hidden; border-bottom: 1px solid #1e293b; }
+.pv-spin { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #0b0f1a; z-index: 2; pointer-events: none; }
 .design-preview-iframe { width: 1400px; height: 900px; border: none; transform: scale(0.33); transform-origin: top left; pointer-events: none; }
 .design-preview-box::after { content: '👁 Click "Full Preview" to see it live'; position: absolute; bottom: 0; left: 0; right: 0; padding: 1.2rem 1rem 0.6rem; background: linear-gradient(to top, rgba(11,15,23,0.95), transparent); color: #94a3b8; font-size: 0.75rem; font-weight: 600; text-align: center; pointer-events: none; }
 .design-content { padding: 1.75rem; display: flex; flex-direction: column; flex: 1; }
@@ -586,7 +587,9 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 .device-toggles { display: flex; gap: 0.3rem; }
 .device-btn { padding: 0.28rem 0.6rem; border: 1px solid #283347; border-radius: 6px; background: transparent; color: #94a3b8; cursor: pointer; font-size: 0.75rem; font-family: inherit; }
 .device-btn.active { color: #fff; border-color: #6366f1; background: #1e1b4b; }
-.preview-container { flex: 1; display: flex; justify-content: center; background: #06090e; overflow: hidden; }
+.preview-container { flex: 1; display: flex; justify-content: center; background: #06090e; overflow: hidden; position: relative; }
+/* ★ Tab-load detector overlay: shown only if the frame takes >350ms to render */
+.pv-frame-spin { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(6,9,14,.6); z-index: 5; pointer-events: none; }
 #live-iframe { width: 100%; height: 100%; border: none; background: #fff; transition: width 0.3s ease; }
 .preview-container.tablet #live-iframe { width: 768px; }
 .preview-container.mobile #live-iframe { width: 390px; }
@@ -677,7 +680,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 /* ══ MODALS ══ */
 .modal-overlay { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); align-items: center; justify-content: center; padding: 2rem; }
 .modal-overlay.active { display: flex; }
-.modal-box { background: #111622; border: 1.5px solid #283347; border-radius: 20px; width: 90%; max-width: 1200px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.8); }
+.modal-box { background: #111622; border: 1.5px solid #283347; border-radius: 20px; width: 90%; max-width: 1200px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.8); position: relative; }
 .modal-bar { padding: 1rem 1.5rem; background: #0d121c; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .modal-iframe { flex: 1; border: none; background: #fff; }
 .mode-grid { padding: 1.5rem; display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); }
@@ -936,6 +939,12 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
               <option>Real Estate &amp; Architecture</option>
               <option>Fitness Center &amp; Personal Trainer</option>
               <option>E-Commerce &amp; Retail</option>
+              <option>Consultant / Advisor</option>
+              <option>Coach (Life / Business)</option>
+              <option>Therapist / Counselor</option>
+              <option>Tradesperson (Plumber / Electrician / Handyman)</option>
+              <option>Cleaning Service</option>
+              <option>Tutor / Trainer</option>
               <option>Personal Portfolio &amp; Creator</option>
               <option>School / College / Education</option>
               <option>Other</option>
@@ -953,6 +962,16 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
         <div class="w-group">
           <label class="w-label" for="biz_services">Services / Products Offered</label>
           <input class="w-input" type="text" id="biz_services" value="UI/UX Design, Full-Stack Web Development, Brand Identity, Growth Optimization">
+        </div>
+        <div class="w-group">
+          <label class="w-label" for="biz_products">🛒 Product List <span style="font-weight:400;color:#94a3b8;">(for product companies — one per line)</span></label>
+          <textarea class="w-textarea" id="biz_products" rows="4" placeholder="Example:&#10;Cotton T-Shirt | ₹499 | https://example.com/tshirt.jpg&#10;Denim Jacket | ₹1499&#10;Leather Wallet | Ask price"></textarea>
+          <div class="w-hint">Format per line: <strong style="color:#a5b4fc">Name | Price | ImageURL (optional)</strong> — no price = Enquire button. Empty = no shop section (unless business type is a shop).</div>
+        </div>
+        <div class="w-group">
+          <label class="w-label" for="biz_reviews">⭐ Client Reviews <span style="font-weight:400;color:#94a3b8;">(paste from Google/Yelp/Facebook — one per line)</span></label>
+          <textarea class="w-textarea" id="biz_reviews" rows="3" placeholder="Example:&#10;Priya Sharma | Fantastic service, highly recommended! | Happy Customer&#10;Rahul Verma | Professional work, on time every time."></textarea>
+          <div class="w-hint">Format per line: <strong style="color:#a5b4fc">Name | Review text | Role (optional)</strong> — rendered verbatim in testimonials.</div>
         </div>
       </div>
 
@@ -998,6 +1017,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
             <label class="wcheck"><input type="checkbox" name="sections[]" value="services" checked><span>Services &amp; Offerings</span></label>
             <label class="wcheck"><input type="checkbox" name="sections[]" value="about" checked><span>About &amp; Story</span></label>
             <label class="wcheck"><input type="checkbox" name="sections[]" value="metrics" checked><span>Key Metrics &amp; Stats</span></label>
+            <label class="wcheck"><input type="checkbox" name="sections[]" value="shop"><span>🛒 Shop &amp; Products (working cart)</span></label>
             <label class="wcheck"><input type="checkbox" name="sections[]" value="contact" checked><span>Interactive Contact Section</span></label>
             <label class="wcheck"><input type="checkbox" name="sections[]" value="footer" checked><span>Footer with Links</span></label>
           </div>
@@ -1127,6 +1147,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
       </div>
       <div class="preview-container" id="preview-container">
         <iframe id="live-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-top-navigation-by-user-activation"></iframe>
+        <div class="pv-frame-spin" id="live-frame-spin" style="display:none;"><div class="wcl-mini-house"><div class="walls"></div><div class="roof"></div><div class="door"></div></div></div>
       </div>
     </div>
   </div>
@@ -1161,6 +1182,15 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
         <option value="deepseek/deepseek-chat">DeepSeek V3 (Free)</option>
         <option value="gemini-2.0-flash">Gemini 2.0 Flash (Free)</option>
         <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (Requires Paid Credits)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="puter-model-row">
+    <div style="display:flex; align-items:center; gap:0.4rem; width:100%;">
+      <span style="color:#10b981; font-weight:700;" title="AI edits apply to this website">🎯 Editing:</span>
+      <select class="puter-model-select" id="ai-target-select" onchange="setAiTargetVariation(this.value)" style="flex:1; min-width:0;">
+        <option value="0">Variation 1</option>
       </select>
     </div>
   </div>
@@ -1221,6 +1251,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
       </div>
     </div>
     <iframe class="modal-iframe" id="modal-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-top-navigation-by-user-activation"></iframe>
+    <div class="pv-frame-spin" id="modal-frame-spin" style="display:none;"><div class="wcl-mini-house"><div class="walls"></div><div class="roof"></div><div class="door"></div></div></div>
   </div>
 </div>
 
@@ -1338,6 +1369,7 @@ Be specific about fields you need!"></textarea>
       </div>
       <div style="display:flex; gap:0.5rem;">
         <button class="wbtn wbtn-ghost" onclick="closeGenerateModal()">✕ Cancel</button>
+        <button class="wbtn" onclick="confirmSoloGenerate()" title="One-page Solo-style professional site (consultant/coach/therapist/trades). Server template stands in if it fails." style="background:linear-gradient(135deg,#059669,#10b981); color:#fff; font-weight:800; padding:0.6rem 1.1rem; border-radius:10px; border:none; cursor:pointer; font-family:inherit; font-size:0.85rem;"><span>⚡</span><span>Solo Quick Site</span></button>
         <button class="wbtn wbtn-primary" onclick="confirmGenerate()"><span>✦</span><span>Synthesize 3 Variations</span></button>
       </div>
     </div>
@@ -1485,6 +1517,7 @@ Be specific about fields you need!"></textarea>
 <script src="https://js.puter.com/v2/"></script>
 <script src="<?= SITE_URL ?>/assets/js/puter-service.js"></script>
 <script src="<?= SITE_URL ?>/assets/js/ai-flowcraft.js"></script>
+<!-- Loader3D JS comes from includes/nav.php (guarded against double-include) -->
 <script>
 window.__CUSTOMER__ = <?= json_encode($customerUser ?: null) ?>;
 /* ══════════════════════════════════════════════════
@@ -1560,9 +1593,108 @@ document.addEventListener('click', (e) => {
 /* ══════════════════════════════════════════════════
    INIT
 ═════════════════════════════════════════════════ */
+/* ★ Studio handoff (?resume=1): Studio may have written a different scoped
+   key than this tab's SESSION_KEY — adopt the NEWEST session with real
+   designs across ALL keys, so saved images never "go missing". */
+function loadBestResumeSession() {
+  let best = null, bestAt = -1, bestAny = null, bestAnyAt = -1;
+  const consider = (raw) => {
+    try {
+      const s = JSON.parse(raw);
+      if (!s || !Array.isArray(s.designs) || !s.designs.length) return;
+      const hasHtml = s.designs.some(d => d && typeof d.html === 'string' && d.html.trim().length > 50);
+      if (!hasHtml) return;
+      const at = s.savedAt || 0;
+      if (at >= bestAnyAt) { bestAny = s; bestAnyAt = at; }
+      if ((s.version === 2 || s.version === 3) && at >= bestAt) { best = s; bestAt = at; }
+    } catch (e) {}
+  };
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf('webcraft_saved_project::') === 0) consider(localStorage.getItem(k));
+    }
+    consider(localStorage.getItem('webcraft_saved_project'));
+  } catch (e) {}
+  if (best) return hydrateSessionDesigns(best);
+  if (bestAny) {
+    // Versionless bridge (studio shape) → normalize to builder shape
+    try {
+      const designs = bestAny.designs.map((d, i) => ({
+        name: d.name || ('Concept ' + (i + 1)),
+        description: d.description || '',
+        badge: d.badge || '',
+        html: d.html || '',
+        adminHtml: d.adminHtml || null,
+        history: []
+      }));
+      return {
+        version: 3, savedAt: bestAnyAt || Date.now(), stage: 'builder',
+        wizard: null, selectedGenMode: 'static', currentWizStep: 4,
+        bizName: bestAny.bizName || bestAny.biz_name || 'Website',
+        concepts: designs, designs,
+        activeDesignIndex: bestAny.activeDesignIndex || 0,
+        currentViewMode: 'site'
+      };
+    } catch (e) { return null; }
+  }
+  return null;
+}
 window.addEventListener('DOMContentLoaded', async () => {
   // ─── SUPABASE CONNECTION ANNOUNCEMENT ───
   console.log('%c🟢 Supabase PostgreSQL: Connected & Synced! (scuzaitwwbnsllvyqced.supabase.co)', 'background: #062b22; color: #34d399; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 6px; border: 1.5px solid #10b981;');
+
+  // ★ Heal guest→login split: guest work must follow the user after login.
+  // If the guest session is NEWER than this login's session, adopt it —
+  // else resume would show stale files while Studio shows fresh ones.
+  try {
+    const me = ((window.__CUSTOMER__ && window.__CUSTOMER__.email) || 'guest').toLowerCase();
+    if (me !== 'guest') {
+      const graw = localStorage.getItem('webcraft_saved_project::guest');
+      if (graw) {
+        const g = JSON.parse(graw);
+        const gHas = g && Array.isArray(g.designs) && g.designs.length
+          && g.designs.some(dd => dd && typeof dd.html === 'string' && dd.html.trim().length > 50);
+        const sraw = localStorage.getItem(SESSION_KEY);
+        const s = sraw ? JSON.parse(sraw) : null;
+        if (gHas && (!s || (g.savedAt || 0) > (s.savedAt || 0))) {
+          localStorage.setItem(SESSION_KEY, graw);
+          __lastSessionSeen = g.savedAt || Date.now();
+          setTimeout(() => showToast('🔄 Picked up your guest work — saved to your account'), 1500);
+        }
+      }
+    }
+  } catch (e) {}
+
+  // ★ Studio handoff params (?resume=1&concept=N&view=site|admin) — honor them,
+  // and show a 3D loading screen while the workspace restores.
+  let resumeQs = null;
+  try {
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.get('resume') === '1') {
+      const qc = parseInt(qs.get('concept') || '-1', 10);
+      const qv = qs.get('view');
+      resumeQs = { concept: isNaN(qc) ? -1 : qc, view: (qv === 'admin' || qv === 'site') ? qv : '' };
+    }
+  } catch (e) {}
+  if (resumeQs) {
+    // ★ Adopt the newest session across ALL keys BEFORE restore reads SESSION_KEY
+    try {
+      const best = loadBestResumeSession();
+      if (best) {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(best));
+        __lastSessionSeen = best.savedAt || Date.now();
+      }
+    } catch (e) {}
+  }
+  if (resumeQs && window.Loader3D) {
+    try { Loader3D.show('Opening your workspace…', 'Loading your saved designs', 'home'); } catch (e) {}
+  } else if (window.Loader3D) {
+    // ★ Situation-based boot loader: database connect wait (short, creative 3D)
+    try { Loader3D.show('Connecting to secure database…', 'Verifying session · syncing workspace', 'db'); } catch (e) {}
+  }
+  const hideResumeLoader = () => { try { if (window.Loader3D) Loader3D.hide(); } catch (e) {} };
+
   setTimeout(() => {
     showToast('🟢 Supabase Database Connected & Synced');
   }, 750);
@@ -1592,17 +1724,38 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (bizInp) bizInp.value = p.biz_name;
     restoreIntoWorkspace();
     saveSessionNow();
+    setTimeout(hideResumeLoader, 700);
     showToast('📂 Loaded ' + p.biz_name);
     return;
   }
 
   const restored = tryRestoreSession();
 
+  // ★ Apply Studio handoff overrides (the exact concept + view that was saved)
+  if (resumeQs && restored && document.getElementById('builder-screen')?.style.display === 'flex') {
+    let needReRender = false;
+    if (resumeQs.concept >= 0 && resumeQs.concept < generatedDesigns.length && resumeQs.concept !== activeDesignIndex) {
+      activeDesignIndex = resumeQs.concept;
+      needReRender = true;
+    }
+    if (resumeQs.view && resumeQs.view !== currentViewMode) {
+      currentViewMode = resumeQs.view;
+      needReRender = true;
+    }
+    if (needReRender) {
+      restoreIntoWorkspace();
+      saveSessionNow();
+    }
+  }
+
   if (!restored) {
     updateWizDisplay();
+    hideResumeLoader();
   } else {
     updateWizDisplay();
     updateGenerateButton();
+    // Boot db loader already visible → give it a beat, then reveal
+    setTimeout(hideResumeLoader, resumeQs ? 900 : 600);
   }
 
   const sel = document.getElementById('ai-model-select');
@@ -1610,6 +1763,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   updateModelLabel();
 
   wireAutoSave();
+
+  // ★ Frame load detection: hide tab-load spinners the moment content renders
+  try {
+    document.getElementById('live-iframe')?.addEventListener('load', () => __hideSpin('live-frame-spin', 'live'));
+    document.getElementById('modal-iframe')?.addEventListener('load', () => __hideSpin('modal-frame-spin', 'modal'));
+  } catch (e) {}
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
@@ -1643,6 +1802,8 @@ function collectWizardSnapshot() {
     biz_tagline:      document.getElementById('biz_tagline')?.value.trim() || '',
     biz_audience:     document.getElementById('biz_audience')?.value.trim() || '',
     biz_services:     document.getElementById('biz_services')?.value.trim() || '',
+    biz_products:     document.getElementById('biz_products')?.value.trim() || '',
+    biz_reviews:      document.getElementById('biz_reviews')?.value.trim() || '',
     design_style:     document.querySelector('input[name="design_style"]:checked')?.value || 'modern',
     design_direction: document.getElementById('design_direction')?.value.trim() || '',
     color_palette:    document.querySelector('input[name="color_palette"]:checked')?.value || 'purple',
@@ -1654,8 +1815,56 @@ function collectWizardSnapshot() {
   };
 }
 
+/* ★ Payload slimming: concepts[] and designs[] usually carry IDENTICAL html
+   (2x bytes → localStorage quota fail → "saved but old photo returns").
+   Drop concepts[].html when it duplicates designs[i].html; hydrateSessionDesigns()
+   restores it on every read. */
+function slimConceptsForSave(concepts, designs) {
+  try {
+    return (concepts || []).map((c, i) => {
+      const d = (designs || [])[i];
+      if (c && d && c.html && c.html === d.html) {
+        const slim = Object.assign({}, c);
+        slim.html = '';
+        return slim;
+      }
+      return c;
+    });
+  } catch (e) { return concepts || []; }
+}
+function hydrateSessionDesigns(s) {
+  try {
+    if (!s || !Array.isArray(s.designs)) return s;
+    if (Array.isArray(s.concepts)) {
+      s.concepts.forEach((c, i) => {
+        if (c && !c.html && s.designs[i] && s.designs[i].html) c.html = s.designs[i].html;
+      });
+      if (!s.concepts.length && s.designs.length) s.concepts = s.designs;
+    } else {
+      s.concepts = s.designs;
+    }
+  } catch (e) {}
+  return s;
+}
+
 function saveSessionNow() {
   try {
+    // ★ Never clobber newer data saved by Studio in another tab:
+    // adopt it first, then write back merged.
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const s = hydrateSessionDesigns(JSON.parse(raw));
+        if (s && (s.savedAt || 0) > (__lastSessionSeen || 0) && Array.isArray(s.designs) && s.designs.length) {
+          generatedDesigns = s.designs;
+          generatedConcepts = s.concepts || s.designs;
+          if (typeof s.activeDesignIndex === 'number') activeDesignIndex = s.activeDesignIndex;
+          if (s.currentViewMode) currentViewMode = s.currentViewMode;
+          if (s.selectedGenMode) selectedGenMode = s.selectedGenMode;
+          __lastSessionSeen = s.savedAt;
+        }
+      }
+    } catch (e) {}
     let stage = 'wizard';
     if (document.getElementById('builder-screen')?.style.display === 'flex') stage = 'builder';
     else if (document.getElementById('designs-screen')?.style.display === 'block') stage = 'designs';
@@ -1668,20 +1877,53 @@ function saveSessionNow() {
       selectedGenMode,
       currentWizStep,
       bizName: document.getElementById('biz_name')?.value.trim() || 'Website',
-      concepts: generatedConcepts,
+      concepts: slimConceptsForSave(generatedConcepts, generatedDesigns),
       designs: generatedDesigns,
       activeDesignIndex,
       currentViewMode
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(payload));
+    __lastSessionSeen = payload.savedAt;
   } catch (e) { console.warn('[session save]', e); }
 }
+// Tracks newest session write we know about (ours or adopted) — guards cross-tab clobber.
+let __lastSessionSeen = 0;
+try {
+  const _r = localStorage.getItem(SESSION_KEY);
+  if (_r) __lastSessionSeen = JSON.parse(_r).savedAt || 0;
+} catch (e) {}
+// ★ Live-sync: Studio saved in another tab → adopt instantly (no stale overwrite on unload).
+window.addEventListener('storage', (e) => {
+  if (!e || e.key !== SESSION_KEY || !e.newValue) return;
+  try {
+    const p = hydrateSessionDesigns(JSON.parse(e.newValue));
+    if (!p || !Array.isArray(p.designs) || !p.designs.length) return;
+    if ((p.savedAt || 0) <= (__lastSessionSeen || 0)) return;
+    __lastSessionSeen = p.savedAt;
+    generatedDesigns = p.designs;
+    generatedConcepts = p.concepts || p.designs;
+    if (typeof p.activeDesignIndex === 'number') activeDesignIndex = p.activeDesignIndex;
+    if (p.currentViewMode) currentViewMode = p.currentViewMode;
+    if (document.getElementById('builder-screen')?.style.display === 'flex' && currentViewMode === 'site') {
+      const c = generatedDesigns[activeDesignIndex] || generatedDesigns[0];
+      if (c && c.html && c.html !== currentHtml) {
+        try { pushHistory(activeDesignIndex, currentHtml); } catch (err) {}
+        currentHtml = c.html;
+        updateLiveIframe(currentHtml);
+        try { updateUndoBtn(); } catch (err) {}
+        showToast('🔄 Synced with Studio!');
+      }
+    } else {
+      showToast('🔄 Synced with Studio — refresh view to see latest');
+    }
+  } catch (err) {}
+});
 
 function loadSession() {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
-    const data = JSON.parse(raw);
+    const data = hydrateSessionDesigns(JSON.parse(raw));
     if (!data || (data.version !== 2 && data.version !== 3)) return null;
     return data;
   } catch (e) { return null; }
@@ -1698,6 +1940,8 @@ function tryRestoreSession() {
     const w = saved.wizard;
     const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
     set('biz_name', w.biz_name);
+    set('biz_products', w.biz_products);
+    set('biz_reviews', w.biz_reviews);
     set('biz_type', w.biz_type);
     set('biz_tagline', w.biz_tagline);
     set('biz_audience', w.biz_audience);
@@ -1826,6 +2070,7 @@ async function startFreshFromBanner() {
   if (!confirm('⚠️ Start fresh? This will delete your saved work.')) return;
   dismissResumeBanner();
   try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+  try { localStorage.removeItem('webcraft_saved_project::guest'); } catch (e) {}
   generatedConcepts = [];
   generatedDesigns = [];
   activeDesignIndex = 0;
@@ -1921,6 +2166,7 @@ async function clearAndSwitchAccount() {
   try { window.AIFlowCraft?.clearLocalState?.(); window.AIFlowCraft?.clearGeneratedProjects?.(); } catch (e) {}
   try { await window.AIFlowCraft?.signOut?.(); } catch (e) {}
   try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+  try { localStorage.removeItem('webcraft_saved_project::guest'); } catch (e) {}
   generatedConcepts = []; generatedDesigns = []; currentAuthUser = null;
   currentWizStep = 1; activeDesignIndex = 0; currentHtml = ''; selectedGenMode = 'static';
   document.getElementById('designs-grid').innerHTML = '';
@@ -2008,6 +2254,70 @@ function fillAdminPreset(key) {
     t.focus();
     saveSessionNow();
     showToast('✓ Preset loaded — edit as needed');
+  }
+}
+
+/* ★ Solo Quick Site: 3 Solo-style variations (light/bold/dark) for
+   consultant/coach/therapist/trades. Fallback flags surface honestly. */
+async function confirmSoloGenerate() {
+  if (!window.__CUSTOMER__ || !window.__CUSTOMER__.email) {
+    showToast('Please sign in / create account first');
+    setTimeout(() => { window.location.href = SITE_URL + '/customer-portal.php?view=signup'; }, 900);
+    return;
+  }
+  const data = collectWizardSnapshot();
+  if (!data.biz_name || !data.biz_tagline) { showToast('⚠️ Complete Step 1 first'); return; }
+  saveSessionNow();
+  closeGenerateModal();
+
+  // ★ Creative Solo loader with live percentage (gen-overlay, Solo skinned)
+  showGenOverlay(data);
+  try {
+    document.querySelector('.gen-overlay-title').textContent = '⚡ Solo Quick Sites';
+    const soloNames = ['1. Solo Light', '2. Solo Bold', '3. Solo Dark'];
+    document.querySelectorAll('#gen-var-status .gvcard-name').forEach((el, i) => {
+      if (soloNames[i]) el.textContent = soloNames[i];
+    });
+    const tt = document.getElementById('gen-overlay-text');
+    if (tt) tt.textContent = 'Solo engine crafting 3 one-page professional sites…';
+  } catch (e) {}
+  let soloPct = 8;
+  const fill = document.getElementById('gen-overlay-fill');
+  const pctNum = document.getElementById('gen-pct-num');
+  const soloTick = setInterval(() => {
+    soloPct = Math.min(soloPct + 6, 90);
+    if (fill) fill.style.width = soloPct + '%';
+    if (pctNum) pctNum.textContent = String(soloPct);
+  }, 450);
+
+  try {
+    const res = await window.AIFlowCraft.generateSolo(data, {
+      model: window.PuterService?.selectedModel || 'deepseek/deepseek-chat'
+    });
+    clearInterval(soloTick);
+    const list = (res.designs || []).map(c => ({
+      name: c.name, description: c.description, badge: c.badge, html: c.html,
+      adminHtml: null, phpBackend: null, sqlSchema: null, history: [],
+      fallback: !!c.fallback
+    }));
+    if (!list.length || !list[0].html) throw new Error('Empty Solo designs');
+    list.forEach((c, i) => {
+      updateGenOverlay('done', `✓ Solo ${i + 1}/3 "${c.name}" ready!`, 92 + i * 2, { variationIndex: i });
+    });
+    generatedConcepts = list;
+    generatedDesigns = list.map(c => ({ ...c }));
+    activeDesignIndex = 0;
+    currentHtml = generatedDesigns[0]?.html || '';
+    currentViewMode = 'site';
+    saveSessionNow();
+    hideGenOverlay(true);
+    display3Designs(generatedConcepts, data.biz_name);
+    showToast(res.fallback ? '⚡ Solo done — template stood in for a slot ✓' : '⚡ 3 Solo sites ready — pick your favorite!');
+  } catch (err) {
+    clearInterval(soloTick);
+    console.error(err);
+    hideGenOverlay(false);
+    showToast('Solo failed: ' + err.message);
   }
 }
 
@@ -2212,6 +2522,30 @@ async function generateWithMode(mode) {
   const data = collectWizardSnapshot();
   if (!data.biz_name || !data.biz_tagline) { showToast('⚠️ Complete Step 1 first'); return; }
 
+  // ★ Shop auto-detect: product list / shop checkbox / shop-type business.
+  // Prefill admin requirements with the shop preset so admin/database modes
+  // manage products + orders out of the box.
+  try {
+    const isShop = (data.biz_products && data.biz_products.trim())
+      || (data.sections || []).includes('shop')
+      || /shop|store|product|retail|e-?commerce|boutique|mart|trading|enterprise|fashion|jewelry|grocery|bakery|furniture|electronics|pharma/i.test(data.biz_type || '');
+    if (isShop && mode !== 'static') {
+      const ar = document.getElementById('admin_requirements');
+      if (ar && !ar.value.trim() && typeof ADMIN_PRESETS !== 'undefined' && ADMIN_PRESETS.shop) {
+        ar.value = ADMIN_PRESETS.shop;
+        data.admin_requirements = ADMIN_PRESETS.shop;
+        showToast('🛒 Shop detected — admin preset applied (products + orders)');
+      }
+    }
+    if (isShop) showToast('🛒 Shop mode ON — products + working cart will be generated');
+  } catch (e) {}
+
+  // ★ 3D "database connect" beat before generation starts (creative, no cubes)
+  try { if (window.Loader3D) Loader3D.show('Connecting to secure database…', 'Verifying session · syncing workspace', 'db'); } catch (e) {}
+  try { saveSessionNow(); } catch (e) {}
+  await new Promise(r => setTimeout(r, 1200));
+  try { if (window.Loader3D) Loader3D.hide(); } catch (e) {}
+
   showGenOverlay(data);
   document.getElementById('wiz-generate-btn').disabled = true;
   document.getElementById('wiz-next').disabled = true;
@@ -2283,7 +2617,7 @@ function display3Designs(concepts, bizName) {
     card.innerHTML = `
       <div class="design-badge-top">${escapeHtml(c.badge || `Variation ${i+1}`)}</div>
       <div class="design-number-badge">${i + 1}</div>
-      <div class="design-preview-box"><iframe class="design-preview-iframe" id="d${i}-iframe"></iframe></div>
+      <div class="design-preview-box"><div class="pv-spin"><div class="wcl-mini-house"><div class="walls"></div><div class="roof"></div><div class="door"></div></div></div><iframe class="design-preview-iframe" id="d${i}-iframe" onload="try{this.previousElementSibling.remove();}catch(e){}"></iframe></div>
       <div class="design-content">
         <h3>${escapeHtml(c.name)}</h3>
         <p>${escapeHtml(c.description)}</p>
@@ -2699,6 +3033,7 @@ function openFullscreenModal(index) {
   tabs.style.display = hasAdmin ? 'flex' : 'none';
   document.getElementById('m-vtab-site').classList.add('active');
   document.getElementById('m-vtab-admin').classList.remove('active');
+  __armSpin('modal-frame-spin', 'modal');
   document.getElementById('modal-iframe').srcdoc = c.html;
   document.getElementById('fullscreen-modal').classList.add('active');
 }
@@ -2708,6 +3043,7 @@ function switchModalView(view) {
   if (!c) return;
   document.getElementById('m-vtab-site').classList.toggle('active', view === 'site');
   document.getElementById('m-vtab-admin').classList.toggle('active', view === 'admin');
+  __armSpin('modal-frame-spin', 'modal');
   document.getElementById('modal-iframe').srcdoc = view === 'admin'
     ? stabilizeAdminHtml(c.adminHtml || '<p style="padding:2rem;font-family:sans-serif;">No admin panel yet — will be generated during publish.</p>')
     : c.html;
@@ -2722,6 +3058,7 @@ function openAdminPreview(index) {
   document.getElementById('modal-view-tabs').style.display = 'flex';
   document.getElementById('m-vtab-site').classList.remove('active');
   document.getElementById('m-vtab-admin').classList.add('active');
+  __armSpin('modal-frame-spin', 'modal');
   document.getElementById('modal-iframe').srcdoc = stabilizeAdminHtml(c.adminHtml);
   document.getElementById('fullscreen-modal').classList.add('active');
 }
@@ -2732,6 +3069,9 @@ function openAdminPreview(index) {
 function selectDesignAndEdit(index) {
   const c = generatedConcepts[index] || generatedDesigns[index];
   if (!c) return;
+
+  // ★ Situation loader: workspace boot (creative 3D, quick beat)
+  try { if (window.Loader3D) Loader3D.show('Opening workspace…', 'Loading "' + (c.name || 'design') + '"', 'home'); } catch (e) {}
 
   if (!generatedDesigns.length) {
     generatedDesigns = generatedConcepts.map(x => ({
@@ -2756,6 +3096,7 @@ function selectDesignAndEdit(index) {
   updateLiveIframe(currentHtml);
   updateUndoBtn();
   saveSessionNow();
+  try { if (window.Loader3D) setTimeout(() => Loader3D.hide(), 650); } catch (e) {}
   showToast(`✏️ Loaded "${c.name}"`);
 }
 function backToDesigns() {
@@ -2802,7 +3143,7 @@ function showSubDesigns(conceptIndex) {
     card.innerHTML = `
       <div class="design-badge-top" style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-color:rgba(99,102,241,0.5);">${escapeHtml(sd.badge || `Variant ${variantLabel}`)}</div>
       <div class="design-number-badge" style="background:linear-gradient(135deg,#6366f1,#a855f7);">${conceptNum}${variantLabel}</div>
-      <div class="design-preview-box"><iframe class="design-preview-iframe" id="sd${conceptIndex}-${si}-iframe"></iframe></div>
+      <div class="design-preview-box"><div class="pv-spin"><div class="wcl-mini-house"><div class="walls"></div><div class="roof"></div><div class="door"></div></div></div><iframe class="design-preview-iframe" id="sd${conceptIndex}-${si}-iframe" onload="try{this.previousElementSibling.remove();}catch(e){}"></iframe></div>
       <div class="design-content">
         <h3>${escapeHtml(sd.name || `Layout ${variantLabel}`)}</h3>
         <p>${escapeHtml(sd.description || 'A premium layout variant for your selected concept.')}</p>
@@ -2981,7 +3322,22 @@ function switchActiveDesign(index) {
   updateUndoBtn();
   saveSessionNow();
 }
-function updateLiveIframe(html) { const f = document.getElementById('live-iframe'); if (f) f.srcdoc = sanitizeHtmlOutput(html); }
+/* ★ Tab/frame load detectors: overlay appears ONLY if a frame takes >350ms
+   to render — instant tab switches stay clean, slow loads show mini 3D. */
+let __liveSpinTimer = null, __modalSpinTimer = null;
+function __armSpin(id, timerSlot) {
+  const s = document.getElementById(id);
+  if (!s) return;
+  if (timerSlot === 'live') { clearTimeout(__liveSpinTimer); __liveSpinTimer = setTimeout(() => { s.style.display = 'flex'; }, 350); }
+  else { clearTimeout(__modalSpinTimer); __modalSpinTimer = setTimeout(() => { s.style.display = 'flex'; }, 350); }
+}
+function __hideSpin(id, timerSlot) {
+  if (timerSlot === 'live') clearTimeout(__liveSpinTimer);
+  else clearTimeout(__modalSpinTimer);
+  const s = document.getElementById(id);
+  if (s) s.style.display = 'none';
+}
+function updateLiveIframe(html) { const f = document.getElementById('live-iframe'); if (!f) return; __armSpin('live-frame-spin', 'live'); f.srcdoc = sanitizeHtmlOutput(html); }
 function refreshLivePreview() {
   const c = generatedDesigns[activeDesignIndex];
   if (!c) return;
@@ -3037,7 +3393,43 @@ function toggleMagicAi(forceOpen) {
   if (forceOpen === true) panel.classList.add('active');
   else panel.classList.toggle('active');
   if (panel.classList.contains('active')) {
+    refreshAiTargetSelect();
     setTimeout(() => document.getElementById('refine-query')?.focus(), 200);
+  }
+}
+/* ★ AI chat target: chat edits ALWAYS apply to the selected website */
+function refreshAiTargetSelect() {
+  const sel = document.getElementById('ai-target-select');
+  if (!sel) return;
+  const list = (generatedDesigns && generatedDesigns.length ? generatedDesigns : generatedConcepts) || [];
+  sel.innerHTML = '';
+  if (!list.length) {
+    const o = document.createElement('option');
+    o.value = '0'; o.textContent = 'No website yet — generate first';
+    sel.appendChild(o);
+    return;
+  }
+  list.forEach((c, i) => {
+    const o = document.createElement('option');
+    o.value = String(i);
+    o.textContent = `${i + 1}. ${(c && c.name) || ('Variation ' + (i + 1))}`;
+    if (i === activeDesignIndex) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+function setAiTargetVariation(v) {
+  const i = parseInt(v, 10);
+  const list = (generatedDesigns && generatedDesigns.length ? generatedDesigns : generatedConcepts) || [];
+  if (isNaN(i) || !list[i]) return;
+  activeDesignIndex = i;
+  [0, 1, 2].forEach(k => document.getElementById(`tab-d${k}`)?.classList.toggle('active', k === i));
+  try { saveSessionNow(); } catch (e) {}
+  const nm = list[i].name || ('Variation ' + (i + 1));
+  showToast(`🎯 AI will edit "${nm}"`);
+  if (document.getElementById('builder-screen')?.style.display === 'flex') {
+    currentHtml = (generatedDesigns[i] && generatedDesigns[i].html) || currentHtml;
+    currentViewMode = 'site';
+    restoreIntoWorkspace();
   }
 }
 function getTimeStr() { return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
@@ -3187,6 +3579,7 @@ async function executeRefine() {
   const input = document.getElementById('refine-query');
   const query = input.value.trim();
   if (!query) return;
+  refreshAiTargetSelect();
   const c = generatedDesigns[activeDesignIndex];
   if (!c) return;
   const isAdmin = currentViewMode === 'admin';
@@ -3338,6 +3731,7 @@ async function saveAndProceedToPayment() {
   // ★ Upload design HTML to server so publish.php can read it even if localStorage clears
   const btn = document.getElementById('btn-publish');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving…'; }
+  try { if (window.Loader3D) Loader3D.show('Uploading your design…', 'Saving to server · preparing publish', 'rocket'); } catch (e) {}
   showToast('⬆️ Uploading design to server…');
 
   try {
@@ -3375,10 +3769,11 @@ async function saveAndProceedToPayment() {
   }
 
   if (btn) { btn.disabled = false; btn.textContent = '🚀 Save & Publish'; }
+  try { if (window.Loader3D) Loader3D.text('✓ Ready! Opening publish…'); } catch (e) {}
 
   setTimeout(() => {
     window.location.href = '<?= SITE_URL ?>/publish.php';
-  }, 500);
+  }, 800);
 }
 
 /* ══════════════════════════════════════════════════

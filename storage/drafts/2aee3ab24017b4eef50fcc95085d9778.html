@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>zen cafe — Consultant</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Plus Jakarta Sans',sans-serif;color:#1e293b;background:#fff;line-height:1.6}
+:root{--primary:#2563eb;--primary-light:#dbeafe}
+.nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #e2e8f0}
+.nav-in{max-width:1150px;margin:0 auto;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:800;font-size:1.25rem;color:#0f172a}
+.nav-links{display:flex;gap:1.5rem;align-items:center}
+.nav-links a{font-size:.9rem;font-weight:600;color:#475569}
+.btn{display:inline-block;padding:.85rem 2rem;border-radius:999px;background:linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);color:#fff;font-weight:700;text-decoration:none;box-shadow:0 10px 25px -5px #2563eb}
+.hero{max-width:1150px;margin:0 auto;padding:5rem 1.5rem 4rem;display:grid;grid-template-columns:1.05fr .95fr;gap:3rem;align-items:center}
+.hero-badge{display:inline-block;padding:.35rem 1rem;background:#dbeafe;color:#2563eb;border-radius:999px;font-weight:700;font-size:.8rem;margin-bottom:1.25rem}
+.hero h1{font-size:clamp(2.2rem,4.6vw,3.4rem);font-weight:800;color:#0f172a;line-height:1.15;margin-bottom:1.1rem;letter-spacing:-.02em}
+.hero p{font-size:1.08rem;color:#64748b;margin-bottom:2rem}
+.hero-img{border-radius:24px;overflow:hidden;box-shadow:0 20px 45px rgba(0,0,0,.1)}
+.hero-img img{width:100%;height:380px;object-fit:cover;display:block}
+.trust{display:flex;gap:2rem;flex-wrap:wrap;justify-content:center;padding:1.25rem;background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;font-size:.85rem;font-weight:700;color:#475569}
+.section{max-width:1150px;margin:0 auto;padding:5rem 1.5rem}
+.sec-head{text-align:center;margin-bottom:2.75rem}
+.sec-tag{font-size:.78rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#2563eb;margin-bottom:.5rem}
+.sec-title{font-size:2.1rem;font-weight:800;color:#0f172a}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem}
+.about{display:grid;grid-template-columns:1fr 1fr;gap:3.5rem;align-items:center;background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0}
+.about img{border-radius:24px;width:100%;height:420px;object-fit:cover}
+.contact{background:#0f172a;color:#e2e8f0}
+.contact-grid{max-width:1150px;margin:0 auto;padding:5rem 1.5rem;display:grid;grid-template-columns:1fr 1.2fr;gap:3rem}
+.c-form input,.c-form textarea{width:100%;padding:.85rem 1rem;border:1.5px solid #334155;border-radius:12px;margin-bottom:1rem;font-family:inherit;background:#0b1220;color:#fff}
+.fab-call{position:fixed;bottom:5.5rem;right:1.5rem;z-index:999;width:56px;height:56px;border-radius:50%;background:#25D366;color:#fff;font-size:1.5rem;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 12px 30px rgba(0,0,0,.3)}
+#back-to-top{display:none;position:fixed;bottom:2rem;right:2rem;z-index:90;width:44px;height:44px;border-radius:50%;background:#0f172a;color:#fff;border:none;cursor:pointer;align-items:center;justify-content:center;font-size:1.2rem}
+#mobile-drawer{display:none;flex-direction:column;background:#fff;padding:1.5rem;gap:1rem;font-weight:600;border-bottom:1px solid #e2e8f0}
+#mobile-drawer.open{display:flex}
+.hamburger{display:none;background:none;border:none;font-size:1.5rem;cursor:pointer}
+footer{background:#0f172a;color:#94a3b8;padding:2.5rem 1.5rem;text-align:center;border-top:1px solid #1e293b}
+@media(max-width:900px){.hero,.about,.contact-grid{grid-template-columns:1fr}.nav-links{display:none}.hamburger{display:block}}
+
+/* Studio Overrides */
+* { box-sizing: border-box; } body {margin: 0;}#i085f{padding:.55rem 1.3rem;font-size:.85rem;}#i0l8j{display:flex;gap:1rem;flex-wrap:wrap;}#i94ar{background:#fff;color:#0f172a;border:1.5px solid #cbd5e1;box-shadow:none;}#i9jdw{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:2rem;box-shadow:0 6px 22px rgba(0,0,0,0.04);}#ih6oh{width:46px;height:46px;border-radius:13px;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:1.35rem;font-weight:800;margin-bottom:1rem;}#i96yg{font-size:1.15rem;color:#0f172a;font-weight:800;margin-bottom:0.5rem;}#iepd2{font-size:0.92rem;color:#64748b;line-height:1.65;}#ieqmp{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:2rem;box-shadow:0 6px 22px rgba(0,0,0,0.04);}#i3ikq{width:46px;height:46px;border-radius:13px;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:1.35rem;font-weight:800;margin-bottom:1rem;}#ite6l{font-size:1.15rem;color:#0f172a;font-weight:800;margin-bottom:0.5rem;}#i2jsp{font-size:0.92rem;color:#64748b;line-height:1.65;}#i3oiu{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:2rem;box-shadow:0 6px 22px rgba(0,0,0,0.04);}#irywz{width:46px;height:46px;border-radius:13px;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:1.35rem;font-weight:800;margin-bottom:1rem;}#irvgm{font-size:1.15rem;color:#0f172a;font-weight:800;margin-bottom:0.5rem;}#irmxt{font-size:0.92rem;color:#64748b;line-height:1.65;}#iif5b{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:2rem;box-shadow:0 6px 22px rgba(0,0,0,0.04);}#i0r45{width:46px;height:46px;border-radius:13px;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:1.35rem;font-weight:800;margin-bottom:1rem;}#i2dl4{font-size:1.15rem;color:#0f172a;font-weight:800;margin-bottom:0.5rem;}#ie4z3{font-size:0.92rem;color:#64748b;line-height:1.65;}#about{background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;}#id0sv{border:none;background:none;}#ixklg{margin-bottom:1rem;}#igpy6{color:#64748b;font-size:1.05rem;line-height:1.75;margin-bottom:1.5rem;}#testimonials{background:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:5.5rem 1.5rem;}#i3hpqf{max-width:1200px;margin:0 auto;}#iynmdw{text-align:center;max-width:650px;margin:0 auto 3.5rem;}#i0pnn2{display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:2rem;}#inpdxn{background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:2rem;box-shadow:0 6px 24px rgba(0,0,0,0.04);display:flex;flex-direction:column;justify-content:space-between;}#i8xxsx{color:#f59e0b;font-size:1.1rem;margin-bottom:1rem;letter-spacing:2px;}#i52usi{font-size:0.95rem;color:#475569;line-height:1.7;font-style:italic;margin-bottom:1.5rem;}#ih9hx2{display:flex;align-items:center;gap:0.9rem;border-top:1px solid #f1f5f9;padding-top:1rem;}#iz1shb{width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid var(--primary);}#izbbti{display:block;font-size:0.92rem;color:#0f172a;}#iumukg{font-size:0.8rem;color:#94a3b8;}#ipvb0r{background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:2rem;box-shadow:0 6px 24px rgba(0,0,0,0.04);display:flex;flex-direction:column;justify-content:space-between;}#i7gri4{color:#f59e0b;font-size:1.1rem;margin-bottom:1rem;letter-spacing:2px;}#is6x27{font-size:0.95rem;color:#475569;line-height:1.7;font-style:italic;margin-bottom:1.5rem;}#i2lyj1{display:flex;align-items:center;gap:0.9rem;border-top:1px solid #f1f5f9;padding-top:1rem;}#i0qi73{width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid var(--primary);}#i53f5m{display:block;font-size:0.92rem;color:#0f172a;}#ixg8yc{font-size:0.8rem;color:#94a3b8;}#izfeui{background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:2rem;box-shadow:0 6px 24px rgba(0,0,0,0.04);display:flex;flex-direction:column;justify-content:space-between;}#i0isof{color:#f59e0b;font-size:1.1rem;margin-bottom:1rem;letter-spacing:2px;}#ikyqul{font-size:0.95rem;color:#475569;line-height:1.7;font-style:italic;margin-bottom:1.5rem;}#ia1w9c{display:flex;align-items:center;gap:0.9rem;border-top:1px solid #f1f5f9;padding-top:1rem;}#imuuvo{width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid var(--primary);}#ifsefm{display:block;font-size:0.92rem;color:#0f172a;}#iyj2el{font-size:0.8rem;color:#94a3b8;}#iqbtc5{font-size:2.1rem;font-weight:800;color:#fff;margin-bottom:1rem;}#icin08{color:#94a3b8;margin-bottom:1.5rem;}#ilbw5l{margin-bottom:.8rem;}#i4mw79{margin-bottom:.8rem;}#imzd3i{margin-top:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap;}#io0gvi{border:none;cursor:pointer;width:100%;}#i8s3sp{margin-top:1.75rem;border-radius:18px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(0,0,0,0.06);}#ibnkgv{border:0;display:block;}#iz2wr1{padding:0.75rem 1rem;background:#f8fafc;display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;font-weight:600;color:#475569;}#id2jyg{color:var(--primary);font-weight:700;}
+
+/* Mobile Overrides */
+@media (max-width: 767px) {
+  [data-mobile-id][data-mobile-padding] { padding: var(--mb-p, inherit); }
+  [data-mobile-bg] { background: attr(data-mobile-bg type(<color>), inherit); }
+  [data-mobile-color] { color: attr(data-mobile-color type(<color>), inherit); }
+  [data-mobile-font-size] { font-size: attr(data-mobile-font-size type(<length>), inherit); }
+  [data-mobile-text-align] { text-align: attr(data-mobile-text-align type(<custom-ident>), inherit); }
+  [data-mobile-display] { display: attr(data-mobile-display type(<custom-ident>), inherit); }
+  [data-mobile-width] { width: attr(data-mobile-width type(<length>), auto); }
+  [data-mobile-height] { height: attr(data-mobile-height type(<length>), auto); }
+  [data-mobile-min-height] { min-height: attr(data-mobile-min-height type(<length>), auto); }
+  [data-mobile-max-width] { max-width: attr(data-mobile-max-width type(<length>), none); }
+  [data-mobile-margin] { margin: attr(data-mobile-margin type(<length>), inherit); }
+  [data-mobile-border-radius] { border-radius: attr(data-mobile-border-radius type(<length>), inherit); }
+  [data-mobile-hide="true"] { display: none !important; }
+}
+</style>
+</head>
+<body>
+<body><nav class="nav"><div class="nav-in"><div class="brand">zen cafe</div><div class="nav-links"><a href="#services">Services</a><a href="#reviews">Reviews</a><a href="#about">About</a><a href="#contact">Contact</a><a href="tel:+15558901234" class="btn" id="i085f">Schedule a Strategy Call</a></div><button class="hamburger">☰</button></div><div id="mobile-drawer"><a href="#services">Services</a><a href="#reviews">Reviews</a><a href="#about">About</a><a href="#contact">Contact</a></div></nav><header id="crafting-next-generation-digital-experie" data-section-name="Crafting next-generation digital experie" class="hero"><div><span class="hero-badge">💼 Independent Strategy Consultant</span><h1>Crafting next-generation digital experiences that inspire and scale.</h1><p>Advisory for growth, operations and digital — senior expertise, no fluff.</p><div id="i0l8j"><a href="tel:+15558901234" class="btn">Schedule a Strategy Call →</a><a href="#services" class="btn" id="i94ar">Explore Services</a></div></div><div class="hero-img"><img src="https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1200&q=80" alt="zen cafe"/></div></header><div class="trust"><span>★ 5-Star Rated</span><span>✓ Verified Professional</span><span>⚡ Fast Response</span><span>🛡️ Satisfaction Guaranteed</span></div><section id="services" class="section"><div class="sec-head"><div class="sec-tag">What I Do</div><h2 class="sec-title">Services</h2></div><div class="grid"><div id="i9jdw"><div id="ih6oh">💼</div><h3 id="i96yg">UI/UX Design</h3><p id="iepd2">Clarity on where to play and how to win.</p></div><div id="ieqmp"><div id="i3ikq">💼</div><h3 id="ite6l">Full-Stack Web Development</h3><p id="i2jsp">Find the leaks, fix the bottlenecks.</p></div><div id="i3oiu"><div id="irywz">💼</div><h3 id="irvgm">Brand Identity</h3><p id="irmxt">Quarterly guidance that compounds.</p></div><div id="iif5b"><div id="i0r45">💼</div><h3 id="i2dl4">Growth Optimization</h3><p id="ie4z3">Clarity on where to play and how to win.</p></div></div></section><section id="about"><div class="section about" id="id0sv"><div><img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=1000&q=80" alt="About zen cafe"/></div><div><div class="sec-tag">About</div><h2 class="sec-title" id="ixklg">Hi, I'm zen cafe</h2><p id="igpy6">High-growth brands and modern businesses seeking top-tier digital quality. trust me for Consultant work done with care, honesty and skill. Every client gets personal attention — no hand-offs, no surprises.</p><a href="#contact" class="btn">Work With Me →</a></div></div></section><section id="testimonials" class="section"><div id="i3hpqf"><div id="iynmdw"><div class="section-tag">Client Endorsements</div><h2 class="section-title">Trusted by Industry Leaders</h2><p class="section-sub">Read what partners say about our measurable results and commitment to craft.</p></div><div id="i0pnn2"><div id="inpdxn"><div><div id="i8xxsx">★★★★★</div><p id="i52usi">"Partnering with zen cafe was a game-changer. Their strategic mastery in Restaurant, Cafe &amp; Bar and obsessive attention to detail doubled our conversion rates within weeks."</p></div><div id="ih9hx2"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" alt="Elena Rostova" loading="lazy" id="iz1shb"/><div><strong id="izbbti">Elena Rostova</strong><span id="iumukg">VP of Operations, NovaCorp</span></div></div></div><div id="ipvb0r"><div><div id="i7gri4">★★★★★</div><p id="is6x27">"The velocity, elegance, and precision delivered by zen cafe surpassed every benchmark. Our clients constantly compliment our new presence."</p></div><div id="i2lyj1"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80" alt="Marcus Sterling" loading="lazy" id="i0qi73"/><div><strong id="i53f5m">Marcus Sterling</strong><span id="ixg8yc">Managing Director, Sterling Group</span></div></div></div><div id="izfeui"><div><div id="i0isof">★★★★★</div><p id="ikyqul">"Simply the highest standard of execution in Restaurant, Cafe &amp; Bar. Responsive, visionary, and thoroughly dependable from kickoff to launch."</p></div><div id="ia1w9c"><img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80" alt="Sophia Vance" loading="lazy" id="imuuvo"/><div><strong id="ifsefm">Sophia Vance</strong><span id="iyj2el">Chief Strategy Officer, Aurelia</span></div></div></div></div></div></section><section id="contact" class="contact"><div class="contact-grid"><div><div class="sec-tag">Get In Touch</div><h2 id="iqbtc5">Let's talk</h2><p id="icin08">Call, message or send the form — I reply within 24 hours.</p><div id="ilbw5l">📞 <strong>+1 (555) 890-1234</strong></div><div id="i4mw79">✉️ hello@zenithstudio.com</div><div>📍 450 Innovation Parkway, San Francisco, CA</div><div id="imzd3i"><a href="tel:+15558901234" class="btn">📞 Call Now</a></div></div><form id="contact-form" method="POST" class="c-form"><input name="name" placeholder="Your name" required/><input type="email" name="email" placeholder="Email address" required/><input name="phone" placeholder="Phone (optional)"/><textarea name="message" placeholder="How can I help?" required></textarea><button type="submit" class="btn" id="io0gvi">Send Message →</button></form></div><div class="map-card" id="i8s3sp"><iframe frameborder="0" title="Business location" width="100%" height="220" loading="lazy" allowfullscreen="" src="https://www.google.com/maps?q=450+Innovation+Parkway%2C+San+Francisco%2C+CA&output=embed" id="ibnkgv"></iframe><div id="iz2wr1"><span>📍 450 Innovation Parkway, San Francisco, CA</span><a href="https://www.google.com/maps/dir/?api=1&destination=450+Innovation+Parkway%2C+San+Francisco%2C+CA" target="_blank" rel="noopener" id="id2jyg">Get Directions →</a></div></div></section><footer id="section-6" data-section-name="Section 6">© 2026 zen cafe · Consultant · All rights reserved.</footer><a href="tel:+15558901234" class="fab-call">📞</a><button id="back-to-top">↑</button></body>
+
+<script>
+document.querySelectorAll('a').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    let targetId = this.getAttribute('href') || '';
+    let targetEl = null;
+    if (targetId && targetId.startsWith('#') && targetId.length > 1) {
+      try { targetEl = document.querySelector(targetId); } catch(err) {}
+    }
+    if (!targetEl) {
+      const rawText = this.innerText.trim().toLowerCase();
+      const cleanSlug = rawText.replace(/[^a-z0-9]/g, '');
+      if (cleanSlug.length >= 2) {
+        targetEl = document.getElementById(cleanSlug) ||
+                   document.getElementById(cleanSlug.replace('us', '')) ||
+                   document.querySelector('section[id*="' + cleanSlug + '"]');
+        if (!targetEl) {
+          const headings = document.querySelectorAll('section h1, section h2, section h3, header h1, header h2');
+          for (const h of headings) {
+            const hText = h.innerText.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (hText.includes(cleanSlug) || cleanSlug.includes(hText)) {
+              targetEl = h.closest('section') || h.closest('header') || h;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (targetEl) {
+      e.preventDefault();
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (targetId === '#contact' || targetEl.id === 'contact') {
+        const firstInput = targetEl.querySelector('input, textarea');
+        if (firstInput) setTimeout(() => firstInput.focus(), 600);
+      }
+      const mob = document.getElementById('mobile-drawer');
+      if (mob) mob.classList.remove('open');
+    }
+  });
+});
+function toggleMobileMenu() {
+  const drawer = document.getElementById('mobile-drawer');
+  if (drawer) drawer.classList.toggle('open');
+}
+const btt = document.getElementById('back-to-top');
+if (btt) {
+  window.addEventListener('scroll', () => {
+    btt.style.display = (window.scrollY > 400) ? 'flex' : 'none';
+  });
+  btt.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+function handleContactSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+  const name = form.querySelector('[name="name"], [type="text"]')?.value || 'Friend';
+  const email = form.querySelector('[type="email"]')?.value || '';
+  const btn = form.querySelector('button[type="submit"]');
+  if (btn) {
+    const origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Sending Message…';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+      form.reset();
+      let modal = document.getElementById('form-success-banner');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'form-success-banner';
+        modal.style.cssText = 'position:fixed;bottom:2rem;right:2rem;z-index:9999;background:#059669;color:#fff;padding:1.25rem 1.75rem;border-radius:14px;box-shadow:0 15px 35px rgba(0,0,0,0.3);display:flex;align-items:center;gap:1rem;font-size:0.95rem;font-weight:600;transition:all 0.3s;max-width:420px;';
+        document.body.appendChild(modal);
+      }
+      modal.innerHTML = '<div style="font-size:1.8rem">🎉</div><div><div style="font-weight:700">Thank you, ' + name + '!</div><div style="font-size:0.85rem;opacity:0.9">Your message was delivered to zen cafe. We will reply to ' + (email || 'your email') + ' within 24 hours.</div></div>';
+      modal.style.opacity = '1';
+      modal.style.transform = 'translateY(0)';
+      setTimeout(() => {
+        modal.style.opacity = '0';
+        modal.style.transform = 'translateY(20px)';
+      }, 5000);
+    }, 800);
+  }
+}
+function toggleFaq(el) {
+  const body = el.nextElementSibling;
+  const icon = el.querySelector('.faq-icon');
+  if (body) {
+    const isOpen = body.style.display === 'block';
+    body.style.display = isOpen ? 'none' : 'block';
+    if (icon) icon.textContent = isOpen ? '+' : '−';
+  }
+}
+</script>
+<script id="wc-animation-runtime">
+(function(){
+  var KEYFRAMES = {
+    fadeIn:[{opacity:0},{opacity:1}],
+    slideUp:[{opacity:0,transform:'translateY(50px)'},{opacity:1,transform:'translateY(0)'}],
+    slideDown:[{opacity:0,transform:'translateY(-50px)'},{opacity:1,transform:'translateY(0)'}],
+    slideLeft:[{opacity:0,transform:'translateX(50px)'},{opacity:1,transform:'translateX(0)'}],
+    slideRight:[{opacity:0,transform:'translateX(-50px)'},{opacity:1,transform:'translateX(0)'}],
+    zoomIn:[{opacity:0,transform:'scale(0.7)'},{opacity:1,transform:'scale(1)'}],
+    zoomOut:[{opacity:0,transform:'scale(1.3)'},{opacity:1,transform:'scale(1)'}],
+    bounce:[{transform:'translateY(0)'},{transform:'translateY(-30px)'},{transform:'translateY(0)'},{transform:'translateY(-15px)'},{transform:'translateY(0)'}],
+    rotate:[{opacity:0,transform:'rotate(-180deg) scale(0.7)'},{opacity:1,transform:'rotate(0deg) scale(1)'}],
+    flip:[{opacity:0,transform:'perspective(400px) rotateY(90deg)'},{opacity:1,transform:'perspective(400px) rotateY(0deg)'}],
+    pulse:[{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}],
+    shake:[{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],
+    blur:[{opacity:0,filter:'blur(12px)'},{opacity:1,filter:'blur(0)'}],
+    lightSpeed:[{opacity:0,transform:'translateX(80px) skewX(-25deg)'},{opacity:1,transform:'translateX(0) skewX(0)'}]
+  };
+  function preApply(el, kf){ if(!kf||!kf[0]) return; var f=kf[0]; if('opacity' in f) el.style.opacity=f.opacity; if('transform' in f) el.style.transform=f.transform; if('filter' in f) el.style.filter=f.filter; }
+  function play(el){
+    var type=el.getAttribute('data-anim'), kf=KEYFRAMES[type]; if(!kf) return;
+    var dur=parseInt(el.getAttribute('data-anim-duration'))||700, delay=parseInt(el.getAttribute('data-anim-delay'))||0;
+    var easing=el.getAttribute('data-anim-easing')||'cubic-bezier(0.22,1,0.36,1)';
+    var rep=el.getAttribute('data-anim-repeat')||'1', iter=rep==='infinite'?Infinity:(parseInt(rep)||1);
+    try { if(el._wcAnim&&el._wcAnim.cancel) el._wcAnim.cancel(); el._wcAnim=el.animate(kf,{duration:dur,delay:delay,easing:easing,fill:'both',iterations:iter}); } catch(e){}
+  }
+  function init(){
+    var els=document.querySelectorAll('[data-anim]'); if(!els.length) return;
+    var io=('IntersectionObserver' in window) ? new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting){ play(e.target); io.unobserve(e.target); } }); },{threshold:0.15}) : null;
+    Array.prototype.forEach.call(els,function(el){
+      var trig=el.getAttribute('data-anim-trigger')||'scroll', kf=KEYFRAMES[el.getAttribute('data-anim')];
+      if(trig==='scroll'||trig==='load') preApply(el,kf);
+      if(trig==='scroll'){ if(io) io.observe(el); else play(el); }
+      else if(trig==='load'){ requestAnimationFrame(function(){ play(el); }); }
+      else if(trig==='hover'){ el.addEventListener('mouseenter',function(){ play(el); }); }
+      else if(trig==='click'){ el.addEventListener('click',function(ev){ ev.preventDefault(); play(el); }); }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+</body>
+</html>

@@ -37,6 +37,7 @@ $nav_links = $customerUser ? [
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/loader-3d.css">
+<script src="<?= SITE_URL ?>/assets/js/loader-3d.js"></script>
 <style>
 /* ── GLOBAL RESETS ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -213,5 +214,14 @@ const mob = document.getElementById('mobileMenu');
 ham.addEventListener('click', () => {
   mob.classList.toggle('open');
   ham.setAttribute('aria-expanded', mob.classList.contains('open'));
+});
+// ★ Logout loading screen (situation-based 3D scene: secure sign-out)
+document.addEventListener('click', (e) => {
+  const a = e.target.closest && e.target.closest('a[href*="action=logout"]');
+  if (!a) return;
+  e.preventDefault();
+  const url = a.href;
+  try { if (window.Loader3D) Loader3D.show('Signing you out…', 'Securing your session', 'lock'); } catch (err) {}
+  setTimeout(() => { window.location.href = url; }, 950);
 });
 </script>

@@ -917,6 +917,16 @@ function pwMeter(val, id) {
     : 'Use 8+ characters with upper, lower, number & symbol.';
 }
 
+// ★ Logout loading screen (situation-based 3D scene: secure sign-out)
+document.addEventListener('click', function (e) {
+  var a = e.target.closest && e.target.closest('a[href*="action=logout"]');
+  if (!a) return;
+  e.preventDefault();
+  var url = a.href;
+  try { if (window.Loader3D) Loader3D.show('Signing you out…', 'Securing your session', 'lock'); } catch (err) {}
+  setTimeout(function () { window.location.href = url; }, 950);
+});
+
 // Lock submit buttons + fullscreen home-build loader while the form posts
 document.querySelectorAll('form').forEach(function (f) {
   f.addEventListener('submit', function () {

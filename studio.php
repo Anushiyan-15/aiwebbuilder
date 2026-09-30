@@ -1,4 +1,9 @@
 <?php
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
 require_once __DIR__ . '/config.php';
 $page_title = 'Visual Studio — Canva-Style Web Studio';
 ?>
@@ -16,6 +21,8 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
   <script src="https://cdnjs.cloudflare.com/ajax/libs/grapesjs/0.21.10/grapes.min.js"></script>
   <script src="https://js.puter.com/v2/"></script>
   <script src="<?= SITE_URL ?>/assets/js/puter-service.js"></script>
+  <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/loader-3d.css">
+  <script src="<?= SITE_URL ?>/assets/js/loader-3d.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1315,6 +1322,8 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
           <span class="bpill active" onclick="filterBlockCategory('all', this)">All</span>
           <span class="bpill" onclick="filterBlockCategory('Sections', this)">Sections</span>
           <span class="bpill" onclick="filterBlockCategory('Components', this)">Components</span>
+          <span class="bpill" onclick="filterBlockCategory('Shapes', this)">Shapes</span>
+          <span class="bpill" onclick="filterBlockCategory('Cards', this)">Cards</span>
           <span class="bpill" onclick="filterBlockCategory('Typography', this)">Text</span>
         </div>
         <div id="gjs-blocks"></div>
@@ -1338,6 +1347,7 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
         <div style="display:flex; justify-content:space-between; align-items:center; margin:1rem 0 0.5rem;">
           <span style="font-size:0.75rem; font-weight:700; color:#818cf8; text-transform:uppercase;">📸 Free Stock Photos</span>
           <button class="hdr-btn" style="padding:0.2rem 0.5rem; font-size:0.68rem; background:linear-gradient(135deg,#10b981,#059669); border:none; color:#fff; font-weight:700;" onclick="openGalleryBuilder()">🖼️ Gallery</button>
+          <button class="hdr-btn" style="padding:0.2rem 0.5rem; font-size:0.68rem; background:linear-gradient(135deg,#6366f1,#a855f7); border:none; color:#fff; font-weight:700;" onclick="openCardBuilder()">🃏 Card</button>
         </div>
         <div class="block-pills">
           <span class="bpill active" onclick="filterStockPhotos('business', this)">Business</span>
@@ -1600,6 +1610,11 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       </button>
 
       <div id="gjs"></div>
+
+      <!-- ★ Canvas tab-load detector: concept/view switches reload the canvas -->
+      <div id="canvas-spin" style="display:none; position:absolute; inset:0; z-index:500; align-items:center; justify-content:center; background:rgba(6,9,14,.55); backdrop-filter:blur(2px); pointer-events:none;">
+        <div class="wcl-mini-house" style="transform:scale(1.4);"><div class="walls"></div><div class="roof"></div><div class="door"></div></div>
+      </div>
     </main>
   </div>
 
@@ -1612,6 +1627,7 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
     <button class="ctx-item" onclick="ctxAnimate()"><span class="ctx-icon">🎬</span> Animate Element</button>
     <button class="ctx-item" onclick="ctxCropImage()" id="ctx-crop-item"><span class="ctx-icon">✂️</span> Crop Image</button>
     <button class="ctx-item" onclick="ctxEditImage()" id="ctx-image-item"><span class="ctx-icon">🖼️</span> Edit Image</button>
+    <button class="ctx-item" onclick="ctxShapeImage()" id="ctx-shape-item"><span class="ctx-icon">🖼️</span> Change Card / Shape Image</button>
     <button class="ctx-item" onclick="ctxEditLink()" id="ctx-link-item"><span class="ctx-icon">🔗</span> Edit Link</button>
     <div class="ctx-sep"></div>
     <button class="ctx-item" onclick="ctxDuplicate()"><span class="ctx-icon">📋</span> Duplicate</button>
@@ -1990,6 +2006,72 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1rem; flex-wrap:wrap">
         <button class="hdr-btn" onclick="closeGalleryBuilder()">Cancel</button>
         <button class="hdr-btn save-btn" onclick="insertGallerySection()">✓ Insert Gallery</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card Builder Modal -->
+  <div class="modal-overlay" id="card-modal">
+    <div class="modal-box" style="max-width:820px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem">
+        <div>
+          <h2 style="font-size:1.25rem; color:#fff; display:flex; align-items:center; gap:0.5rem; margin-bottom:0.15rem"><span style="font-size:1.3rem">🃏</span> Card Builder</h2>
+          <p style="font-size:0.75rem; color:#94a3b8">Pick a layout + photo, write content, add a button. Everything stays editable after insert.</p>
+        </div>
+        <button class="drawer-close" onclick="closeCardBuilder()" style="font-size:1.4rem">✕</button>
+      </div>
+
+      <div style="font-size:0.78rem; font-weight:800; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.6rem;">1. Choose Layout</div>
+      <div class="gal-layouts" id="cd-layouts"></div>
+
+      <div style="font-size:0.78rem; font-weight:800; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.6rem;">2. Pick Photo (customer uploads first)</div>
+      <div class="gal-picker" id="cd-picker"></div>
+
+      <div class="be-field">
+        <label class="be-label">Or paste image URL</label>
+        <input type="text" class="be-input" id="cd-img-url" placeholder="https://example.com/photo.jpg">
+      </div>
+      <div class="be-row-2">
+        <div class="be-field">
+          <label class="be-label">Badge / Tag (optional)</label>
+          <input type="text" class="be-input" id="cd-badge" value="New" placeholder="New">
+        </div>
+        <div class="be-field">
+          <label class="be-label">Corner Radius (px)</label>
+          <input type="number" class="be-input" id="cd-radius" value="20" min="0" max="60">
+        </div>
+      </div>
+      <div class="be-field">
+        <label class="be-label">Title</label>
+        <input type="text" class="be-input" id="cd-title" value="Our Special Service" placeholder="Card title">
+      </div>
+      <div class="be-field">
+        <label class="be-label">Content / Description</label>
+        <input type="text" class="be-input" id="cd-text" value="Short description about this service, product or person." placeholder="Card description">
+      </div>
+      <div class="be-row-2">
+        <div class="be-field">
+          <label class="be-label">Button Text</label>
+          <input type="text" class="be-input" id="cd-btn-text" value="Learn More →" placeholder="Learn More →">
+        </div>
+        <div class="be-field">
+          <label class="be-label">Button Link</label>
+          <input type="text" class="be-input" id="cd-btn-link" value="#contact" placeholder="#contact">
+        </div>
+      </div>
+      <div class="be-field">
+        <label class="be-label">Button Style</label>
+        <select class="be-input" id="cd-btn-style">
+          <option value="primary">Primary (indigo)</option>
+          <option value="outline">Outline</option>
+          <option value="whatsapp">WhatsApp (green)</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1rem; flex-wrap:wrap">
+        <button class="hdr-btn" onclick="closeCardBuilder()">Cancel</button>
+        <button class="hdr-btn save-btn" onclick="insertCard()">✓ Insert Card</button>
       </div>
     </div>
   </div>
@@ -2422,6 +2504,8 @@ p{color:#64748b;max-width:520px;line-height:1.6}
 
     function wcPlayAnimOnElement(el) {
       if (!el) return;
+      // ★ Don't fight the user's manual live preview (it owns the element right now)
+      try { if (el.classList && el.classList.contains('wc-anim-live')) return; } catch (e) {}
       const type = el.getAttribute('data-anim');
       if (!type) return;
       const kf = ANIM_KEYFRAMES[type];
@@ -2510,6 +2594,8 @@ p{color:#64748b;max-width:520px;line-height:1.6}
             if (el.classList.contains('webcraft-section-handle')) return;
             if (el.classList.contains('webcraft-drop-line')) return;
             if (el.classList.contains('webcraft-canvas-body')) return;
+            // ★ Skip the element currently live-previewing its animation
+            if (el.classList.contains('wc-anim-live')) return;
 
             el.style.setProperty('opacity', '1', 'important');
             el.style.setProperty('visibility', 'visible', 'important');
@@ -2526,6 +2612,8 @@ p{color:#64748b;max-width:520px;line-height:1.6}
             if (id.startsWith('wc-') || id.startsWith('webcraft-')) return;
             if (el.classList.contains('webcraft-section-handle')) return;
             if (el.classList.contains('webcraft-drop-line')) return;
+            // ★ Never freeze the element currently live-previewing its animation
+            if (el.classList.contains('wc-anim-live')) return;
 
             try {
               const rect = el.getBoundingClientRect();
@@ -2574,6 +2662,14 @@ p{color:#64748b;max-width:520px;line-height:1.6}
         card.className = 'anim-card';
         card.dataset.anim = key;
         card.innerHTML = `<span class="a-icon">${p.icon}</span><div class="a-name">${p.name}</div>`;
+        // ★ Hover the card → icon itself demos the effect (pick with confidence)
+        card.onmouseenter = () => {
+          try {
+            const icon = card.querySelector('.a-icon');
+            const kk = ANIM_KEYFRAMES[key];
+            if (icon && kk) icon.animate(kk, { duration: 600, easing: 'cubic-bezier(0.22,1,0.36,1)', fill: 'both', iterations: 1 });
+          } catch (e) {}
+        };
         card.onclick = () => {
           document.querySelectorAll('#anim-presets-grid .anim-card').forEach(c => c.classList.remove('active'));
           card.classList.add('active');
@@ -2616,6 +2712,116 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       playAnimPreview();
     }
 
+    /* ★ LIVE CANVAS PREVIEW — play the chosen animation on the real
+       element in the editor the moment it is selected, and KEEP it
+       alive (loop) so the animation stays on the element. Only one
+       element animates at a time; freeze restored when replaced. */
+    function stopCanvasLiveAnims(exceptEl) {
+      try {
+        const cd = grapesEditor?.Canvas?.getDocument?.();
+        if (!cd) return;
+        cd.querySelectorAll('.wc-anim-live').forEach(node => {
+          if (node === exceptEl) return;
+          try { if (node._wcLiveAnim && node._wcLiveAnim.cancel) node._wcLiveAnim.cancel(); } catch (e) {}
+          try { if (node._wcLiveTimer) clearTimeout(node._wcLiveTimer); } catch (e) {}
+          node._wcLiveTimer = null;
+          delete node._wcLiveParams;
+          node.classList.remove('wc-anim-live');
+          try {
+            node.style.setProperty('opacity', '1', 'important');
+            node.style.setProperty('visibility', 'visible', 'important');
+            node.style.setProperty('transform', 'none', 'important');
+          } catch (e) {}
+        });
+      } catch (e) {}
+    }
+
+    /* ★ Watchdog: whatever kills a live infinite loop (re-render, reveal
+       timers, competing plays) → detect dead playState and replay.
+       Guarantees infinite REALLY stays infinite on canvas. */
+    function ensureLiveWatchdog() {
+      if (window.__wcLiveWatch) return;
+      window.__wcLiveWatch = setInterval(() => {
+        try {
+          const cd = grapesEditor?.Canvas?.getDocument?.();
+          if (!cd || !cd.body) return;
+          cd.querySelectorAll('.wc-anim-live').forEach(el => {
+            try {
+              if (!el.isConnected) {
+                el.classList.remove('wc-anim-live');
+                delete el._wcLiveParams;
+                return;
+              }
+              const p = el._wcLiveParams;
+              if (!p) return;
+              const st = el._wcLiveAnim ? el._wcLiveAnim.playState : 'idle';
+              if (st === 'finished' || st === 'idle' || !el._wcLiveAnim) {
+                const kf = ANIM_KEYFRAMES[p.type];
+                if (!kf) return;
+                el.classList.add('wc-anim-live');
+                ['opacity', 'visibility', 'transform', 'animation-play-state', 'animation-fill-mode'].forEach(prop => {
+                  try { el.style.removeProperty(prop); } catch (e) {}
+                });
+                el._wcLiveAnim = el.animate(kf, { duration: p.dur, delay: 0, easing: p.easing, fill: 'both', iterations: Infinity });
+              }
+            } catch (e) {}
+          });
+        } catch (e) {}
+      }, 1500);
+    }
+
+    function previewAnimationOnCanvas() {
+      try {
+        if (!selectedComponent) return;
+        const el = selectedComponent.getEl && selectedComponent.getEl();
+        if (!el) return;
+        const type = getSelectedAnimation();
+        const kf = ANIM_KEYFRAMES[type];
+        if (!kf) return;
+        const dur = parseInt(document.getElementById('anim-duration')?.value || '700');
+        const delay = parseInt(document.getElementById('anim-delay')?.value || '0');
+        const easing = document.getElementById('anim-easing')?.value || 'cubic-bezier(0.22,1,0.36,1)';
+        const repAttr = document.getElementById('anim-repeat')?.value || '1';
+        const iterations = repAttr === 'infinite' ? Infinity : parseInt(repAttr) || 1;
+        // ★ One live element at a time — stop the previous one first
+        stopCanvasLiveAnims(el);
+        el.classList.add('wc-anim-live');
+        ['opacity', 'visibility', 'transform', 'animation-play-state', 'animation-fill-mode'].forEach(prop => {
+          try { el.style.removeProperty(prop); } catch (e) {}
+        });
+        try { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+        if (el._wcLiveAnim && el._wcLiveAnim.cancel) { try { el._wcLiveAnim.cancel(); } catch (e) {} }
+        if (el._wcLiveTimer) { clearTimeout(el._wcLiveTimer); el._wcLiveTimer = null; }
+        const finishLive = () => {
+          try {
+            if (el._wcLiveAnim && el._wcLiveAnim.cancel) el._wcLiveAnim.cancel();
+          } catch (e) {}
+          try {
+            el.classList.remove('wc-anim-live');
+            el.style.setProperty('opacity', '1', 'important');
+            el.style.setProperty('visibility', 'visible', 'important');
+            el.style.setProperty('transform', 'none', 'important');
+          } catch (e) {}
+        };
+        // ★ Stay alive: finite repeats play min 3 loops so it clearly stays;
+        // 'infinite' truly loops until replaced/removed (+ watchdog replays if killed).
+        const liveIter = (iterations === Infinity) ? Infinity : Math.min(Math.max(iterations, 3), 6);
+        if (liveIter === Infinity) {
+          el._wcLiveParams = { type, dur, delay, easing };
+          ensureLiveWatchdog();
+        } else {
+          delete el._wcLiveParams;
+        }
+        el._wcLiveAnim = el.animate(kf, { duration: dur, delay: delay, easing: easing, fill: 'both', iterations: liveIter });
+        try { el._wcLiveAnim.onfinish = finishLive; } catch (e) {}
+        if (liveIter !== Infinity) {
+          const cap = delay + dur * liveIter + 600;
+          el._wcLiveTimer = setTimeout(finishLive, Math.min(cap, 12000));
+        }
+        el._wcFinishLive = finishLive;
+      } catch (e) {}
+    }
+
     function applyAnimationToSelected(silent) {
       if (!selectedComponent) {
         if (!silent) showToast('👉 Select an element first');
@@ -2637,7 +2843,8 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       });
       selectedComponent.setAttributes(attrs);
       setTimeout(setupAnimationsInCanvas, 60);
-      if (!silent) showToast(`🎬 ${ANIM_PRESETS[type]?.name||type} applied`);
+      previewAnimationOnCanvas();
+      if (!silent) showToast(`🎬 ${ANIM_PRESETS[type]?.name||type} applied ▶ playing live`);
     }
 
     function removeAnimationFromSelected() {
@@ -2651,6 +2858,10 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       try {
         const el = selectedComponent.getEl();
         if (el) {
+          if (el._wcLiveAnim && el._wcLiveAnim.cancel) el._wcLiveAnim.cancel();
+          if (el._wcLiveTimer) clearTimeout(el._wcLiveTimer);
+          delete el._wcLiveParams;
+          el.classList.remove('wc-anim-live');
           el.style.animation = '';
           el.style.opacity = '';
           el.style.transform = '';
@@ -2829,13 +3040,18 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       cropState.originalComp = comp;
       const attrs = comp.getAttributes() || {},
         src = attrs.src || '';
+      cropState.oldSrc = src;
       if (!src) {
         showToast('⚠️ Image has no source');
         return;
       }
       const imgEl = document.getElementById('crop-image'),
         rectEl = document.getElementById('crop-rect');
-      imgEl.src = src;
+      // Reset per-open state so stale crop box / sizes never leak from last image
+      try {
+        document.getElementById('crop-out-w').value = '';
+        document.getElementById('crop-out-h').value = '';
+      } catch (e) {}
       imgEl.onload = () => {
         cropState.imageNatural = {
           w: imgEl.naturalWidth || 1,
@@ -2856,6 +3072,16 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       };
       document.getElementById('crop-modal').classList.add('active');
       setTimeout(setupCropDrag, 50);
+      // ★ Force reload even when src equals the previously cropped image
+      // (same-URL assignment may not fire onload → stale old image stays visible).
+      try {
+        if (imgEl.getAttribute('src') === src && imgEl.complete && imgEl.naturalWidth) {
+          imgEl.onload();
+        } else {
+          imgEl.removeAttribute('src');
+          imgEl.src = src;
+        }
+      } catch (e) { imgEl.src = src; }
     }
 
     function setupCropDrag() {
@@ -2991,6 +3217,12 @@ p{color:#64748b;max-width:520px;line-height:1.6}
         dispH = imgEl.clientHeight;
       const natW = imgEl.naturalWidth,
         natH = imgEl.naturalHeight;
+      // Guard: if natural dimensions are 0, the image hasn't loaded yet
+      if (natW <= 0 || natH <= 0) {
+        showToast('⚠️ Image still loading — wait for it to finish then retry crop', 5000);
+        closeCropTool();
+        return;
+      }
       const sx = natW / dispW,
         sy = natH / dispH;
       const cropX = rectEl.offsetLeft * sx,
@@ -2999,34 +3231,80 @@ p{color:#64748b;max-width:520px;line-height:1.6}
         cropH = rectEl.offsetHeight * sy;
       const outW = parseInt(document.getElementById('crop-out-w').value) || Math.round(cropW);
       const outH = parseInt(document.getElementById('crop-out-h').value) || Math.round(cropH);
+      // ★ Cap output at 1600px so the cropped image never blows localStorage quota
+      const outScale = Math.min(1, 1600 / Math.max(outW, outH));
+      const finalW = Math.max(1, Math.round(outW * outScale)),
+        finalH = Math.max(1, Math.round(outH * outScale));
       const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, outW);
-      canvas.height = Math.max(1, outH);
+      canvas.width = finalW;
+      canvas.height = finalH;
       const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        showToast('❌ Could not get canvas context — try again', 5000);
+        closeCropTool();
+        return;
+      }
+      // Use the image's own crossOrigin if available, fall back to anonymous
       const tmp = new Image();
-      tmp.crossOrigin = 'anonymous';
+      tmp.crossOrigin = imgEl.crossOrigin || 'anonymous';
       tmp.onload = () => {
-        try {
-          ctx.drawImage(tmp, cropX, cropY, cropW, cropH, 0, 0, outW, outH);
-          const dataUrl = canvas.toDataURL('image/png');
-          comp.setAttributes(Object.assign({}, comp.getAttributes() || {}, { src: dataUrl }));
+        const finishCrop = (finalUrl) => {
+          // ★ Re-resolve live component: canvas may have re-rendered while crop was open
+          let target = comp;
+          if (!isCompAttached(target)) {
+            const selImg = (selectedComponent && (selectedComponent.get('tagName') || '').toLowerCase() === 'img') ? selectedComponent : null;
+            target = findImgCompBySrc(cropState.oldSrc) || selImg;
+            if (target) {
+              cropState.originalComp = target;
+              try { grapesEditor.select(target); } catch (e) {}
+            }
+          }
+          if (!target || !isCompAttached(target)) {
+            showToast('⚠️ Canvas changed — select the image again & retry crop', 5000);
+            closeCropTool();
+            return;
+          }
+          target.setAttributes(Object.assign({}, target.getAttributes() || {}, { src: finalUrl }));
           if (document.getElementById('crop-replace-orig')?.checked) {
             userUploadedImages.unshift({
               id: 'img_' + Date.now(),
-              name: 'cropped.png',
-              url: dataUrl
+              name: 'cropped.jpg',
+              url: finalUrl
             });
             saveUserUploads();
           }
+          const cropSaved = syncCanvasToHtml();
           renderSmartLayers();
-          showToast('✂️ Image cropped!');
+          // ★ Honest result: verify the crop is really in canvas HTML
+          const cropRes = verifyImageApplied(target, finalUrl);
+          if (cropRes === 'ok') showToast(cropSaved ? '✂️ Image cropped! ✓ Saved' : '⚠️ Cropped but storage full — use a smaller image');
+          else if (cropRes === 'model') showToast('⚠️ Crop NOT applied — select the image again & retry', 5000);
+          else showToast('⚠️ Crop NOT saved to page — select the image again & retry', 5000);
           closeCropTool();
+        };
+        try {
+          // White base so JPEG (no alpha) never turns transparent areas black
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, finalW, finalH);
+          ctx.drawImage(tmp, cropX, cropY, cropW, cropH, 0, 0, finalW, finalH);
+          // ★ Prefer server URL (permanent, tiny); fallback to embedded dataURL
+          if (canvas.toBlob) {
+            canvas.toBlob(b => {
+              if (!b) { finishCrop(canvas.toDataURL('image/jpeg', 0.85)); return; }
+              uploadImageToServer(b, 'cropped.jpg').then(u => {
+                finishCrop(u || canvas.toDataURL('image/jpeg', 0.85));
+              });
+            }, 'image/jpeg', 0.85);
+          } else {
+            finishCrop(canvas.toDataURL('image/jpeg', 0.85));
+          }
         } catch (e) {
-          showToast('⚠️ Crop failed.');
+          showToast('⚠️ Crop failed — external image blocked (CORS). Download it & upload instead.');
         }
       };
       tmp.onerror = () => {
-        showToast('⚠️ Could not load image');
+        showToast('❌ Failed to load image for cropping. The image may not have proper CORS headers, or the image source may be invalid.', 5000);
+        closeCropTool();
       };
       tmp.src = imgEl.src;
     }
@@ -3143,6 +3421,129 @@ p{color:#64748b;max-width:520px;line-height:1.6}
         saveProjectData();
       }, 150);
       showToast(`🖼️ ${layout} gallery added`);
+    }
+
+    /* ══════════════════════════════════════════════════
+       CARD BUILDER — image + content + button, all editable
+    ══════════════════════════════════════════════════ */
+    const CD_LAYOUTS = {
+      vertical: { name: 'Image Top' },
+      horizontal: { name: 'Side by Side' },
+      profile: { name: 'Profile' }
+    };
+    let cardState = { layout: 'vertical', img: '' };
+
+    function openCardBuilder() {
+      cardState.img = '';
+      try { document.getElementById('cd-img-url').value = ''; } catch (e) {}
+      renderCardLayouts();
+      renderCardPicker();
+      document.getElementById('card-modal').classList.add('active');
+    }
+
+    function closeCardBuilder() {
+      document.getElementById('card-modal').classList.remove('active');
+    }
+
+    function renderCardLayouts() {
+      const grid = document.getElementById('cd-layouts');
+      if (!grid) return;
+      grid.innerHTML = '';
+      const demos = {
+        vertical: 'grid-template-columns:1fr;grid-template-rows:1.2fr 1fr;',
+        horizontal: 'grid-template-columns:1fr 1.4fr;grid-template-rows:1fr;',
+        profile: 'grid-template-columns:1fr;grid-template-rows:1fr 1fr;'
+      };
+      Object.keys(CD_LAYOUTS).forEach(key => {
+        const L = CD_LAYOUTS[key];
+        const card = document.createElement('div');
+        card.className = 'gal-layout' + (key === cardState.layout ? ' active' : '');
+        card.dataset.layout = key;
+        card.innerHTML = `<div class="gl-demo" style="${demos[key]}"><div></div><div></div></div><div class="gl-name">${L.name}</div>`;
+        card.onclick = () => {
+          cardState.layout = key;
+          document.querySelectorAll('#cd-layouts .gal-layout').forEach(c => c.classList.toggle('active', c.dataset.layout === key));
+        };
+        grid.appendChild(card);
+      });
+    }
+
+    function renderCardPicker() {
+      const picker = document.getElementById('cd-picker');
+      if (!picker) return;
+      picker.innerHTML = '';
+      const all = [];
+      (userUploadedImages || []).forEach(u => all.push({ url: u.url, caption: u.name || 'Upload' }));
+      try {
+        Object.keys(stockPhotos || {}).forEach(k => (stockPhotos[k] || []).forEach(p => all.push({ url: p.url, caption: p.caption || k })));
+      } catch (e) {}
+      if (!all.length) {
+        picker.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:0.75rem;padding:1rem;">No photos yet — upload in Media tab first, or paste a URL below.</div>';
+        return;
+      }
+      all.forEach((item) => {
+        const d = document.createElement('div');
+        d.className = 'gp-item' + (cardState.img === item.url ? ' on' : '');
+        d.innerHTML = `<img src="${item.url}" loading="lazy">`;
+        d.title = item.caption;
+        d.onclick = () => {
+          cardState.img = (cardState.img === item.url) ? '' : item.url;
+          try { document.getElementById('cd-img-url').value = ''; } catch (e) {}
+          picker.querySelectorAll('.gp-item').forEach(g => g.classList.remove('on'));
+          if (cardState.img) d.classList.add('on');
+        };
+        picker.appendChild(d);
+      });
+    }
+
+    function cdButtonStyle(kind) {
+      const base = 'display:inline-block;text-decoration:none;font-weight:700;font-size:0.9rem;padding:0.8rem 1.8rem;border-radius:999px;margin-top:1rem;';
+      if (kind === 'outline') return base + 'background:transparent;border:1.5px solid #cbd5e1;color:#334155;';
+      if (kind === 'whatsapp') return base + 'background:#25D366;color:#fff;border:none;';
+      if (kind === 'dark') return base + 'background:#0f172a;color:#fff;border:none;';
+      return base + 'background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:none;';
+    }
+
+    function insertCard() {
+      if (!grapesEditor) return;
+      const img = (document.getElementById('cd-img-url')?.value || '').trim() || cardState.img;
+      if (!img) {
+        showToast('👉 Pick a photo first (or paste a URL)');
+        return;
+      }
+      const badge = (document.getElementById('cd-badge')?.value || '').trim();
+      const title = (document.getElementById('cd-title')?.value || '').trim() || 'Card Title';
+      const text = (document.getElementById('cd-text')?.value || '').trim() || '';
+      const btnText = (document.getElementById('cd-btn-text')?.value || '').trim() || 'Learn More →';
+      const btnLink = (document.getElementById('cd-btn-link')?.value || '').trim() || '#contact';
+      const btnKind = document.getElementById('cd-btn-style')?.value || 'primary';
+      const radius = Math.max(0, parseInt(document.getElementById('cd-radius')?.value) || 20);
+      const layout = cardState.layout;
+      const badgeHtml = badge ? `<span style="display:inline-block;font-size:0.68rem;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#4f46e5;background:#eef2ff;padding:0.3rem 0.8rem;border-radius:999px;margin-bottom:0.8rem;">${escapeHtml(badge)}</span>` : '';
+      const btnHtml = `<a href="${escapeHtml(btnLink)}" style="${cdButtonStyle(btnKind)}">${escapeHtml(btnText)}</a>`;
+      const imgTag = (h, extra) => `<img data-wc-card-img="1" src="${escapeHtml(img)}" alt="${escapeHtml(title)}" style="width:100%;height:${h};object-fit:cover;display:block;${extra || ''}"/>`;
+      let html = '';
+      if (layout === 'horizontal') {
+        html = `<div data-wc-card="horizontal" style="max-width:640px;margin:2rem auto;background:#ffffff;border-radius:${radius}px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.12);display:flex;flex-wrap:wrap;"><div style="flex:1 1 220px;min-width:220px;">${imgTag('100%', 'min-height:220px;')}</div><div style="flex:1 1 260px;padding:1.75rem;">${badgeHtml}<h3 style="font-size:1.4rem;font-weight:800;color:#0f172a;margin-bottom:0.6rem;">${escapeHtml(title)}</h3><p style="font-size:0.95rem;line-height:1.65;color:#475569;">${escapeHtml(text)}</p>${btnHtml}</div></div>`;
+      } else if (layout === 'profile') {
+        html = `<div data-wc-card="profile" style="max-width:320px;margin:2rem auto;background:#ffffff;border-radius:${radius}px;box-shadow:0 10px 30px rgba(0,0,0,0.12);padding:2.25rem 1.75rem;text-align:center;"><img data-wc-card-img="1" src="${escapeHtml(img)}" alt="${escapeHtml(title)}" style="width:130px;height:130px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 1.1rem;border:4px solid #eef2ff;"/>${badgeHtml}<h3 style="font-size:1.35rem;font-weight:800;color:#0f172a;margin-bottom:0.5rem;">${escapeHtml(title)}</h3><p style="font-size:0.92rem;line-height:1.65;color:#475569;">${escapeHtml(text)}</p>${btnHtml}</div>`;
+      } else {
+        html = `<div data-wc-card="photo" style="max-width:340px;margin:2rem auto;background:#ffffff;border-radius:${radius}px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.12);">${imgTag('220px', '')}<div style="padding:1.5rem;">${badgeHtml}<h3 style="font-size:1.35rem;font-weight:800;color:#0f172a;margin-bottom:0.6rem;">${escapeHtml(title)}</h3><p style="font-size:0.95rem;line-height:1.65;color:#475569;">${escapeHtml(text)}</p>${btnHtml}</div></div>`;
+      }
+      const added = grapesEditor.addComponents(html);
+      const comp = Array.isArray(added) ? added[0] : added;
+      if (comp) {
+        configureEditorComponent(comp);
+        grapesEditor.select(comp);
+      }
+      closeCardBuilder();
+      setTimeout(() => {
+        renderFriendlySections();
+        renderSmartLayers();
+        refreshSectionDragHandles();
+        const ok = syncCanvasToHtml();
+        showToast(ok ? '🃏 Card added ✓ Saved' : '🃏 Card added, but ⚠️ storage full');
+      }, 150);
     }
 
     /* ══════════════════════════════════════════════════
@@ -3492,6 +3893,9 @@ p{color:#64748b;max-width:520px;line-height:1.6}
     };
 
     window.addEventListener('DOMContentLoaded', () => {
+      // ★ Situation loader: studio boot — canvas takes a moment to build
+      try { if (window.Loader3D) Loader3D.show('Opening Visual Studio…', 'Loading canvas + designs', 'home'); } catch (e) {}
+      setTimeout(() => { try { if (window.Loader3D) Loader3D.hide(); } catch (e) {} }, 9000);
       loadLanguageState();
       loadProjectData();
       loadUserUploads();
@@ -3536,6 +3940,7 @@ p{color:#64748b;max-width:520px;line-height:1.6}
         bizName: biz,
         activeDesignIndex: (typeof p.activeDesignIndex === 'number') ? p.activeDesignIndex : 0,
         ownerEmail: p.ownerEmail || null,
+        savedAt: p.savedAt || 0,
         designs: designs.map((d, i) => ({
           name: d.name || ('Concept ' + (i + 1)),
           description: d.description || '',
@@ -3552,26 +3957,29 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       activeConceptIndex = isNaN(p) ? 0 : p;
       currentStudioView = (urlParams.get('view') === 'admin') ? 'admin' : 'site';
 
-      let best = null;
+      let best = null, bestAt = -1, bestLen = -1;
       studioScopedSourceKey = null;
 
       // 1) Scan all per-customer builder sessions: webcraft_saved_project::<email>
       //    These are authoritative — builder's saveSessionNow() writes here.
+      //    ★ NEWEST first (stale long sessions must NOT beat fresh edits).
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
           if (!k || k.indexOf('webcraft_saved_project::') !== 0) continue;
           const norm = studioNormalize(studioTryParse(localStorage.getItem(k)));
           if (!norm) continue;
-          // Prefer the session that actually has the requested concept with real HTML
           const candHtml = (norm.designs[activeConceptIndex] && norm.designs[activeConceptIndex].html) || '';
-          const bestHtml = (best && best.designs[activeConceptIndex] && best.designs[activeConceptIndex].html) || '';
-          if (!best || (candHtml.trim().length > bestHtml.trim().length)) {
+          const len = candHtml.trim().length;
+          const at = norm.savedAt || 0;
+          if (!best || at > bestAt || (at === bestAt && len > bestLen)) {
             best = norm;
+            bestAt = at;
+            bestLen = len;
             studioScopedSourceKey = k;
           }
         }
-        if (best) console.log('[studio] loaded from scoped key:', studioScopedSourceKey);
+        if (best) console.log('[studio] loaded from scoped key:', studioScopedSourceKey, 'savedAt:', bestAt);
       } catch (e) { console.warn('[studio] scoped scan failed', e); }
 
       // 2) Bridge keys written by builder openStudioInNewTab()
@@ -3662,6 +4070,59 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       console.log('[studio] Project loaded. concept=' + activeConceptIndex + ', view=' + currentStudioView + ', html length=' + currentHtml.length);
     }
 
+    /* ★ External-change detection: Builder (or another tab) saved NEWER
+       designs while this Studio tab sat open (e.g. fresh Generate) —
+       reload canvas instead of showing stale images. */
+    function studioNewestExternalAt() {
+      let at = -1;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k || (k.indexOf('webcraft_saved_project::') !== 0 && k !== 'webcraft_saved_project' && k !== 'webcraft_studio_bridge')) continue;
+          const o = studioTryParse(localStorage.getItem(k));
+          if (!o) continue;
+          const t = o.savedAt || 0;
+          if (t > at) at = t;
+        }
+      } catch (e) {}
+      return at;
+    }
+
+    function maybeReloadExternalStudioData(reason) {
+      try {
+        if (!projectData || window.__STUDIO_NO_DATA__) {
+          // Studio booted empty — adopt anything that arrived
+          const at0 = studioNewestExternalAt();
+          if (at0 > 0) {
+            loadProjectData();
+            lockTheme(currentHtml, true);
+            loadHtmlIntoStudioCanvas();
+            showToast('🔄 Latest designs loaded');
+            return true;
+          }
+          return false;
+        }
+        // ★ Never yank unsaved canvas work — reload only a clean canvas
+        if (window.__wcCanvasDirty) {
+          console.log('[studio] external update skipped (unsaved canvas edits):', reason);
+          return false;
+        }
+        const mine = projectData.savedAt || 0;
+        const ext = studioNewestExternalAt();
+        if (ext <= mine) return false;
+        // Don't yank the canvas mid-edit — wait for a calm moment
+        if (document.querySelector('.modal-overlay.active')) {
+          console.log('[studio] external update pending (modal open):', reason);
+          return false;
+        }
+        loadProjectData();
+        lockTheme(currentHtml, true);
+        loadHtmlIntoStudioCanvas();
+        showToast('🔄 Newer designs detected — canvas reloaded');
+        return true;
+      } catch (e) { return false; }
+    }
+
     function updateProjectName(val) {
       if (projectData) {
         projectData.bizName = val.trim() || 'Website';
@@ -3671,31 +4132,68 @@ p{color:#64748b;max-width:520px;line-height:1.6}
     }
 
     function saveProjectData() {
-      if (!projectData) return;
-      try { localStorage.setItem('webcraft_saved_project', JSON.stringify(projectData)); } catch (e) {}
+      if (!projectData) return false;
+      let ok = true;
+      try { projectData.savedAt = Date.now(); } catch (e) {}
+      try { localStorage.setItem('webcraft_saved_project', JSON.stringify(projectData)); }
+      catch (e) {
+        ok = false;
+        console.warn('[studio] save failed (quota?)', e);
+        try { showToast('⚠️ Storage full — image too large. Use a smaller image.', 5000); } catch (err) {}
+      }
       // ★ Write back into the scoped builder session so builder focus-sync sees edits.
       // Builder reads SESSION_KEY = webcraft_saved_project::<email> with {designs, concepts,...}.
       try {
+        // ★ Write to the session we loaded from (single target = less quota).
+        // Slimmed concepts (no duplicated html) halve the bytes.
+        let slimConcepts = [];
+        try {
+          slimConcepts = (projectData.designs || []).map(d => {
+            const c = { name: d.name || 'Concept', description: d.description || '', badge: d.badge || '', html: '', adminHtml: d.adminHtml || null };
+            return c;
+          });
+        } catch (e) {}
         const targets = [];
         if (studioScopedSourceKey) targets.push(studioScopedSourceKey);
-        // Also fan-out to every scoped session that already has designs (same browser, same user)
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.indexOf('webcraft_saved_project::') === 0 && targets.indexOf(k) === -1) targets.push(k);
+        else {
+          // Fallback (legacy): fan-out only if we never found a source key
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.indexOf('webcraft_saved_project::') === 0 && targets.indexOf(k) === -1) targets.push(k);
+          }
         }
         targets.forEach(k => {
           try {
             const raw = localStorage.getItem(k);
             const sess = raw ? JSON.parse(raw) : {};
             sess.designs = projectData.designs;
-            sess.concepts = projectData.designs;
+            sess.concepts = slimConcepts.length ? slimConcepts : projectData.designs;
             sess.bizName = projectData.bizName || sess.bizName;
             sess.activeDesignIndex = activeConceptIndex;
             sess.savedAt = Date.now();
             localStorage.setItem(k, JSON.stringify(sess));
-          } catch (e) {}
+          } catch (e) { ok = false; }
         });
-      } catch (e) {}
+      } catch (e) { ok = false; }
+      return ok;
+    }
+
+    /* ★ Canvas tab-load detector: concept/view tabs reload the canvas —
+       overlay shows only if render takes >250ms, hides when done. */
+    let __canvasSpinTimer = null;
+    function showCanvasLoading() {
+      clearTimeout(__canvasSpinTimer);
+      __canvasSpinTimer = setTimeout(() => {
+        const s = document.getElementById('canvas-spin');
+        if (s) s.style.display = 'flex';
+      }, 250);
+      // Safety: never stuck
+      setTimeout(hideCanvasLoading, 4000);
+    }
+    function hideCanvasLoading() {
+      clearTimeout(__canvasSpinTimer);
+      const s = document.getElementById('canvas-spin');
+      if (s) s.style.display = 'none';
     }
 
     function switchStudioConcept(index) {
@@ -3713,6 +4211,7 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       [0, 1, 2].forEach(i => document.getElementById(`tab-c${i}`).classList.toggle('active', i === index));
       document.getElementById('st-vtab-site')?.classList.toggle('active', currentStudioView === 'site');
       document.getElementById('st-vtab-admin')?.classList.toggle('active', currentStudioView === 'admin');
+      showCanvasLoading();
       loadHtmlIntoStudioCanvas();
       showToast(`Switched to Concept ${index + 1}`);
     }
@@ -3734,6 +4233,7 @@ p{color:#64748b;max-width:520px;line-height:1.6}
         currentHtml = d.html || WC_FALLBACK_HTML;
       }
       lockTheme(currentHtml, true);
+      showCanvasLoading();
       loadHtmlIntoStudioCanvas();
       showToast(`✏️ Now editing: ${view === 'admin' ? '🔐 Admin Panel' : '🌐 Frontend Site'}`);
     }
@@ -3753,22 +4253,84 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       renderUserUploads();
     }
 
+    // ★ Shared downscale: huge photos → max 1600px JPEG 0.82 (protects localStorage quota).
+    // Without this, silent quota fail = "saved but old photo returns".
+    function compressImageDataUrl(rawUrl, done) {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const MAX = 1600;
+          const w = img.naturalWidth || 1, h = img.naturalHeight || 1;
+          const scale = Math.min(1, MAX / Math.max(w, h));
+          if (scale < 1) {
+            const c = document.createElement('canvas');
+            c.width = Math.round(w * scale);
+            c.height = Math.round(h * scale);
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            done(c.toDataURL('image/jpeg', 0.82));
+          } else done(rawUrl);
+        } catch (err) { done(rawUrl); }
+      };
+      img.onerror = () => done(rawUrl);
+      img.src = rawUrl;
+    }
+
+    /* ★ Server upload: local photos live in storage/uploads/ (short URL),
+       so they survive save/preview/publish on ANY machine — no quota bloat.
+       Falls back to embedded dataURL when offline/server unreachable. */
+    function dataUrlToBlob(dataUrl) {
+      try {
+        const parts = String(dataUrl).split(',');
+        const mime = ((parts[0] || '').match(/data:(.*?);/) || [])[1] || 'image/jpeg';
+        const bin = atob(parts[1] || '');
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        return new Blob([arr], { type: mime });
+      } catch (e) { return null; }
+    }
+
+    function uploadImageToServer(blob, filename) {
+      if (!blob) return Promise.resolve(null);
+      try {
+        const fd = new FormData();
+        fd.append('image', blob, filename || 'image.jpg');
+        return fetch('<?= SITE_URL ?>/api/upload.php', { method: 'POST', body: fd })
+          .then(r => r.json())
+          .then(j => (j && j.success && j.url) ? j.url : null)
+          .catch(() => null);
+      } catch (e) { return Promise.resolve(null); }
+    }
+
     function handleFileInput(files) {
       if (!files || !files.length) return;
+      showToast('⏳ Processing images…');
       let loaded = 0;
       Array.from(files).forEach(file => {
         const r = new FileReader();
         r.onload = (e) => {
-          userUploadedImages.unshift({
-            id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-            name: file.name,
-            url: e.target.result
+          compressImageDataUrl(e.target.result, (url) => {
+            const item = {
+              id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+              name: file.name,
+              url
+            };
+            userUploadedImages.unshift(item);
+            loaded++;
+            if (loaded === files.length) {
+              saveUserUploads();
+              showToast(`🖼️ Uploaded ${files.length} ✓ Saved`);
+            }
+            // ★ Push to server in background → permanent URL, tiny storage
+            const blob = dataUrlToBlob(url);
+            if (blob) {
+              uploadImageToServer(blob, file.name || 'upload.jpg').then(serverUrl => {
+                if (serverUrl) {
+                  item.url = serverUrl;
+                  saveUserUploads();
+                }
+              });
+            }
           });
-          loaded++;
-          if (loaded === files.length) {
-            saveUserUploads();
-            showToast(`🖼️ Uploaded ${files.length}`);
-          }
         };
         r.readAsDataURL(file);
       });
@@ -3821,6 +4383,10 @@ p{color:#64748b;max-width:520px;line-height:1.6}
           alt: alt || ''
         }));
         selectedComponent.set({ draggable: true, resizable: true });
+        try {
+          const le = selectedComponent.getEl && selectedComponent.getEl();
+          if (le && le.tagName === 'IMG') le.setAttribute('src', url);
+        } catch (e) {}
       } else {
         const root = grapesEditor.DomComponents.getWrapper();
         const added = root.append(`<img src="${escapeHtml(url)}" alt="${escapeHtml(alt || '')}" style="width:100%;max-width:850px;height:auto;border-radius:16px;margin:2rem auto;display:block;object-fit:cover;"/>`, { at: 0 });
@@ -3830,6 +4396,7 @@ p{color:#64748b;max-width:520px;line-height:1.6}
           grapesEditor.select(comp);
         }
       }
+      syncCanvasToHtml();
       renderSmartLayers();
     }
 
@@ -3884,6 +4451,16 @@ p{color:#64748b;max-width:520px;line-height:1.6}
             { id: 'sb-contact', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">📞</div><div>Contact</div>', category: 'Sections', content: getTemplateHTML('contact') },
             { id: 'sb-footer', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">🦶</div><div>Footer</div>', category: 'Sections', content: getTemplateHTML('footer') },
             { id: 'sb-gallery', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">🖼️</div><div>Gallery</div>', category: 'Sections', content: getTemplateHTML('gallery') },
+            { id: 'sb-shape-circle', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">⭕</div><div>Circle</div>', category: 'Shapes', content: '<div data-wc-shape="circle" style="width:240px;height:240px;border-radius:50%;overflow:hidden;margin:2rem auto;position:relative;background:#1e293b;"><img data-wc-shape-img="1" src="https://picsum.photos/seed/wcshape-circle/600/600" alt="Shape image" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>' },
+            { id: 'sb-shape-arch', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">🏛️</div><div>Arch</div>', category: 'Shapes', content: '<div data-wc-shape="arch" style="width:240px;height:320px;border-radius:999px 999px 24px 24px;overflow:hidden;margin:2rem auto;position:relative;background:#1e293b;"><img data-wc-shape-img="1" src="https://picsum.photos/seed/wcshape-arch/600/800" alt="Shape image" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>' },
+            { id: 'sb-shape-blob', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">🫧</div><div>Blob</div>', category: 'Shapes', content: '<div data-wc-shape="blob" style="width:260px;height:260px;border-radius:58% 42% 55% 45%/55% 48% 52% 45%;overflow:hidden;margin:2rem auto;position:relative;background:#1e293b;"><img data-wc-shape-img="1" src="https://picsum.photos/seed/wcshape-blob/600/600" alt="Shape image" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>' },
+            { id: 'sb-shape-hexagon', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">⬡</div><div>Hexagon</div>', category: 'Shapes', content: '<div data-wc-shape="hexagon" style="width:260px;height:240px;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);margin:2rem auto;position:relative;background:#1e293b;"><img data-wc-shape-img="1" src="https://picsum.photos/seed/wcshape-hexagon/600/600" alt="Shape image" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>' },
+            { id: 'sb-shape-diamond', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">◆</div><div>Diamond</div>', category: 'Shapes', content: '<div data-wc-shape="diamond" style="width:240px;height:240px;clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);margin:2rem auto;position:relative;background:#1e293b;"><img data-wc-shape-img="1" src="https://picsum.photos/seed/wcshape-diamond/600/600" alt="Shape image" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>' },
+            { id: 'sb-shape-star', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">⭐</div><div>Star</div>', category: 'Shapes', content: '<div data-wc-shape="star" style="width:260px;height:260px;clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);margin:2rem auto;position:relative;background:#1e293b;"><img data-wc-shape-img="1" src="https://picsum.photos/seed/wcshape-star/600/600" alt="Shape image" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>' },
+            { id: 'sb-shape-rounded', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">▢</div><div>Rounded</div>', category: 'Shapes', content: '<div data-wc-shape="rounded" style="width:280px;height:200px;border-radius:28px;overflow:hidden;margin:2rem auto;position:relative;background:#1e293b;"><img data-wc-shape-img="1" src="https://picsum.photos/seed/wcshape-rounded/600/400" alt="Shape image" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>' },
+            { id: 'sb-card-photo', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">🃏</div><div>Photo Card</div>', category: 'Cards', content: '<div data-wc-card="photo" style="max-width:340px;margin:2rem auto;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.12);"><img data-wc-card-img="1" src="https://picsum.photos/seed/wccard-photo/600/400" alt="Card image" style="width:100%;height:220px;object-fit:cover;display:block;"/><div style="padding:1.5rem;"><span style="display:inline-block;font-size:0.68rem;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#4f46e5;background:#eef2ff;padding:0.3rem 0.8rem;border-radius:999px;margin-bottom:0.8rem;">New</span><h3 style="font-size:1.35rem;font-weight:800;color:#0f172a;margin-bottom:0.6rem;">Card Title</h3><p style="font-size:0.95rem;line-height:1.65;color:#475569;">Short description about this service, product or person.</p><a href="#contact" style="display:inline-block;text-decoration:none;font-weight:700;font-size:0.9rem;padding:0.8rem 1.8rem;border-radius:999px;margin-top:1rem;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:none;">Learn More →</a></div></div>' },
+            { id: 'sb-card-profile', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">👤</div><div>Profile Card</div>', category: 'Cards', content: '<div data-wc-card="profile" style="max-width:320px;margin:2rem auto;background:#ffffff;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,0.12);padding:2.25rem 1.75rem;text-align:center;"><img data-wc-card-img="1" src="https://picsum.photos/seed/wccard-profile/400/400" alt="Profile photo" style="width:130px;height:130px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 1.1rem;border:4px solid #eef2ff;"/><h3 style="font-size:1.35rem;font-weight:800;color:#0f172a;margin-bottom:0.5rem;">Person Name</h3><p style="font-size:0.92rem;line-height:1.65;color:#475569;">Role or short bio goes here.</p><a href="#contact" style="display:inline-block;text-decoration:none;font-weight:700;font-size:0.9rem;padding:0.8rem 1.8rem;border-radius:999px;margin-top:1rem;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:none;">Contact →</a></div></div>' },
+            { id: 'sb-card-side', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">↔️</div><div>Side Card</div>', category: 'Cards', content: '<div data-wc-card="horizontal" style="max-width:640px;margin:2rem auto;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.12);display:flex;flex-wrap:wrap;"><div style="flex:1 1 220px;min-width:220px;"><img data-wc-card-img="1" src="https://picsum.photos/seed/wccard-side/600/600" alt="Card image" style="width:100%;height:100%;min-height:220px;object-fit:cover;display:block;"/></div><div style="flex:1 1 260px;padding:1.75rem;"><h3 style="font-size:1.4rem;font-weight:800;color:#0f172a;margin-bottom:0.6rem;">Card Title</h3><p style="font-size:0.95rem;line-height:1.65;color:#475569;">Description text here. Everything is editable.</p><a href="#contact" style="display:inline-block;text-decoration:none;font-weight:700;font-size:0.9rem;padding:0.8rem 1.8rem;border-radius:999px;margin-top:1rem;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:none;">Learn More →</a></div></div>' },
             { id: 'sb-button-primary', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">🔘</div><div>Primary Button</div>', category: 'Components', content: `<a href="#contact" class="btn-primary" style="display:block;width:max-content;margin:1rem auto;padding:0.9rem 2rem;border-radius:999px;background:var(--primary,#6366f1);color:#fff;font-weight:700;text-decoration:none;">Get Started →</a>` },
             { id: 'sb-button-outline', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">◯</div><div>Outline Button</div>', category: 'Components', content: `<a href="#contact" class="btn-outline" style="display:block;width:max-content;margin:1rem auto;padding:0.9rem 2rem;border-radius:999px;background:transparent;border:1.5px solid #cbd5e1;color:#334155;font-weight:600;text-decoration:none;">Learn More</a>` },
             { id: 'sb-button-whatsapp', label: '<div style="font-size:1.3rem;margin-bottom:0.2rem">💬</div><div>WhatsApp</div>', category: 'Components', content: `<a href="https://wa.me/15551234567" target="_blank" class="btn-whatsapp" style="display:inline-flex;align-items:center;gap:0.5rem;margin:1rem auto;padding:0.9rem 1.8rem;border-radius:999px;background:#25D366;color:#fff;font-weight:700;text-decoration:none;width:max-content;">💬 Chat on WhatsApp</a>` },
@@ -3935,14 +4512,20 @@ p{color:#64748b;max-width:520px;line-height:1.6}
         setTimeout(() => {
           suppressEditorOpen = false;
           if (!component) return;
+          const isShape = component.getAttributes && component.getAttributes()['data-wc-shape'];
+          const isCard = component.getAttributes && component.getAttributes()['data-wc-card'];
           const btns = findButtons(component);
-          if (btns.length > 0) showToast('🔘 Button added');
+          if (isCard) showToast('🃏 Card added — click text to edit, image to change');
+          else if (isShape) showToast('⭐ Shape added — right-click → Change Card / Shape Image');
+          else if (btns.length > 0) showToast('🔘 Button added');
           else showToast('✨ New element added');
         }, 300);
       });
       grapesEditor.on('load', () => {
         setupContextMenu();
         loadHtmlIntoStudioCanvas();
+        // ★ Boot loader done — canvas is ready
+        setTimeout(() => { try { if (window.Loader3D) Loader3D.hide(); } catch (e) {} }, 900);
       });
       grapesEditor.on('device:set', () => {
         setTimeout(applyMobileStylesInCanvas, 50);
@@ -4476,8 +5059,10 @@ body.webcraft-canvas-body {
 }
 /* ★ Force-reveal generated scroll-animation elements in EDITOR mode.
       Generated page scripts are stripped, so AOS/WOW/[data-anim]/etc.
-      would remain stuck at opacity:0 without this override. */
-body.webcraft-canvas-body [data-anim],
+      would remain stuck at opacity:0 without this override.
+      NOTE: .wc-anim-live is excluded so the user's chosen animation
+      plays LIVE on canvas the moment it is selected. */
+body.webcraft-canvas-body [data-anim]:not(.wc-anim-live),
 body.webcraft-canvas-body [class*="aos"],
 body.webcraft-canvas-body [class*="wow"],
 body.webcraft-canvas-body [class*="sal-"],
@@ -4537,6 +5122,7 @@ a, button { -webkit-user-drag: none; }`;
             forceCanvasReveal();
             setTimeout(forceCanvasReveal, 400);
             setTimeout(forceCanvasReveal, 1200);
+            hideCanvasLoading();
           }, 120);
 
           /* ★ Only apply detected background if the canvas body currently
@@ -4597,7 +5183,7 @@ a, button { -webkit-user-drag: none; }`;
     }
 
     function syncCanvasToHtml() {
-      if (!grapesEditor) return;
+      if (!grapesEditor) return false;
       try {
         getCanvasBody()?.querySelectorAll('.webcraft-section-handle,.webcraft-drop-line,#wc-lang-switcher').forEach(el => el.remove());
       } catch (e) {}
@@ -4665,9 +5251,12 @@ ${WC_ANIMATION_RUNTIME}
         } else {
           projectData.designs[activeConceptIndex].html = currentHtml;
         }
-        saveProjectData();
+        const savedOk = saveProjectData();
+        setTimeout(refreshSectionDragHandles, 0);
+        return savedOk;
       }
       setTimeout(refreshSectionDragHandles, 0);
+      return true;
     }
 
     /* ══════════════ CONTEXT MENU ══════════════ */
@@ -4702,11 +5291,13 @@ ${WC_ANIMATION_RUNTIME}
       if (!menu) return;
       const linkItem = document.getElementById('ctx-link-item'),
         imageItem = document.getElementById('ctx-image-item'),
-        cropItem = document.getElementById('ctx-crop-item');
+        cropItem = document.getElementById('ctx-crop-item'),
+        shapeItem = document.getElementById('ctx-shape-item');
       const tag = (comp.get('tagName') || '').toLowerCase();
       if (linkItem) linkItem.style.display = (tag === 'a' || tag === 'button') ? 'flex' : 'none';
       if (imageItem) imageItem.style.display = tag === 'img' ? 'flex' : 'none';
       if (cropItem) cropItem.style.display = tag === 'img' ? 'flex' : 'none';
+      if (shapeItem) shapeItem.style.display = findShapeImgComp(comp) ? 'flex' : 'none';
       menu.style.display = 'flex';
       menu.style.left = x + 'px';
       menu.style.top = y + 'px';
@@ -4814,18 +5405,100 @@ ${WC_ANIMATION_RUNTIME}
       renderSmartLayers();
     }
 
-    function ctxBringForward() {
+    /* ★ Find the image inside a shape OR card (wrapper, inner img, or child of one) */
+    function findShapeImgComp(comp) {
+      if (!comp || !grapesEditor) return null;
+      try {
+        const tag = (comp.get('tagName') || '').toLowerCase();
+        const attrs = comp.getAttributes ? (comp.getAttributes() || {}) : {};
+        if (tag === 'img') {
+          if (attrs['data-wc-shape-img'] || attrs['data-wc-card-img']) return comp;
+          const p = comp.parent && comp.parent();
+          const pa = (p && p.getAttributes) ? (p.getAttributes() || {}) : {};
+          if (pa['data-wc-shape'] || pa['data-wc-card']) return comp;
+          return null;
+        }
+        if (attrs['data-wc-shape'] || attrs['data-wc-card']) {
+          let found = null;
+          const walk = (c) => {
+            if (found || !c) return;
+            const t = (c.get('tagName') || '').toLowerCase();
+            if (t === 'img') { found = c; return; }
+            const kids = c.components && c.components();
+            if (kids && kids.length) kids.forEach(walk);
+          };
+          walk(comp);
+          return found;
+        }
+        return null;
+      } catch (e) { return null; }
+    }
+
+    function ctxShapeImage() {
       hideContextMenu();
-      if (!ctxTargetComponent) return;
-      ctxTargetComponent.set('style', Object.assign({}, ctxTargetComponent.getStyle(), { 'z-index': '10', 'position': 'relative' }));
-      showToast('⬆️ Brought forward');
+      const imgComp = findShapeImgComp(ctxTargetComponent || selectedComponent);
+      if (!imgComp) {
+        showToast('👉 Select a card or shape first');
+        return;
+      }
+      grapesEditor.select(imgComp);
+      openImageEditor(imgComp);
+    }
+
+    /* ★ REAL layer reorder: move within parent + normalize stacking.
+       Live on canvas immediately, fully saved via syncCanvasToHtml. */
+    function moveLayer(comp, dir) {
+      try { hideContextMenu(); } catch (e) {}
+      if (!comp) comp = selectedComponent;
+      if (!comp || !grapesEditor) {
+        showToast('👉 Select an element first');
+        return;
+      }
+      const parent = comp.parent && comp.parent();
+      if (!parent || !parent.components) return;
+      const coll = parent.components();
+      const idx = coll.indexOf(comp);
+      const ni = idx + dir;
+      if (idx < 0 || ni < 0 || ni >= coll.length) {
+        showToast(dir > 0 ? '⬆️ Already at front' : '⬇️ Already at back');
+        return;
+      }
+      coll.remove(comp);
+      coll.add(comp, { at: ni });
+      // Deterministic stacking in export: DOM order + z-index per sibling
+      try {
+        coll.each((c, i) => {
+          const st = (c.getStyle && c.getStyle()) || {};
+          const pos = String(st.position || '').toLowerCase();
+          const patch = { 'z-index': String(1 + i) };
+          if (!pos || pos === 'static') patch.position = 'relative';
+          if (c.addStyle) c.addStyle(patch);
+        });
+      } catch (e) {}
+      try { configureEditorComponent(comp); } catch (e) {}
+      try { grapesEditor.select(comp); } catch (e) {}
+      try { renderSmartLayers(); } catch (e) {}
+      try { if (typeof refreshSectionDragHandles === 'function') refreshSectionDragHandles(); } catch (e) {}
+      const ok = (typeof syncCanvasToHtml === 'function') ? syncCanvasToHtml() : true;
+      showToast(ok ? (dir > 0 ? '⬆️ Brought forward ✓ Saved' : '⬇️ Sent backward ✓ Saved') : '⚠️ Moved, but storage full — could not save');
+    }
+
+    function moveLayerByIndex(idx, dir) {
+      const comp = window._layerComponents && window._layerComponents[idx];
+      if (!comp) return;
+      grapesEditor.select(comp);
+      moveLayer(comp, dir);
+    }
+
+    function bringForward() { moveLayer(selectedComponent, 1); }
+    function sendBackward() { moveLayer(selectedComponent, -1); }
+
+    function ctxBringForward() {
+      moveLayer(ctxTargetComponent || selectedComponent, 1);
     }
 
     function ctxSendBackward() {
-      hideContextMenu();
-      if (!ctxTargetComponent) return;
-      ctxTargetComponent.set('style', Object.assign({}, ctxTargetComponent.getStyle(), { 'z-index': '1', 'position': 'relative' }));
-      showToast('⬇️ Sent backward');
+      moveLayer(ctxTargetComponent || selectedComponent, -1);
     }
 
     function ctxDelete() {
@@ -4904,6 +5577,7 @@ ${WC_ANIMATION_RUNTIME}
       document.getElementById('ie-height-unit').value = ['px', 'cm', 'in', '%', 'auto'].includes(h.unit) ? h.unit : 'auto';
       document.getElementById('ie-radius').value = parseInt(style['border-radius']) || 16;
       document.getElementById('ie-fit').value = style['object-fit'] || 'cover';
+      try { document.getElementById('ie-file').value = ''; } catch (e) {}
       previewImageEditor();
       document.getElementById('image-editor-modal').classList.add('active');
     }
@@ -4929,12 +5603,99 @@ ${WC_ANIMATION_RUNTIME}
 
     function replaceImageFromFile(file) {
       if (!file) return;
+      showToast('⏳ Processing image…');
       const reader = new FileReader();
       reader.onload = e => {
-        document.getElementById('ie-src').value = e.target.result;
-        previewImageEditor();
+        compressImageDataUrl(e.target.result, (url) => {
+          // Instant local preview first…
+          document.getElementById('ie-src').value = url;
+          previewImageEditor();
+          showToast('🖼️ Image ready — press ✓ Apply Image');
+          // …then server upload in background → permanent URL wins
+          const blob = dataUrlToBlob(url);
+          if (blob) {
+            uploadImageToServer(blob, file.name || 'image.jpg').then(serverUrl => {
+              if (serverUrl && document.getElementById('ie-src')) {
+                document.getElementById('ie-src').value = serverUrl;
+                previewImageEditor();
+                showToast('☁️ Photo saved to server ✓ — press ✓ Apply Image');
+              }
+            });
+          }
+        });
       };
       reader.readAsDataURL(file);
+    }
+
+    /* ★ Component-identity helpers: the canvas tree can re-render between
+       opening an editor and pressing Apply (frame reload, device switch).
+       A detached comp accepts setAttributes silently but never serializes —
+       THAT is the "studio shows new, preview/save show old" ghost. */
+    function isCompAttached(comp) {
+      try {
+        if (!comp || !grapesEditor) return false;
+        let c = comp, guard = 0;
+        while (c && guard++ < 1000) {
+          if (c.isWrapper && c.isWrapper()) return true;
+          c = (c.parent && c.parent()) || null;
+        }
+        return false;
+      } catch (e) { return false; }
+    }
+
+    function findImgCompBySrc(src) {
+      try {
+        if (!src || !grapesEditor) return null;
+        const root = grapesEditor.DomComponents && grapesEditor.DomComponents.getWrapper
+          ? grapesEditor.DomComponents.getWrapper() : null;
+        if (!root) return null;
+        let found = null;
+        const walk = (c) => {
+          if (found || !c) return;
+          try {
+            const t = (c.get('tagName') || '').toLowerCase();
+            if (t === 'img') {
+              const a = c.getAttributes ? (c.getAttributes() || {}) : {};
+              if ((a.src || '') === src) { found = c; return; }
+            }
+          } catch (e) {}
+          const kids = c.components && c.components();
+          if (kids && kids.length) kids.forEach(walk);
+        };
+        walk(root);
+        return found;
+      } catch (e) { return null; }
+    }
+
+    /* ★ Verify the new image REALLY landed in serialized canvas HTML.
+       Returns 'ok' | 'model' | 'html' | 'args' (console carries details). */
+    function verifyImageApplied(comp, src) {
+      try {
+        if (!comp || !src || !grapesEditor) return 'args';
+        const attrs = comp.getAttributes ? (comp.getAttributes() || {}) : {};
+        if ((attrs.src || '') !== src) {
+          console.warn('[studio] verify: model attr mismatch', { attached: isCompAttached(comp) });
+          return 'model';
+        }
+        // Belt & braces: force the live canvas DOM node too
+        try {
+          const liveEl = comp.getEl && comp.getEl();
+          if (liveEl && liveEl.tagName === 'IMG' && liveEl.getAttribute('src') !== src) {
+            liveEl.setAttribute('src', src);
+          }
+        } catch (e) {}
+        const html = grapesEditor.getHtml() || '';
+        // Probe the distinctive middle of the src (JPEG heads all look alike).
+        // ★ Check BOTH raw and HTML-escaped forms: serializers turn & into
+        // &amp; (Unsplash/stock URLs), which caused false "not applied".
+        const probe = src.length > 120 ? src.slice(32, 96) : src;
+        const escProbe = probe.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        if (probe && (html.indexOf(probe) !== -1 || html.indexOf(escProbe) !== -1)) return 'ok';
+        console.warn('[studio] verify: src missing from getHtml', {
+          attached: isCompAttached(comp), srcLen: src.length, htmlLen: html.length
+        });
+        return 'html';
+      } catch (e) { return 'html'; }
     }
 
     function applyImageEditor() {
@@ -4945,8 +5706,20 @@ ${WC_ANIMATION_RUNTIME}
       const height = composeCssSize('ie-height-value', 'ie-height-unit', 'auto');
       const radius = parseInt(document.getElementById('ie-radius').value, 10);
       const fit = document.getElementById('ie-fit').value || 'cover';
-      if (src) editingImage.setAttributes(Object.assign({}, editingImage.getAttributes(), { src, alt }));
-      editingImage.addStyle({
+      // ★ Re-resolve live component in case the canvas re-rendered mid-edit
+      let target = editingImage;
+      const oldSrc = (target.getAttributes ? (target.getAttributes() || {}).src : '') || '';
+      if (!isCompAttached(target)) {
+        const selImg = (selectedComponent && (selectedComponent.get('tagName') || '').toLowerCase() === 'img') ? selectedComponent : null;
+        target = findImgCompBySrc(oldSrc) || selImg;
+        if (target) editingImage = target;
+      }
+      if (!target || !isCompAttached(target)) {
+        showToast('⚠️ Canvas changed — select the image again & retry', 5000);
+        return;
+      }
+      if (src) target.setAttributes(Object.assign({}, target.getAttributes(), { src, alt }));
+      target.addStyle({
         width, height,
         'max-width': 'none',
         'box-sizing': 'border-box',
@@ -4954,9 +5727,15 @@ ${WC_ANIMATION_RUNTIME}
         'border-radius': (Number.isFinite(radius) ? radius : 16) + 'px',
         display: 'block'
       });
-      editingImage.set({ draggable: true, resizable: true, stylable: true });
+      target.set({ draggable: true, resizable: true, stylable: true });
+      const imgSaved = syncCanvasToHtml();
       renderSmartLayers();
-      showToast(`🖼️ Image updated`);
+      try { document.getElementById('ie-file').value = ''; } catch (e) {}
+      // ★ Honest result: saved + actually in canvas HTML?
+      const imgRes = src ? verifyImageApplied(target, src) : 'ok';
+      if (imgRes === 'ok') showToast(imgSaved ? `🖼️ Image updated ✓ Saved` : `⚠️ Image updated but storage full — use a smaller image`);
+      else if (imgRes === 'model') showToast('⚠️ Image NOT applied — select the image again & retry', 5000);
+      else showToast('⚠️ Image NOT saved to page — select the image again & retry', 5000);
       closeImageEditor();
     }
 
@@ -4965,8 +5744,20 @@ ${WC_ANIMATION_RUNTIME}
         showToast('Open an image first');
         return;
       }
-      closeImageEditor();
-      openCropTool(editingImage);
+      // ★ FIX: pending upload (ie-src) must be pushed to the component FIRST.
+      // closeImageEditor() nulls editingImage, so capture comp + apply pending src
+      // before opening crop — otherwise crop shows the OLD image.
+      const comp = editingImage;
+      try {
+        const pendingSrc = (document.getElementById('ie-src')?.value || '').trim();
+        const cur = comp.getAttributes ? (comp.getAttributes() || {}) : {};
+        if (pendingSrc && cur.src !== pendingSrc) {
+          comp.setAttributes(Object.assign({}, cur, { src: pendingSrc }));
+        }
+      } catch (e) {}
+      document.getElementById('image-editor-modal').classList.remove('active');
+      editingImage = null;
+      openCropTool(comp);
     }
 
     function closeButtonEditor() {
@@ -4975,7 +5766,8 @@ ${WC_ANIMATION_RUNTIME}
     }
 
     function finishButtonEditor() {
-      showToast('✓ Button updated');
+      syncCanvasToHtml();
+      showToast('✓ Button updated ✓ Saved');
       closeButtonEditor();
     }
 
@@ -5862,6 +6654,7 @@ ${WC_ANIMATION_RUNTIME}
       const walk = (c) => {
         const t = (c.get('tagName') || '').toLowerCase();
         if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'button', 'span', 'img', 'section'].includes(t)) list.push(c);
+        else if (t === 'div' && c.getAttributes && (c.getAttributes()['data-wc-shape'] || c.getAttributes()['data-wc-card'])) list.push(c);
         const k = c.components();
         if (k && k.length) k.forEach(walk);
       };
@@ -5881,17 +6674,25 @@ ${WC_ANIMATION_RUNTIME}
         else if (tag === 'p' || tag === 'span') badgeClass = 'p';
         else if (tag === 'a' || tag === 'button') badgeClass = 'btn';
         else if (tag === 'img') badgeClass = 'img';
+        else if (tag === 'div') badgeClass = 'img';
+        const layerOrderBtns = `<button class="hdr-btn" title="Bring forward" style="padding:0.12rem 0.4rem;font-size:0.62rem;" onclick="event.stopPropagation(); moveLayerByIndex(${idx},1)">⬆</button><button class="hdr-btn" title="Send backward" style="padding:0.12rem 0.4rem;font-size:0.62rem;" onclick="event.stopPropagation(); moveLayerByIndex(${idx},-1)">⬇</button>`;
 
         if (tag === 'img') {
           const alt = comp.getAttributes()?.alt || 'Image';
           const animBadge = comp.getAttributes?.()?.['data-anim'] ? ' 🎬' : '';
-          card.innerHTML = `<div class="layer-card-top" onclick="selectLayerComponent(${idx})"><span class="layer-tag-badge img">IMG${animBadge}</span><span style="font-size:0.68rem;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px;">${escapeHtml(alt)}</span></div>`;
+          card.innerHTML = `<div class="layer-card-top" onclick="selectLayerComponent(${idx})"><span class="layer-tag-badge img">IMG${animBadge}</span><span style="font-size:0.68rem;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px;">${escapeHtml(alt)}</span><span style="display:flex;gap:0.2rem;">${layerOrderBtns}</span></div>`;
         } else if (tag === 'section') {
           const secAttrs = comp.getAttributes?.() || {};
           const secName = secAttrs['data-section-name'] || secAttrs.id || `Section ${idx + 1}`;
           const animBadge = secAttrs['data-anim'] ? ' 🎬' : '';
           const mobBadge = secAttrs['data-mobile-id'] ? ' 📱' : '';
-          card.innerHTML = `<div class="layer-card-top" onclick="selectLayerComponent(${idx})"><span class="layer-tag-badge sec">SECTION${animBadge}${mobBadge}</span><strong style="font-size:0.72rem;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(secName)}</strong></div>`;
+          card.innerHTML = `<div class="layer-card-top" onclick="selectLayerComponent(${idx})"><span class="layer-tag-badge sec">SECTION${animBadge}${mobBadge}</span><strong style="font-size:0.72rem;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px;">${escapeHtml(secName)}</strong><span style="display:flex;gap:0.2rem;">${layerOrderBtns}</span></div>`;
+        } else if (tag === 'div' && (comp.getAttributes?.()?.['data-wc-shape'] || comp.getAttributes?.()?.['data-wc-card'])) {
+          const isCard = !!comp.getAttributes?.()?.['data-wc-card'];
+          const kind = isCard ? 'CARD' : 'SHAPE';
+          const shapeName = comp.getAttributes()?.['data-wc-shape'] || comp.getAttributes()?.['data-wc-card'] || 'card';
+          const animBadge = comp.getAttributes?.()?.['data-anim'] ? ' 🎬' : '';
+          card.innerHTML = `<div class="layer-card-top" onclick="selectLayerComponent(${idx})"><span class="layer-tag-badge img">${kind}${animBadge}</span><strong style="font-size:0.72rem;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px;text-transform:capitalize;">${escapeHtml(shapeName)}</strong><span style="display:flex;gap:0.2rem;"><button class="hdr-btn" title="Change image" style="padding:0.12rem 0.4rem;font-size:0.62rem;" onclick="event.stopPropagation(); selectLayerComponent(${idx}); ctxShapeImage()">🖼️</button>${layerOrderBtns}</span></div>`;
         } else {
           const el = comp.getEl();
           const text = (el ? el.innerText : comp.get('content')) || '';
@@ -6552,23 +7353,35 @@ ${WC_ANIMATION_RUNTIME}
       }
     });
 
+    /* ★ Proof of save: KB actually written (user sees save really happened) */
+    function savedDesignsKB() {
+      try {
+        const n = JSON.stringify(projectData?.designs || []).length;
+        return n > 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB';
+      } catch (e) { return ''; }
+    }
+
     /* ══════════════ NAVIGATION ══════════════ */
     function goBack() {
+      try { if (window.Loader3D) Loader3D.show('Saving your design…', 'Syncing canvas + images', 'save'); } catch (e) {}
       persistAdminAssets();
       syncCanvasToHtml();
-      saveProjectData();
+      const ok = saveProjectData();
       saveLanguageState();
-      showToast('💾 Saving…');
-      setTimeout(() => window.location.href = '<?= SITE_URL ?>/builder.php?resume=1&concept=' + activeConceptIndex + '&view=' + currentStudioView, 350);
+      if (!ok) { try { if (window.Loader3D) Loader3D.hide(); } catch (e) {} return; }
+      try { if (window.Loader3D) Loader3D.text('✓ Saved ' + savedDesignsKB() + ' · Opening builder…'); } catch (e) {}
+      setTimeout(() => window.location.href = '<?= SITE_URL ?>/builder.php?resume=1&concept=' + activeConceptIndex + '&view=' + currentStudioView, 900);
     }
 
     function saveAndReturnToBuilder() {
+      try { if (window.Loader3D) Loader3D.show('Saving your design…', 'Syncing canvas + images', 'save'); } catch (e) {}
       persistAdminAssets();
       syncCanvasToHtml();
-      saveProjectData();
+      const ok = saveProjectData();
       saveLanguageState();
-      showToast('✓ Saved! Returning to builder…');
-      setTimeout(() => window.location.href = '<?= SITE_URL ?>/builder.php?resume=1&concept=' + activeConceptIndex + '&view=' + currentStudioView, 500);
+      if (!ok) { try { if (window.Loader3D) Loader3D.hide(); } catch (e) {} return; }
+      try { if (window.Loader3D) Loader3D.text('✓ Saved ' + savedDesignsKB() + ' · Opening builder…'); } catch (e) {}
+      setTimeout(() => window.location.href = '<?= SITE_URL ?>/builder.php?resume=1&concept=' + activeConceptIndex + '&view=' + currentStudioView, 1100);
     }
 
     function escapeHtml(s) {

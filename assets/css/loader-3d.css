@@ -375,26 +375,39 @@
 }
 
 /* ═════════ SAVE SCENE (pencil writes + check) ═════════ */
-.wcl-save { position: relative; width: 150px; height: 96px; flex-shrink: 0; }
+.wcl-save { position: relative; width: 190px; height: 130px; flex-shrink: 0; perspective: 600px; animation: wclSaveFloat 3s ease-in-out infinite; }
+@keyframes wclSaveFloat { 0%, 100% { transform: translateY(5px) rotateX(4deg); } 50% { transform: translateY(-7px) rotateX(-4deg); } }
+.wcl-save .halo {
+  position: absolute; bottom: -14px; left: 50%; width: 150px; height: 26px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(99,102,241,.45) 0%, transparent 70%);
+  filter: blur(4px);
+  animation: wclHalo 3s ease-in-out infinite;
+}
+@keyframes wclHalo { 0%, 100% { transform: translateX(-50%) scaleX(1); opacity: .8; } 50% { transform: translateX(-50%) scaleX(.78); opacity: .5; } }
 .wcl-save .paper {
-  position: absolute; bottom: 0; left: 0; width: 104px; height: 76px; border-radius: 8px;
+  position: absolute; bottom: 0; left: 22px; width: 104px; height: 76px; border-radius: 8px;
   background: linear-gradient(180deg, #fff, #e2e8f0);
-  box-shadow: 0 10px 24px rgba(0,0,0,.45);
+  box-shadow: 0 18px 34px rgba(0,0,0,.55), 0 0 24px rgba(129,140,248,.25);
+  transform: rotateX(8deg);
 }
 .wcl-save .wline {
-  position: absolute; bottom: 44px; left: 12px; height: 6px; border-radius: 3px;
+  position: absolute; bottom: 44px; left: 34px; height: 6px; border-radius: 3px;
   background: linear-gradient(90deg, #6366f1, #a855f7);
+  box-shadow: 0 0 8px rgba(139,92,246,.7);
   animation: wclWrite 2.6s ease-in-out infinite;
 }
+.wcl-save .wline.l2 { bottom: 30px; animation-delay: .35s; opacity: .85; }
 @keyframes wclWrite {
   0%, 8% { width: 0; opacity: 1; }
   55% { width: 80px; opacity: 1; }
   70%, 100% { width: 80px; opacity: 0; }
 }
 .wcl-save .pencil {
-  position: absolute; top: 0; left: 0; width: 14px; height: 52px; border-radius: 4px;
+  position: absolute; top: 0; left: 22px; width: 14px; height: 52px; border-radius: 4px;
   background: linear-gradient(180deg, #f472b6 0 8px, #fbbf24 8px 40px, #e2e8f0 40px);
   transform: rotate(24deg);
+  filter: drop-shadow(0 6px 8px rgba(0,0,0,.5));
   animation: wclPencil 2.6s ease-in-out infinite;
 }
 @keyframes wclPencil {
@@ -403,11 +416,11 @@
   70%, 100% { transform: translate(4px,-6px) rotate(24deg); opacity: 0; }
 }
 .wcl-save .done {
-  position: absolute; top: 6px; right: 6px; width: 34px; height: 34px; border-radius: 50%;
+  position: absolute; top: 2px; right: 10px; width: 38px; height: 38px; border-radius: 50%;
   background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff; font-size: 1.1rem; font-weight: 900;
+  color: #fff; font-size: 1.15rem; font-weight: 900;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 18px rgba(16,185,129,.8);
+  box-shadow: 0 0 22px rgba(16,185,129,.9), 0 0 0 4px rgba(16,185,129,.18);
   animation: wclDonePop 2.6s ease-in-out infinite;
 }
 .wcl-save .done::after { content: '✓'; }
@@ -416,6 +429,21 @@
   70% { transform: scale(1.15); opacity: 1; }
   80%, 92% { transform: scale(1); opacity: 1; }
   100% { transform: scale(0); opacity: 0; }
+}
+/* Orbiting magic sparkles — the 3D creative touch (no cubes) */
+.wcl-save .spark {
+  position: absolute; font-size: 1rem; line-height: 1;
+  background: linear-gradient(135deg, #fde68a, #f472b6);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 6px rgba(244,114,182,.8));
+  animation: wclSpark 2.2s ease-in-out infinite;
+}
+.wcl-save .spark.s1 { top: 8px; left: 4px; }
+.wcl-save .spark.s2 { top: 44px; right: 0; animation-delay: .7s; font-size: .8rem; }
+.wcl-save .spark.s3 { bottom: 6px; left: 0; animation-delay: 1.4s; font-size: .7rem; }
+@keyframes wclSpark {
+  0%, 100% { transform: translateZ(0) scale(.6) rotate(0deg); opacity: .3; }
+  50% { transform: translateY(-10px) scale(1.25) rotate(25deg); opacity: 1; }
 }
 
 /* ═════════ RADAR SCENE (loading data) ═════════ */
@@ -433,3 +461,75 @@
 .wcl-radar .blip.b1 { top: 30px; left: 66px; }
 .wcl-radar .blip.b2 { top: 74px; left: 34px; animation-delay: .9s; }
 @keyframes wclBlip { 0%, 100% { opacity: .15; transform: scale(.7); } 12% { opacity: 1; transform: scale(1.3); } 30% { opacity: .4; } }
+
+/* ═════════ DB SCENE (secure database connect — 3D, no cubes) ═════════ */
+.wcl-db { position: relative; width: 160px; height: 150px; flex-shrink: 0; perspective: 700px; animation: wclDbFloat 3.2s ease-in-out infinite; }
+@keyframes wclDbFloat { 0%, 100% { transform: translateY(5px); } 50% { transform: translateY(-7px); } }
+.wcl-db .cyl-top {
+  position: absolute; top: 26px; left: 40px; width: 80px; height: 26px; border-radius: 50%; z-index: 3;
+  background: radial-gradient(ellipse at 50% 35%, #e0f2fe 0%, #38bdf8 45%, #0369a1 100%);
+  box-shadow: 0 0 22px rgba(56,189,248,.85), inset 0 2px 5px rgba(255,255,255,.75);
+  animation: wclDbGlow 2s ease-in-out infinite alternate;
+}
+@keyframes wclDbGlow { from { box-shadow: 0 0 12px rgba(56,189,248,.55), inset 0 2px 5px rgba(255,255,255,.75); } to { box-shadow: 0 0 28px rgba(56,189,248,1), inset 0 2px 5px rgba(255,255,255,.9); } }
+.wcl-db .cyl-body {
+  position: absolute; top: 38px; left: 40px; width: 80px; height: 72px; z-index: 2;
+  background: linear-gradient(180deg, #0284c7 0%, #0c4a6e 60%, #082f49 100%);
+  border-radius: 0 0 40px 40px / 0 0 13px 13px;
+  box-shadow: inset -12px 0 20px rgba(0,0,0,.5), inset 10px 0 16px rgba(125,211,252,.18), 0 16px 32px rgba(0,0,0,.55);
+  overflow: hidden;
+}
+.wcl-db .cyl-body::before, .wcl-db .cyl-body::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 13px; border-radius: 50%;
+  border: 2px solid rgba(125,211,252,.55); border-top: none; border-left: none; border-right: none;
+}
+.wcl-db .cyl-body::before { top: 16px; }
+.wcl-db .cyl-body::after { top: 38px; opacity: .7; }
+.wcl-db .cyl-base {
+  position: absolute; top: 104px; left: 46px; width: 68px; height: 14px; border-radius: 50%; z-index: 1;
+  background: radial-gradient(ellipse, rgba(2,132,199,.55) 0%, transparent 70%);
+  filter: blur(3px);
+}
+/* 3D orbit ring with data packets circling the cylinder */
+.wcl-db .orbit {
+  position: absolute; top: 30px; left: 8px; width: 144px; height: 92px; z-index: 4;
+  border: 1.5px solid rgba(52,211,153,.55); border-radius: 50%;
+  transform: rotateX(72deg);
+  animation: wclDbSpin 2.6s linear infinite;
+  box-shadow: 0 0 14px rgba(52,211,153,.25);
+}
+@keyframes wclDbSpin { to { transform: rotateX(72deg) rotateZ(360deg); } }
+.wcl-db .orbit i { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #6ee7b7; box-shadow: 0 0 12px #34d399, 0 0 22px rgba(52,211,153,.6); }
+.wcl-db .orbit i:nth-child(1) { top: -5px; left: 50%; }
+.wcl-db .orbit i:nth-child(2) { bottom: -5px; left: 50%; animation-delay: 1.3s; background: #93c5fd; box-shadow: 0 0 12px #38bdf8, 0 0 22px rgba(56,189,248,.6); }
+/* Rising sync particles */
+.wcl-db .pkt i {
+  position: absolute; bottom: 44px; width: 6px; height: 6px; border-radius: 2px;
+  background: linear-gradient(135deg, #6ee7b7, #38bdf8);
+  box-shadow: 0 0 8px rgba(56,189,248,.9);
+  animation: wclPkt 1.9s ease-out infinite;
+}
+.wcl-db .pkt i:nth-child(1) { left: 56px; }
+.wcl-db .pkt i:nth-child(2) { left: 78px; animation-delay: .6s; }
+.wcl-db .pkt i:nth-child(3) { left: 98px; animation-delay: 1.2s; }
+@keyframes wclPkt {
+  0% { transform: translateY(0) scale(.6); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: translateY(-52px) scale(1.1); opacity: 0; }
+}
+/* Connected check badge */
+.wcl-db .ok {
+  position: absolute; bottom: 22px; right: 12px; width: 36px; height: 36px; border-radius: 50%; z-index: 5;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff; font-size: 1.05rem; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 20px rgba(16,185,129,.9), 0 0 0 4px rgba(16,185,129,.18);
+  animation: wclDbOk 3.2s ease-in-out infinite;
+}
+.wcl-db .ok::after { content: '✓'; }
+@keyframes wclDbOk {
+  0%, 52% { transform: scale(0); opacity: 0; }
+  64% { transform: scale(1.2); opacity: 1; }
+  74%, 90% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}

@@ -783,14 +783,58 @@ label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);text-tra
     echo '<script src="../assets/js/loader-3d.js"></script>';
     echo '</head><body><div class="layout">';
     // Page-load overlay (every admin page) + auto-fading flashes + form loaders
+    // ★ Contextual boot text: shows WHICH tab is loading
+    $bootTitle = htmlspecialchars($title);
     echo '<div id="pa-boot" style="position:fixed;inset:0;z-index:99997;background:#0a0d14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;animation:paBootAutoHide .5s ease 6s forwards;">'
        . '<div class="wcl-mini-house" style="margin:0;"><i class="walls"></i><i class="roof"></i><i class="door"></i></div>'
-       . '<div style="color:#fff;font-weight:800;font-size:.95rem;">Loading<span class="wcl-sub" style="display:inline;"></span></div>'
+       . '<div style="color:#fff;font-weight:800;font-size:.95rem;">Loading ' . $bootTitle . '<span class="wcl-sub" style="display:inline;"></span></div>'
        . '</div>';
     echo '<script>'
        . 'window.addEventListener("load",function(){var b=document.getElementById("pa-boot");if(b)b.style.display="none";});'
        . 'setTimeout(function(){var b=document.getElementById("pa-boot");if(b)b.style.display="none";},5000);'
        . 'setTimeout(function(){document.querySelectorAll(".alert").forEach(function(a){a.style.opacity="0";setTimeout(function(){a.style.display="none";},500);});},5000);'
-       . 'document.addEventListener("submit",function(e){var f=e.target;if(f&&f.dataset&&f.dataset.wcl&&window.Loader3D){Loader3D.show(f.dataset.wcl,"Please wait",f.dataset.wclType||"mail");}},true);'
+       // ★ Situation-based 3D scene per admin tab (sidebar navigation)
+       . 'var PA_TAB_LOADERS={'
+       . '"index.php":["Opening dashboard…","Loading command center","home"],'
+       . '"tenants.php":["Opening tenants…","Loading tenant directory","home"],'
+       . '"plans.php":["Opening plans…","Loading pricing plans","save"],'
+       . '"billing.php":["Opening billing…","Loading subscriptions","db"],'
+       . '"deployments.php":["Opening deployments…","Loading build history","rocket"],'
+       . '"domains.php":["Opening domains…","Checking SSL status","lock"],'
+       . '"ai-usage.php":["Opening AI usage…","Loading token stats","radar"],'
+       . '"tickets.php":["Opening tickets…","Loading support inbox","mail"],'
+       . '"notifications.php":["Opening notifications…","Loading broadcast hub","mail"],'
+       . '"send-email.php":["Opening composer…","Preparing email editor","mail"],'
+       . '"customers.php":["Opening customers…","Loading accounts","home"],'
+       . '"customer-view.php":["Opening customer…","Loading account details","home"],'
+       . '"audit-logs.php":["Opening audit trail…","Loading activity logs","radar"],'
+       . '"team.php":["Opening team…","Loading roles","lock"]};'
+       . 'document.addEventListener("click",function(e){'
+       . 'var a=e.target&&e.target.closest?e.target.closest("aside a[href]"):null;'
+       . 'if(!a||!a.getAttribute("href"))return;'
+       . 'var href=a.getAttribute("href");'
+       // logout → secure sign-out scene
+       . 'if(href.indexOf("action=logout")!==-1){e.preventDefault();try{if(window.Loader3D)Loader3D.show("Signing you out…","Securing your session","lock");}catch(x){}setTimeout(function(){window.location.href=a.href;},950);return;}'
+       . 'var file=href.split("/").pop().split("?")[0];'
+       . 'var m=PA_TAB_LOADERS[file];'
+       . 'if(!m||!window.Loader3D)return;'
+       // active tab → no reload needed
+       . 'if(a.style.background&&a.style.background.indexOf(".18")!==-1)return;'
+       . 'e.preventDefault();'
+       . 'try{Loader3D.show(m[0],m[1],m[2]);}catch(x){}'
+       . 'setTimeout(function(){window.location.href=a.href;},700);'
+       . '},true);'
+       // ★ ALL POST forms get a contextual loader (data-wcl overrides)
+       . 'document.addEventListener("submit",function(e){'
+       . 'var f=e.target;if(!f||!f.dataset||!window.Loader3D)return;'
+       . 'if(f.method&&f.method.toUpperCase()==="GET")return;'
+       . 'if(f.dataset.wcl){Loader3D.show(f.dataset.wcl,"Please wait",f.dataset.wclType||"mail");return;}'
+       . 'var act=(f.getAttribute("action")||location.pathname).split("/").pop().split("?")[0];'
+       . 'var fm={"tickets.php":["Sending reply…","Delivering to customer","mail"],"deployments.php":["Starting rollback…","Restoring snapshot","rocket"],"billing.php":["Updating billing…","Syncing subscriptions","db"],"team.php":["Updating team…","Saving roles","lock"],"domains.php":["Updating domain…","Checking SSL","lock"],"plans.php":["Saving plans…","Updating pricing","save"],"ai-usage.php":["Resetting counters…","Clearing usage stats","radar"],"send-email.php":["Sending email…","Delivering message","mail"],"notifications.php":["Sending notifications…","Broadcasting alert","mail"],"customer-view.php":["Sending notification…","Notifying customer","mail"]};'
+       . 'var mm=fm[act]||["Working…","Please wait","save"];'
+       . 'try{Loader3D.show(mm[0],mm[1],mm[2]);}catch(x){}'
+       . '},true);'
+       // ★ Delayed fullscreen helper for quick AJAX calls (no flash if fast)
+       . 'window.paAjaxLoad=function(msg,sub,scene){var t=setTimeout(function(){try{if(window.Loader3D)Loader3D.show(msg||"Working…",sub||"Please wait",scene||"radar");}catch(x){}},450);return function(){clearTimeout(t);try{if(window.Loader3D)Loader3D.hide();}catch(x){}};};'
        . '</script>';
 }
