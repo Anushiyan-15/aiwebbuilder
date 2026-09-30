@@ -11,6 +11,25 @@
  */
 require_once __DIR__ . '/config.php';
 
+// ─── Customer ownership gate ───────────────────────────────
+if (session_status() === PHP_SESSION_NONE) session_start();
+// No-cache: logout ku pirahu Back press panna stale manager vara kudathu
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
+$smCustomerEmail = strtolower(trim($_SESSION['customer_user']['email'] ?? ''));
+function smOwnerEmail(?array $o): string {
+    if (!$o) return '';
+    return strtolower(trim($o['admin_email'] ?? ($o['client_email'] ?? '')));
+}
+function smDeny(string $msg): void {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'error' => $msg . ' Please log in with the owner email.']);
+    exit;
+}
+
 // ─── Helpers ───────────────────────────────────────────────
 function smClean(string $v): string {
     return htmlspecialchars(strip_tags(trim($v)), ENT_QUOTES, 'UTF-8');
@@ -42,6 +61,8 @@ if ($action === 'get_order') {
     $oid = smClean($_GET['order_id'] ?? '');
     $order = loadOrder($oid);
     if (!$order) { echo json_encode(['success' => false, 'error' => 'Order not found']); exit; }
+    $owner = smOwnerEmail($order);
+    if ($owner && $owner !== $smCustomerEmail) smDeny('Access denied for this project.');
     echo json_encode([
         'success'          => true,
         'order_id'         => $order['order_id'],
@@ -88,6 +109,8 @@ if ($action === 'add_feature' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $order = loadOrder($oid);
     if (!$order) { echo json_encode(['success' => false, 'error' => 'Order not found']); exit; }
+    $owner = smOwnerEmail($order);
+    if ($owner && $owner !== $smCustomerEmail) smDeny('Access denied for this project.');
     if (!($order['site_active'] ?? true)) {
         echo json_encode(['success' => false, 'error' => 'Site is currently suspended. Please renew your subscription first.']); exit;
     }
@@ -154,6 +177,12 @@ if ($action === 'add_feature' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 $orderId = smClean($_GET['order_id'] ?? '');
 $order   = $orderId ? loadOrder($orderId) : null;
 $notFound = !$order;
+$ownerDenied = false;
+if ($order) {
+    $owner = smOwnerEmail($order);
+    if ($owner && $owner !== $smCustomerEmail) { $ownerDenied = true; $order = null; $notFound = true; }
+}
+if (!$smCustomerEmail && $orderId) { $ownerDenied = true; $order = null; $notFound = true; }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -305,6 +334,7 @@ a{text-decoration:none;color:inherit}
 .stat-card .stat-val{font-size:1.6rem;font-weight:900;color:#fff;display:block}
 .stat-card .stat-lbl{font-size:.74rem;color:#64748b;font-weight:700;margin-top:.15rem}
 </style>
+<link rel="stylesheet" href="<?= defined('SITE_URL') ? SITE_URL : '' ?>/assets/css/loader-3d.css">
 </head>
 <body>
 
@@ -317,14 +347,22 @@ a{text-decoration:none;color:inherit}
 </div>
 
 <?php if ($notFound): ?>
-<!-- Not Found -->
+<!-- Not Found / Access Denied -->
 <div class="wrap">
   <div class="not-found">
-    <div class="icon">🔍</div>
-    <h2>Website Not Found</h2>
-    <p>The order ID you provided doesn't match any published website.<br>Check your email for the correct link.</p>
-    <br><br>
-    <a href="<?= defined('SITE_URL') ? SITE_URL : '' ?>/builder.php" class="btn btn-primary">← Build a New Website</a>
+    <?php if (!empty($ownerDenied)): ?>
+      <div class="icon">🔒</div>
+      <h2>Login Required</h2>
+      <p>This project belongs to another account.<br>Please log in with the owner email to manage it.</p>
+      <br><br>
+      <a href="<?= defined('SITE_URL') ? SITE_URL : '' ?>/customer-portal.php" class="btn btn-primary">Login to My Projects →</a>
+    <?php else: ?>
+      <div class="icon">🔍</div>
+      <h2>Website Not Found</h2>
+      <p>The order ID you provided doesn't match any published website.<br>Check your email for the correct link.</p>
+      <br><br>
+      <a href="<?= defined('SITE_URL') ? SITE_URL : '' ?>/builder.php" class="btn btn-primary">← Build a New Website</a>
+    <?php endif; ?>
   </div>
 </div>
 <?php else: ?>
@@ -466,9 +504,14 @@ a{text-decoration:none;color:inherit}
 
     <!-- Progress -->
     <div class="progress-wrap" id="feature-progress">
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+        <div class="wcl-mini-house" style="margin:0;"><i class="walls"></i><i class="roof"></i><i class="door"></i></div>
+        <div>
+          <div class="progress-stage" id="feat-prog-stage">AI is analyzing your request…</div>
+          <div class="progress-msg" id="feat-prog-msg">This usually takes 30–60 seconds. Please wait.</div>
+        </div>
+      </div>
       <div class="progress-bar"><div class="progress-fill" id="feat-prog-bar"></div></div>
-      <div class="progress-stage" id="feat-prog-stage">AI is analyzing your request…</div>
-      <div class="progress-msg" id="feat-prog-msg">This usually takes 30–60 seconds. Please wait.</div>
     </div>
 
     <!-- Success -->
@@ -513,6 +556,7 @@ a{text-decoration:none;color:inherit}
 
 <script src="https://js.puter.com/v2/"></script>
 <script src="<?= defined('SITE_URL') ? SITE_URL : '' ?>/assets/js/puter-service.js"></script>
+<script src="<?= defined('SITE_URL') ? SITE_URL : '' ?>/assets/js/loader-3d.js"></script>
 <script src="<?= defined('SITE_URL') ? SITE_URL : '' ?>/assets/js/ai-admin-generator.js"></script>
 <script>
 /* ════ CONFIG ════ */
@@ -525,21 +569,39 @@ let orderData = null;
 /* ════ INIT ════ */
 document.addEventListener('DOMContentLoaded', async () => {
   if (!ORDER_ID) return;
+  if (window.Loader3D) Loader3D.show('Loading website…', 'Fetching project data', 'radar');
   initTabs();
-  await loadOrder();
+  try { await loadOrder(); } finally { if (window.Loader3D) Loader3D.hide(); }
   loadNotifications();
 });
 
 /* ════ TABS ════ */
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+  const panel = document.getElementById('tab-' + tabId);
+  if (btn && !btn.disabled) { btn.classList.add('active'); }
+  if (panel) panel.classList.add('active');
+}
+
 function initTabs() {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tab-' + tab)?.classList.add('active');
+      if (btn.disabled) return;
+      switchTab(btn.dataset.tab);
+      history.replaceState(null, '', '#' + btn.dataset.tab);
     });
+  });
+
+  // Activate tab from URL hash if present
+  const hash = window.location.hash.replace('#', '');
+  if (hash) { setTimeout(() => switchTab(hash), 100); }
+
+  // Support hashchange (e.g. browser back/forward)
+  window.addEventListener('hashchange', () => {
+    const h = window.location.hash.replace('#', '');
+    if (h) switchTab(h);
   });
 }
 
@@ -753,7 +815,7 @@ async function addFeature() {
 
   const btn = document.getElementById('btn-add-feature');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Generating…';
+  btn.innerHTML = '<span class="wcl-bblocks"><i></i><i></i><i></i></span>Generating…';
   document.getElementById('feature-progress').classList.add('active');
   document.getElementById('feature-success').classList.remove('show');
 

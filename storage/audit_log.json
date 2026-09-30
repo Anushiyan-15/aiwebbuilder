@@ -1,5 +1,115 @@
 [
     {
+        "id": "AUD-20260929-172035-7a4f",
+        "timestamp": "2026-09-29 17:20:35",
+        "admin_user": "billing_admin",
+        "admin_role": "billing",
+        "action": "admin_login",
+        "order_id": "\u2014",
+        "detail": "Admin 'billing_admin' logged in with role 'billing'",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260929-152205-581a",
+        "timestamp": "2026-09-29 15:22:05",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "admin_login",
+        "order_id": "\u2014",
+        "detail": "Admin 'superadmin' logged in with role 'superadmin'",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260929-151359-c6a1",
+        "timestamp": "2026-09-29 15:13:59",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "admin_login",
+        "order_id": "\u2014",
+        "detail": "Admin 'superadmin' logged in with role 'superadmin'",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260929-151033-c6f3",
+        "timestamp": "2026-09-29 15:10:33",
+        "admin_user": "billing_admin",
+        "admin_role": "billing",
+        "action": "admin_login",
+        "order_id": "\u2014",
+        "detail": "Admin 'billing_admin' logged in with role 'billing'",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260929-145202-8734",
+        "timestamp": "2026-09-29 14:52:02",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "email_queued",
+        "order_id": "WBL-2026-F2568D",
+        "detail": "Email to senthustr01@gmail.com: \ud83d\udcb3 Your Monthly Website Hosting Renewal is Due",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260929-140822-5d9f",
+        "timestamp": "2026-09-29 14:08:22",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "admin_login",
+        "order_id": "\u2014",
+        "detail": "Admin 'superadmin' logged in with role 'superadmin'",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260929-130311-c861",
+        "timestamp": "2026-09-29 13:03:11",
+        "admin_user": "dev_admin",
+        "admin_role": "developer",
+        "action": "admin_login",
+        "order_id": "\u2014",
+        "detail": "Admin 'dev_admin' logged in with role 'developer'",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260929-130131-1fe9",
+        "timestamp": "2026-09-29 13:01:31",
+        "admin_user": "billing_admin",
+        "admin_role": "billing",
+        "action": "admin_login",
+        "order_id": "\u2014",
+        "detail": "Admin 'billing_admin' logged in with role 'billing'",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260929-130047-4513",
+        "timestamp": "2026-09-29 13:00:47",
+        "admin_user": "support_admin",
+        "admin_role": "support",
+        "action": "admin_login",
+        "order_id": "\u2014",
+        "detail": "Admin 'support_admin' logged in with role 'support'",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260929-125922-c345",
+        "timestamp": "2026-09-29 12:59:22",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "admin_login",
+        "order_id": "\u2014",
+        "detail": "Admin 'superadmin' logged in with role 'superadmin'",
+        "ip": "::1"
+    },
+    {
+        "id": "AUD-20260928-153910-e6a6",
+        "timestamp": "2026-09-28 15:39:10",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "admin_login",
+        "order_id": "\u2014",
+        "detail": "Admin 'superadmin' logged in with role 'superadmin'",
+        "ip": "::1"
+    },
+    {
         "id": "AUD-20260928-140454-5816",
         "timestamp": "2026-09-28 14:04:54",
         "admin_user": "superadmin",

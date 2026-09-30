@@ -31,11 +31,9 @@ if (empty($apiKey) || $apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
     $apiKey = defined('GEMINI_API_KEY') ? GEMINI_API_KEY : '';
 }
 
-// ── CRITICAL FIX: use a REAL Gemini model name ──
-// 'gemini-3.6-flash' does NOT exist. Use a real model:
-$resolvedModel = (defined('GEMINI_MODEL') && GEMINI_MODEL && GEMINI_MODEL !== 'gemini-3.6-flash')
+$resolvedModel = (defined('GEMINI_MODEL') && GEMINI_MODEL)
     ? GEMINI_MODEL
-    : 'gemini-2.5-flash';
+    : 'gemini-3.8-flash';
 
 // ── Sanitize helper ───────────────────────────────────────────
 $sanitize = function ($v) {
@@ -43,17 +41,17 @@ $sanitize = function ($v) {
 };
 
 $d = $req['data'] ?? [];
-$bizName     = $sanitize($d['biz_name'] ?? 'Apex Studio');
+$bizName     = $sanitize($d['biz_name'] ?? $req['biz_name'] ?? 'Apex Studio');
 if (empty($bizName)) $bizName = 'Apex Studio';
-$bizType     = $sanitize($d['biz_type'] ?? 'Creative Agency');
-$bizTagline  = $sanitize($d['biz_tagline'] ?? 'Elevate your digital presence with modern web solutions.');
-$bizAudience = $sanitize($d['biz_audience'] ?? 'Modern businesses, entrepreneurs, and clients seeking premium quality.');
-$bizServices = $sanitize($d['biz_services'] ?? 'Web Design, Brand Strategy, Digital Marketing, Custom Development');
-$style       = $sanitize($d['design_style'] ?? 'modern');
-$palette     = $sanitize($d['color_palette'] ?? 'purple');
-$bizPhone    = $sanitize($d['biz_phone'] ?? '+1 (555) 234-5678');
-$bizEmail    = $sanitize($d['biz_email'] ?? 'contact@' . strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $bizName)) . '.com');
-$bizAddress  = $sanitize($d['biz_address'] ?? '100 Innovation Blvd, Suite 400, Tech City');
+$bizType     = $sanitize($d['biz_type'] ?? $req['biz_type'] ?? 'Creative Agency');
+$bizTagline  = $sanitize($d['biz_tagline'] ?? $req['biz_tagline'] ?? 'Elevate your digital presence with modern web solutions.');
+$bizAudience = $sanitize($d['biz_audience'] ?? $req['biz_audience'] ?? 'Modern businesses, entrepreneurs, and clients seeking premium quality.');
+$bizServices = $sanitize($d['biz_services'] ?? $req['biz_services'] ?? 'Web Design, Brand Strategy, Digital Marketing, Custom Development');
+$style       = $sanitize($d['design_style'] ?? $req['design_style'] ?? $req['style'] ?? 'modern');
+$palette     = $sanitize($d['color_palette'] ?? $req['color_palette'] ?? $req['palette'] ?? 'purple');
+$bizPhone    = $sanitize($d['biz_phone'] ?? $req['biz_phone'] ?? '+1 (555) 234-5678');
+$bizEmail    = $sanitize($d['biz_email'] ?? $req['biz_email'] ?? ('contact@' . strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $bizName)) . '.com'));
+$bizAddress  = $sanitize($d['biz_address'] ?? $req['biz_address'] ?? '100 Innovation Blvd, Suite 400, Tech City');
 
 $colorPresets = [
     'purple' => ['primary' => '#6366f1', 'secondary' => '#a855f7', 'accent' => '#38bdf8', 'gradient' => 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', 'light' => '#ede9fe'],
@@ -212,9 +210,414 @@ JS;
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  Design 1: Modern Minimal & Crisp (Light Theme)
+//  Niche Stock Assets & Google Maps Embed
 // ═══════════════════════════════════════════════════════════════
-function buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp) {
+function getNicheAssets($bizType, $bizName) {
+    $t = strtolower($bizType . ' ' . $bizName);
+    if (preg_match('/tech|software|app|saas|ai|digital|cyber|cloud|it\b|developer|data/i', $t)) {
+        return [
+            'hero' => 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1000&q=80',
+            'showcase1' => 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80',
+            'showcase2' => 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
+            'tag' => 'Next-Gen Technology'
+        ];
+    } elseif (preg_match('/restaurant|cafe|food|dining|bakery|bar|coffee|bistro|culinary/i', $t)) {
+        return [
+            'hero' => 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1000&q=80',
+            'showcase1' => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
+            'showcase2' => 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
+            'tag' => 'Artisanal Dining & Hospitality'
+        ];
+    } elseif (preg_match('/fitness|gym|workout|trainer|crossfit|health|wellness|yoga|physio|sport/i', $t)) {
+        return [
+            'hero' => 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1000&q=80',
+            'showcase1' => 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=800&q=80',
+            'showcase2' => 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?auto=format&fit=crop&w=800&q=80',
+            'tag' => 'Elite Health & Performance'
+        ];
+    } elseif (preg_match('/dental|clinic|doctor|medical|hospital|therapy|care|pharma/i', $t)) {
+        return [
+            'hero' => 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=1000&q=80',
+            'showcase1' => 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80',
+            'showcase2' => 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=800&q=80',
+            'tag' => 'Modern Healthcare & Wellness'
+        ];
+    } elseif (preg_match('/law|legal|attorney|advocate|court|justice/i', $t)) {
+        return [
+            'hero' => 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1453733190071-0d931bd90b7b?auto=format&fit=crop&w=1000&q=80',
+            'showcase1' => 'https://images.unsplash.com/photo-1479142506502-19b3a3b7ff33?auto=format&fit=crop&w=800&q=80',
+            'showcase2' => 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?auto=format&fit=crop&w=800&q=80',
+            'tag' => 'Trusted Legal Counsel'
+        ];
+    } elseif (preg_match('/real estate|realtor|property|architecture|construction|builder|home|interior/i', $t)) {
+        return [
+            'hero' => 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1000&q=80',
+            'showcase1' => 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80',
+            'showcase2' => 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
+            'tag' => 'Prime Architectural Spaces'
+        ];
+    } elseif (preg_match('/fashion|clothing|apparel|jewelry|boutique|beauty|salon|style/i', $t)) {
+        return [
+            'hero' => 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1000&q=80',
+            'showcase1' => 'https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=800&q=80',
+            'showcase2' => 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=800&q=80',
+            'tag' => 'Haute Couture & Elegance'
+        ];
+    } else {
+        return [
+            'hero' => 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80',
+            'about' => 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1000&q=80',
+            'showcase1' => 'https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?auto=format&fit=crop&w=800&q=80',
+            'showcase2' => 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80',
+            'tag' => 'Strategic Growth & Craft'
+        ];
+    }
+}
+
+function getMapEmbed($bizAddress) {
+    $bizAddress = trim($bizAddress ?? '');
+    if (empty($bizAddress) || strtolower($bizAddress) === '(unspecified)') {
+        return '';
+    }
+    $enc = urlencode($bizAddress);
+    return <<<MAP
+<div class="map-card" style="margin-top:1.75rem; border-radius:18px; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 8px 24px rgba(0,0,0,0.06);">
+  <iframe title="Business location" width="100%" height="220" style="border:0; display:block;" loading="lazy" allowfullscreen src="https://www.google.com/maps?q={$enc}&output=embed"></iframe>
+  <div style="padding:0.75rem 1rem; background:#f8fafc; display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:600; color:#475569;">
+    <span>📍 {$bizAddress}</span>
+    <a href="https://www.google.com/maps/dir/?api=1&destination={$enc}" target="_blank" rel="noopener" style="color:var(--primary); font-weight:700;">Get Directions &rarr;</a>
+  </div>
+</div>
+MAP;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Premium Helpers: Showcase, Testimonials, FAQ Accordion
+// ═══════════════════════════════════════════════════════════════
+
+function getShowcaseHtml($bizName, $bizType, $style, $cp, $assets) {
+    $img1 = $assets['showcase1'] ?? 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80';
+    $img2 = $assets['showcase2'] ?? 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80';
+    $tag = $assets['tag'] ?? 'Featured Work';
+
+    if ($style === 'light') {
+        return <<<SHOW
+<section class="section" id="showcase">
+  <div class="section-header">
+    <div class="section-tag">Recent Work</div>
+    <h2 class="section-title">Curated Excellence & Impact</h2>
+    <p class="section-sub">A glimpse into signature projects delivered with measurable ROI.</p>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:2rem;">
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:20px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.04); transition:transform 0.25s;">
+      <div style="height:240px; overflow:hidden;">
+        <img src="{$img1}" alt="{$bizName} flagship project" style="width:100%; height:100%; object-fit:cover;">
+      </div>
+      <div style="padding:1.75rem;">
+        <span style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--primary); letter-spacing:0.08em; background:var(--primary-light); padding:0.25rem 0.65rem; border-radius:999px;">{$tag}</span>
+        <h3 style="font-size:1.3rem; font-weight:800; color:#0f172a; margin:0.8rem 0 0.4rem;">Enterprise Transformation</h3>
+        <p style="font-size:0.9rem; color:#64748b; line-height:1.6;">Re-engineered acquisition pipeline resulting in +210% inbound pipeline growth and user retention.</p>
+      </div>
+    </div>
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:20px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.04); transition:transform 0.25s;">
+      <div style="height:240px; overflow:hidden;">
+        <img src="{$img2}" alt="{$bizName} client project" style="width:100%; height:100%; object-fit:cover;">
+      </div>
+      <div style="padding:1.75rem;">
+        <span style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--primary); letter-spacing:0.08em; background:var(--primary-light); padding:0.25rem 0.65rem; border-radius:999px;">High Velocity</span>
+        <h3 style="font-size:1.3rem; font-weight:800; color:#0f172a; margin:0.8rem 0 0.4rem;">Modern Brand Deployment</h3>
+        <p style="font-size:0.9rem; color:#64748b; line-height:1.6;">Delivered bespoke web application with sub-second page loads, intuitive UI, and seamless UX.</p>
+      </div>
+    </div>
+  </div>
+</section>
+SHOW;
+    } elseif ($style === 'bold') {
+        return <<<SHOW
+<section class="section" id="showcase">
+  <h2 class="section-title">Proven Track Record</h2>
+  <p class="section-subtitle">Real outcomes engineered for ambitious organizations that refuse to blend in.</p>
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:2rem;">
+    <div style="background:#fff; border:2.5px solid #0f172a; border-radius:20px; overflow:hidden; box-shadow:6px 6px 0px #0f172a;">
+      <img src="{$img1}" alt="{$bizName} case study 1" style="width:100%; height:240px; object-fit:cover; border-bottom:2.5px solid #0f172a;">
+      <div style="padding:1.75rem;">
+        <div style="display:inline-block; background:var(--primary-light); color:var(--primary); font-weight:800; font-size:0.78rem; padding:0.2rem 0.7rem; border-radius:999px; border:1px solid var(--primary); margin-bottom:0.6rem;">{$tag}</div>
+        <h3 style="font-size:1.4rem; font-weight:800; font-family:'Space Grotesk'; margin-bottom:0.5rem;">Next-Gen Market Expansion</h3>
+        <p style="font-size:0.95rem; color:#475569; line-height:1.6;">Scaled digital infrastructure to handle 50,000+ daily interactions with zero latency.</p>
+      </div>
+    </div>
+    <div style="background:#fff; border:2.5px solid #0f172a; border-radius:20px; overflow:hidden; box-shadow:6px 6px 0px #0f172a;">
+      <img src="{$img2}" alt="{$bizName} case study 2" style="width:100%; height:240px; object-fit:cover; border-bottom:2.5px solid #0f172a;">
+      <div style="padding:1.75rem;">
+        <div style="display:inline-block; background:var(--primary-light); color:var(--primary); font-weight:800; font-size:0.78rem; padding:0.2rem 0.7rem; border-radius:999px; border:1px solid var(--primary); margin-bottom:0.6rem;">Rapid Scalability</div>
+        <h3 style="font-size:1.4rem; font-weight:800; font-family:'Space Grotesk'; margin-bottom:0.5rem;">Conversion Architecture</h3>
+        <p style="font-size:0.95rem; color:#475569; line-height:1.6;">Re-engineered customer onboarding funnel delivering 3.4x higher activation.</p>
+      </div>
+    </div>
+  </div>
+</section>
+SHOW;
+    } else {
+        return <<<SHOW
+<section class="section" id="showcase">
+  <div class="section-tag">Portfolio of Distinction</div>
+  <h2 class="section-head">Bespoke Case Studies</h2>
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:2.5rem;">
+    <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:16px; overflow:hidden; backdrop-filter:blur(14px);">
+      <img src="{$img1}" alt="{$bizName} showcase" style="width:100%; height:250px; object-fit:cover; filter:brightness(0.85);">
+      <div style="padding:2rem;">
+        <span style="font-size:0.72rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--primary); font-weight:700;">{$tag}</span>
+        <h3 style="font-size:1.3rem; color:#fff; font-family:'Cinzel',serif; margin:0.8rem 0 0.5rem;">The Sovereign Platform</h3>
+        <p style="font-size:0.9rem; color:#94a3b8; line-height:1.7;">A flagship digital identity system architected for tier-one global clientele.</p>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:16px; overflow:hidden; backdrop-filter:blur(14px);">
+      <img src="{$img2}" alt="{$bizName} showcase" style="width:100%; height:250px; object-fit:cover; filter:brightness(0.85);">
+      <div style="padding:2rem;">
+        <span style="font-size:0.72rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--primary); font-weight:700;">Private Advisory</span>
+        <h3 style="font-size:1.3rem; color:#fff; font-family:'Cinzel',serif; margin:0.8rem 0 0.5rem;">Autonomous Digital Assets</h3>
+        <p style="font-size:0.9rem; color:#94a3b8; line-height:1.7;">End-to-end bespoke implementation with bank-grade security and uncompromising aesthetics.</p>
+      </div>
+    </div>
+  </div>
+</section>
+SHOW;
+    }
+}
+
+function getTestimonialsHtml($bizName, $bizType, $style, $cp) {
+    $reviews = [
+        [
+            'quote' => "Partnering with {$bizName} was a game-changer. Their strategic mastery in {$bizType} and obsessive attention to detail doubled our conversion rates within weeks.",
+            'author' => 'Elena Rostova',
+            'role' => 'VP of Operations, NovaCorp',
+            'avatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+            'rating' => '★★★★★'
+        ],
+        [
+            'quote' => "The velocity, elegance, and precision delivered by {$bizName} surpassed every benchmark. Our clients constantly compliment our new presence.",
+            'author' => 'Marcus Sterling',
+            'role' => 'Managing Director, Sterling Group',
+            'avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+            'rating' => '★★★★★'
+        ],
+        [
+            'quote' => "Simply the highest standard of execution in {$bizType}. Responsive, visionary, and thoroughly dependable from kickoff to launch.",
+            'author' => 'Sophia Vance',
+            'role' => 'Chief Strategy Officer, Aurelia',
+            'avatar' => 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80',
+            'rating' => '★★★★★'
+        ]
+    ];
+
+    if ($style === 'light') {
+        $cards = '';
+        foreach ($reviews as $r) {
+            $cards .= <<<CARD
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:18px; padding:2rem; box-shadow:0 6px 24px rgba(0,0,0,0.04); display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="color:#f59e0b; font-size:1.1rem; margin-bottom:1rem; letter-spacing:2px;">{$r['rating']}</div>
+                <p style="font-size:0.95rem; color:#475569; line-height:1.7; font-style:italic; margin-bottom:1.5rem;">"{$r['quote']}"</p>
+              </div>
+              <div style="display:flex; align-items:center; gap:0.9rem; border-top:1px solid #f1f5f9; padding-top:1rem;">
+                <img src="{$r['avatar']}" alt="{$r['author']}" style="width:46px; height:46px; border-radius:50%; object-fit:cover; border:2px solid var(--primary);">
+                <div>
+                  <strong style="display:block; font-size:0.92rem; color:#0f172a;">{$r['author']}</strong>
+                  <span style="font-size:0.8rem; color:#94a3b8;">{$r['role']}</span>
+                </div>
+              </div>
+            </div>
+CARD;
+        }
+        return <<<SEC
+<section class="section" id="testimonials" style="background:#f8fafc; border-top:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; padding:5.5rem 1.5rem;">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div style="text-align:center; max-width:650px; margin:0 auto 3.5rem;">
+      <div class="section-tag">Client Endorsements</div>
+      <h2 class="section-title">Trusted by Industry Leaders</h2>
+      <p class="section-sub">Read what partners say about our measurable results and commitment to craft.</p>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:2rem;">
+      {$cards}
+    </div>
+  </div>
+</section>
+SEC;
+    } elseif ($style === 'bold') {
+        $cards = '';
+        foreach ($reviews as $r) {
+            $cards .= <<<CARD
+            <div style="background:#ffffff; border:2.5px solid #0f172a; border-radius:18px; padding:2.2rem; box-shadow:6px 6px 0px #0f172a; display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
+                  <span style="color:#f59e0b; font-size:1.2rem;">{$r['rating']}</span>
+                  <span style="background:var(--primary-light); color:var(--primary); font-size:0.75rem; font-weight:800; padding:0.25rem 0.6rem; border-radius:999px; border:1px solid var(--primary);">VERIFIED</span>
+                </div>
+                <p style="font-size:1rem; color:#0f172a; font-weight:500; line-height:1.6; margin-bottom:1.5rem;">"{$r['quote']}"</p>
+              </div>
+              <div style="display:flex; align-items:center; gap:0.9rem; border-top:2px solid #e2e8f0; padding-top:1rem;">
+                <img src="{$r['avatar']}" alt="{$r['author']}" style="width:48px; height:48px; border-radius:12px; object-fit:cover; border:2px solid #0f172a;">
+                <div>
+                  <strong style="display:block; font-size:1rem; font-family:'Space Grotesk';">{$r['author']}</strong>
+                  <span style="font-size:0.82rem; color:#64748b;">{$r['role']}</span>
+                </div>
+              </div>
+            </div>
+CARD;
+        }
+        return <<<SEC
+<section class="section" id="testimonials">
+  <h2 class="section-title">Proof That Speaks Volumes</h2>
+  <p class="section-subtitle">Real experiences and verified feedback from partners achieving record growth.</p>
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:2rem;">
+    {$cards}
+  </div>
+</section>
+SEC;
+    } else {
+        $cards = '';
+        foreach ($reviews as $r) {
+            $cards .= <<<CARD
+            <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.09); border-radius:14px; padding:2.2rem; backdrop-filter:blur(14px); display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="color:#f59e0b; font-size:1rem; margin-bottom:1.2rem; letter-spacing:3px;">{$r['rating']}</div>
+                <p style="font-size:0.95rem; color:#cbd5e1; font-weight:300; line-height:1.8; margin-bottom:1.8rem; font-style:italic;">"{$r['quote']}"</p>
+              </div>
+              <div style="display:flex; align-items:center; gap:1rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:1.2rem;">
+                <img src="{$r['avatar']}" alt="{$r['author']}" style="width:46px; height:46px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,0.25);">
+                <div>
+                  <strong style="display:block; font-size:0.92rem; color:#fff; font-family:'Cinzel',serif; letter-spacing:0.04em;">{$r['author']}</strong>
+                  <span style="font-size:0.8rem; color:#94a3b8;">{$r['role']}</span>
+                </div>
+              </div>
+            </div>
+CARD;
+        }
+        return <<<SEC
+<section class="section" id="testimonials">
+  <div class="section-tag">Executive Testimonials</div>
+  <h2 class="section-head">Endorsements of Distinction</h2>
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:2rem;">
+    {$cards}
+  </div>
+</section>
+SEC;
+    }
+}
+
+function getFaqHtml($bizName, $bizType, $style, $cp) {
+    $faqs = [
+        [
+            'q' => "What sets {$bizName}'s approach to {$bizType} apart?",
+            'a' => "We combine meticulous user-centric design with conversion architecture. Every decision is driven by real market data, ensuring your business stands out while converting visitors into dedicated clients."
+        ],
+        [
+            'q' => "What is the typical timeframe to deliver a full project?",
+            'a' => "Our focused sprint model allows us to deploy fully functional, high-performance solutions within 7 to 14 days, maintaining exceptional polish and comprehensive testing throughout."
+        ],
+        [
+            'q' => "Do you provide ongoing support and proactive maintenance?",
+            'a' => "Yes. We offer continuous care tiers including automated backups, speed tuning, security patches, and priority technical guidance to guarantee flawless operation 24/7."
+        ],
+        [
+            'q' => "How can we initiate our project with {$bizName}?",
+            'a' => "Simply submit the inquiry form below or give us a direct call. Our leadership team will review your objectives and host an onboarding session within 24 hours."
+        ]
+    ];
+
+    if ($style === 'light') {
+        $items = '';
+        foreach ($faqs as $idx => $f) {
+            $items .= <<<FAQ
+            <div style="border:1px solid #e2e8f0; border-radius:14px; margin-bottom:1rem; overflow:hidden; background:#fff; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+              <button onclick="toggleFaq(this)" type="button" style="width:100%; text-align:left; background:none; border:none; padding:1.25rem 1.5rem; font-size:1.02rem; font-weight:700; color:#0f172a; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-family:inherit;">
+                <span>{$f['q']}</span>
+                <span class="faq-icon" style="font-size:1.4rem; color:var(--primary); font-weight:400;">+</span>
+              </button>
+              <div style="display:none; padding:0 1.5rem 1.25rem; color:#64748b; font-size:0.92rem; line-height:1.7; border-top:1px solid #f1f5f9; padding-top:0.75rem;">
+                {$f['a']}
+              </div>
+            </div>
+FAQ;
+        }
+        return <<<SEC
+<section class="section" id="faq" style="max-width:880px; margin:0 auto; padding:5.5rem 1.5rem;">
+  <div style="text-align:center; margin-bottom:3.5rem;">
+    <div class="section-tag">Got Questions?</div>
+    <h2 class="section-title">Frequently Asked Questions</h2>
+    <p class="section-sub">Everything you need to know about our services, process, and deliverables.</p>
+  </div>
+  <div>
+    {$items}
+  </div>
+</section>
+SEC;
+    } elseif ($style === 'bold') {
+        $items = '';
+        foreach ($faqs as $idx => $f) {
+            $items .= <<<FAQ
+            <div style="border:2.5px solid #0f172a; border-radius:14px; margin-bottom:1.2rem; overflow:hidden; background:#fff; box-shadow:4px 4px 0px #0f172a;">
+              <button onclick="toggleFaq(this)" type="button" style="width:100%; text-align:left; background:none; border:none; padding:1.25rem 1.5rem; font-size:1.05rem; font-weight:800; color:#0f172a; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-family:'Space Grotesk';">
+                <span>{$f['q']}</span>
+                <span class="faq-icon" style="font-size:1.4rem; font-weight:800; color:#0f172a;">+</span>
+              </button>
+              <div style="display:none; padding:0 1.5rem 1.25rem; color:#475569; font-size:0.95rem; line-height:1.7; border-top:2px solid #0f172a; padding-top:1rem; background:#f8fafc;">
+                {$f['a']}
+              </div>
+            </div>
+FAQ;
+        }
+        return <<<SEC
+<section class="section" id="faq" style="max-width:900px; margin:0 auto;">
+  <h2 class="section-title">Clear Answers, No Confusion</h2>
+  <p class="section-subtitle">Common questions answered directly by the {$bizName} team.</p>
+  <div>
+    {$items}
+  </div>
+</section>
+SEC;
+    } else {
+        $items = '';
+        foreach ($faqs as $idx => $f) {
+            $items .= <<<FAQ
+            <div style="border:1px solid rgba(255,255,255,0.08); border-radius:10px; margin-bottom:1rem; overflow:hidden; background:rgba(255,255,255,0.02); backdrop-filter:blur(10px);">
+              <button onclick="toggleFaq(this)" type="button" style="width:100%; text-align:left; background:none; border:none; padding:1.3rem 1.6rem; font-size:1rem; font-weight:600; color:#fff; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-family:'Cinzel',serif; letter-spacing:0.03em;">
+                <span>{$f['q']}</span>
+                <span class="faq-icon" style="font-size:1.4rem; color:var(--primary); font-family:sans-serif;">+</span>
+              </button>
+              <div style="display:none; padding:0 1.6rem 1.4rem; color:#94a3b8; font-size:0.92rem; line-height:1.8; border-top:1px solid rgba(255,255,255,0.06); padding-top:1rem;">
+                {$f['a']}
+              </div>
+            </div>
+FAQ;
+        }
+        return <<<SEC
+<section class="section" id="faq" style="max-width:880px; margin:0 auto;">
+  <div class="section-tag">Direct Inquiries</div>
+  <h2 class="section-head">Common Inquiries</h2>
+  <div>
+    {$items}
+  </div>
+</section>
+SEC;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+//  Design 1: Modern Minimal & Crisp (Light Theme)
+//  Supports Sub-Variants: A (Conversion), B (Bento Grid), C (Editorial Authority)
+// ═══════════════════════════════════════════════════════════════
+function buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets = null, $mapEmbed = null, $subVariant = 'A') {
+    if (!$assets) $assets = getNicheAssets($bizType, $bizName);
+    if ($mapEmbed === null) $mapEmbed = getMapEmbed($bizAddress);
     $servicesList = array_filter(array_map('trim', explode(',', $bizServices)));
     if (empty($servicesList)) $servicesList = ['Strategic Planning', 'Digital Excellence', 'Creative Design', 'Ongoing Support'];
 
@@ -222,10 +625,81 @@ function buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizService
     $icons = ['✦', '⚡', '❖', '◈', '★', '◉'];
     foreach ($servicesList as $idx => $s) {
         $ic = $icons[$idx % count($icons)];
-        $cardsHtml .= "<div class='service-card'><div class='service-icon'>{$ic}</div><h3>" . htmlspecialchars($s) . "</h3><p>Bespoke execution and strategic delivery crafted specifically for {$bizAudience}.</p><a href='#contact' class='card-link'>Inquire Now &rarr;</a></div>";
+        $isFeatured = ($subVariant === 'B' && $idx === 0) ? 'style="grid-column: span 2; background: linear-gradient(135deg, var(--primary-light), #ffffff); border-color: var(--primary);"' : '';
+        $cardsHtml .= "<article class='service-card' {$isFeatured}><div class='service-icon'>{$ic}</div><h3>" . htmlspecialchars($s) . "</h3><p>Bespoke execution and strategic delivery crafted specifically for " . htmlspecialchars($bizAudience) . ".</p><a href='#contact' class='card-link'>Inquire Now &rarr;</a></article>";
     }
+
+    $showcaseHtml = getShowcaseHtml($bizName, $bizType, 'light', $cp, $assets);
+    $testimonialsHtml = getTestimonialsHtml($bizName, $bizType, 'light', $cp);
+    $faqHtml = getFaqHtml($bizName, $bizType, 'light', $cp);
     $sharedJs = getSharedJS($bizName);
     $year = date('Y');
+    $aboutImg = $assets['about'] ?? 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1000&q=80';
+    $heroImg = $assets['hero'] ?? 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80';
+
+    if ($subVariant === 'B') {
+        $pageTitle = "{$bizName} — Bento Architecture";
+        $heroHtml = <<<HERO
+<header class="hero" style="padding:5rem 1.5rem 4rem;">
+  <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:3.5rem; align-items:center; text-align:left; max-width:1200px; margin:0 auto;">
+    <div>
+      <div class="hero-badge">✦ Bento Architecture · {$bizAudience}</div>
+      <h1 style="text-align:left; margin:0 0 1.25rem; font-size:clamp(2.4rem, 5vw, 3.8rem);">{$bizTagline}</h1>
+      <p style="text-align:left; margin:0 0 2rem; color:#64748b; font-size:1.1rem; line-height:1.7;">Engineered for ambitious organizations requiring unmatched velocity, conversion clarity, and high-impact digital presence.</p>
+      <div class="hero-actions" style="justify-content:flex-start; margin-bottom:0;">
+        <a href="#contact" class="btn-primary">Start Your Build &rarr;</a>
+        <a href="#services" class="btn-secondary">Explore Capabilities</a>
+      </div>
+    </div>
+    <div style="position:relative; border-radius:24px; overflow:hidden; box-shadow:0 20px 45px rgba(0,0,0,0.1); border:1px solid #e2e8f0;">
+      <img src="{$heroImg}" alt="{$bizName} flagship" style="width:100%; height:340px; object-fit:cover; display:block;">
+      <div style="position:absolute; bottom:1.25rem; left:1.25rem; right:1.25rem; background:rgba(255,255,255,0.94); backdrop-filter:blur(14px); border-radius:14px; padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.7); box-shadow:0 10px 25px rgba(0,0,0,0.06);">
+        <div><strong style="color:#0f172a; font-size:0.95rem; display:block;">Verified Standard</strong><span style="font-size:0.8rem; color:#64748b;">99.8% Client Retention</span></div>
+        <span style="font-size:0.75rem; font-weight:800; background:var(--primary-light); color:var(--primary); padding:0.25rem 0.65rem; border-radius:999px;">FEATURED</span>
+      </div>
+    </div>
+  </div>
+</header>
+HERO;
+    } elseif ($subVariant === 'C') {
+        $pageTitle = "{$bizName} — Editorial Standard";
+        $heroHtml = <<<HERO
+<header class="hero" style="padding:6rem 1.5rem 4rem;">
+  <div style="max-width:920px; margin:0 auto; text-align:center;">
+    <div class="hero-badge">✦ Signature Strategic Practice</div>
+    <h1 style="font-size:clamp(2.6rem, 5.5vw, 4.4rem); letter-spacing:-0.035em; margin-bottom:1.5rem;">{$bizTagline}</h1>
+    <p style="font-size:1.2rem; max-width:680px; margin:0 auto 2.5rem; color:#475569; line-height:1.8;">Pioneering tailored digital systems for {$bizAudience} with an uncompromising dedication to craft, clarity, and return on investment.</p>
+    <div class="hero-actions" style="margin-bottom:3rem;">
+      <a href="#contact" class="btn-primary">Schedule Discovery Session &rarr;</a>
+      <a href="#showcase" class="btn-secondary">View Signature Works</a>
+    </div>
+    <div style="border-top:1px solid #e2e8f0; padding-top:2rem; display:flex; justify-content:center; gap:2.5rem; flex-wrap:wrap; font-size:0.88rem; font-weight:700; color:#64748b;">
+      <span>★ 150+ Milestone Launches</span>
+      <span>★ SOC-2 / SSL Hardened</span>
+      <span>★ 24/7 Dedicated Concierge</span>
+    </div>
+  </div>
+</header>
+HERO;
+    } else {
+        $pageTitle = "{$bizName} — {$bizTagline}";
+        $heroHtml = <<<HERO
+<header class="hero">
+  <div class="hero-badge">✦ Tailored for {$bizAudience}</div>
+  <h1>{$bizTagline}</h1>
+  <p>Partnering with visionary clients to design, build, and accelerate high-performing digital solutions that produce tangible results.</p>
+  <div class="hero-actions">
+    <a href="#contact" class="btn-primary">Start a Project &rarr;</a>
+    <a href="#services" class="btn-secondary">Explore Services</a>
+  </div>
+  <aside class="metrics-wrap">
+    <div class="metric-item"><h4>99.8%</h4><p>Client Satisfaction</p></div>
+    <div class="metric-item"><h4>150+</h4><p>Successful Deliveries</p></div>
+    <div class="metric-item"><h4>24/7</h4><p>Dedicated Support</p></div>
+  </aside>
+</header>
+HERO;
+    }
 
     return <<<HTML
 <!DOCTYPE html>
@@ -233,7 +707,7 @@ function buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizService
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{$bizName} — {$bizTagline}</title>
+<title>{$pageTitle}</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -245,7 +719,7 @@ a { text-decoration: none; color: inherit; }
 .nav-container { max-width: 1200px; margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
 .brand-logo { font-size: 1.3rem; font-weight: 800; color: var(--dark); display: flex; align-items: center; gap: 0.5rem; }
 .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
-.nav-links { display: flex; align-items: center; gap: 2rem; }
+.nav-links { display: flex; align-items: center; gap: 1.75rem; }
 .nav-links a { font-size: 0.9rem; font-weight: 600; color: #475569; transition: color 0.2s; }
 .nav-links a:hover { color: var(--primary); }
 .btn-nav { padding: 0.55rem 1.25rem; border-radius: 999px; background: var(--dark); color: #fff !important; font-size: 0.85rem; font-weight: 600; transition: transform 0.2s, background 0.2s; }
@@ -279,7 +753,7 @@ a { text-decoration: none; color: inherit; }
 .card-link { font-size: 0.85rem; font-weight: 700; color: var(--primary); }
 .about-section { background: #fff; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 5.5rem 1.5rem; }
 .about-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
-.about-img-box { background: var(--primary-gradient); border-radius: 24px; padding: 3rem; color: #fff; min-height: 380px; display: flex; flex-direction: column; justify-content: flex-end; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+.about-img-box { border-radius: 24px; padding: 3rem; color: #fff; min-height: 380px; display: flex; flex-direction: column; justify-content: flex-end; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
 .about-img-box h3 { font-size: 1.8rem; font-weight: 800; line-height: 1.3; margin-bottom: 0.75rem; }
 .about-img-box p { opacity: 0.9; font-size: 0.95rem; }
 .about-content h2 { font-size: 2.2rem; font-weight: 800; color: var(--dark); margin-bottom: 1.25rem; }
@@ -295,7 +769,7 @@ a { text-decoration: none; color: inherit; }
 #back-to-top { display: none; position: fixed; bottom: 2rem; right: 2rem; z-index: 90; width: 44px; height: 44px; border-radius: 50%; background: var(--dark); color: #fff; border: none; cursor: pointer; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-size: 1.2rem; }
 footer { background: var(--dark); color: #94a3b8; padding: 3.5rem 1.5rem 2rem; border-top: 1px solid #1e293b; }
 .footer-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; }
-.footer-links { display: flex; gap: 2rem; font-size: 0.9rem; }
+.footer-links { display: flex; gap: 1.75rem; font-size: 0.9rem; }
 .footer-links a:hover { color: #fff; }
 @media (max-width: 768px) { .nav-links { display: none; } .hamburger { display: block; } .about-grid, .contact-grid { grid-template-columns: 1fr; padding: 2rem; } .metrics-wrap { grid-template-columns: 1fr; } }
 </style>
@@ -308,7 +782,9 @@ footer { background: var(--dark); color: #94a3b8; padding: 3.5rem 1.5rem 2rem; b
     <div class="nav-links">
       <a href="#services">Services</a>
       <a href="#about">About</a>
-      <a href="#contact">Contact</a>
+      <a href="#showcase">Showcase</a>
+      <a href="#testimonials">Reviews</a>
+      <a href="#faq">FAQ</a>
       <a href="#contact" class="btn-nav">Get in Touch</a>
     </div>
     <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Toggle navigation">☰</button>
@@ -316,24 +792,15 @@ footer { background: var(--dark); color: #94a3b8; padding: 3.5rem 1.5rem 2rem; b
   <div id="mobile-drawer">
     <a href="#services">Services</a>
     <a href="#about">About</a>
+    <a href="#showcase">Showcase</a>
+    <a href="#testimonials">Reviews</a>
+    <a href="#faq">FAQ</a>
     <a href="#contact">Contact</a>
   </div>
 </nav>
 
-<header class="hero">
-  <div class="hero-badge">✦ Tailored for {$bizAudience}</div>
-  <h1>{$bizTagline}</h1>
-  <p>Partnering with visionary clients to design, build, and accelerate high-performing digital solutions that produce tangible results.</p>
-  <div class="hero-actions">
-    <a href="#contact" class="btn-primary">Start a Project &rarr;</a>
-    <a href="#services" class="btn-secondary">Explore Services</a>
-  </div>
-  <div class="metrics-wrap">
-    <div class="metric-item"><h4>99.8%</h4><p>Client Satisfaction</p></div>
-    <div class="metric-item"><h4>150+</h4><p>Successful Deliveries</p></div>
-    <div class="metric-item"><h4>24/7</h4><p>Dedicated Support</p></div>
-  </div>
-</header>
+<main>
+{$heroHtml}
 
 <section class="section" id="services">
   <div class="section-header">
@@ -344,9 +811,11 @@ footer { background: var(--dark); color: #94a3b8; padding: 3.5rem 1.5rem 2rem; b
   <div class="services-grid">{$cardsHtml}</div>
 </section>
 
+{$showcaseHtml}
+
 <section class="about-section" id="about">
   <div class="about-grid">
-    <div class="about-img-box">
+    <div class="about-img-box" style="background: linear-gradient(135deg, rgba(15,23,42,0.88) 0%, rgba(15,23,42,0.4) 60%), url('{$aboutImg}') center/cover no-repeat;">
       <h3>Built with precision.<br>Engineered for growth.</h3>
       <p>{$bizName} combines strategy, modern design, and technology to deliver outstanding digital experiences.</p>
     </div>
@@ -360,6 +829,10 @@ footer { background: var(--dark); color: #94a3b8; padding: 3.5rem 1.5rem 2rem; b
   </div>
 </section>
 
+{$testimonialsHtml}
+
+{$faqHtml}
+
 <section class="section" id="contact">
   <div class="contact-grid">
     <div class="c-info">
@@ -369,6 +842,7 @@ footer { background: var(--dark); color: #94a3b8; padding: 3.5rem 1.5rem 2rem; b
       <div class="c-item"><span>Phone</span><strong>{$bizPhone}</strong></div>
       <div class="c-item"><span>Email</span><strong>{$bizEmail}</strong></div>
       <div class="c-item"><span>Office</span><strong>{$bizAddress}</strong></div>
+      {$mapEmbed}
     </div>
     <form class="c-form" onsubmit="handleContactSubmit(event)">
       <input type="text" name="name" placeholder="Your Full Name" required>
@@ -378,13 +852,14 @@ footer { background: var(--dark); color: #94a3b8; padding: 3.5rem 1.5rem 2rem; b
     </form>
   </div>
 </section>
+</main>
 
 <button id="back-to-top" title="Back to top">↑</button>
 
 <footer>
   <div class="footer-container">
     <div><strong style="color:#fff;font-size:1.1rem">{$bizName}</strong><p style="font-size:0.85rem;margin-top:0.3rem">{$bizTagline}</p></div>
-    <div class="footer-links"><a href="#services">Services</a><a href="#about">About</a><a href="#contact">Contact</a></div>
+    <div class="footer-links"><a href="#services">Services</a><a href="#about">About</a><a href="#showcase">Showcase</a><a href="#testimonials">Reviews</a><a href="#faq">FAQ</a><a href="#contact">Contact</a></div>
     <p style="font-size:0.8rem">&copy; {$year} {$bizName}. All rights reserved.</p>
   </div>
 </footer>
@@ -397,8 +872,11 @@ HTML;
 
 // ═══════════════════════════════════════════════════════════════
 //  Design 2: Bold Dynamic & High-Converting
+//  Supports Sub-Variants: A (Neo-Brutalist), B (Cyber Aurora), C (Velocity Growth)
 // ═══════════════════════════════════════════════════════════════
-function buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp) {
+function buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets = null, $mapEmbed = null, $subVariant = 'A') {
+    if (!$assets) $assets = getNicheAssets($bizType, $bizName);
+    if ($mapEmbed === null) $mapEmbed = getMapEmbed($bizAddress);
     $servicesList = array_filter(array_map('trim', explode(',', $bizServices)));
     if (empty($servicesList)) $servicesList = ['Rapid Launch', 'High Conversion Strategy', 'Omnichannel Growth', 'Full Support'];
 
@@ -406,10 +884,17 @@ function buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizService
     $emojis = ['🚀', '🔥', '💎', '📈', '🎯', '✨'];
     foreach ($servicesList as $idx => $s) {
         $em = $emojis[$idx % count($emojis)];
-        $featCards .= "<div class='bold-card'><div class='bold-badge'>Feature " . ($idx + 1) . "</div><div class='bold-icon'>{$em}</div><h3>" . htmlspecialchars($s) . "</h3><p>Engineered for maximum velocity, user retention, and peak performance for {$bizAudience}.</p></div>";
+        $featCards .= "<article class='bold-card'><div class='bold-badge'>Feature " . ($idx + 1) . "</div><div class='bold-icon'>{$em}</div><h3>" . htmlspecialchars($s) . "</h3><p>Engineered for maximum velocity, user retention, and peak performance for " . htmlspecialchars($bizAudience) . ".</p></article>";
     }
+
+    $showcaseHtml = getShowcaseHtml($bizName, $bizType, 'bold', $cp, $assets);
+    $testimonialsHtml = getTestimonialsHtml($bizName, $bizType, 'bold', $cp);
+    $faqHtml = getFaqHtml($bizName, $bizType, 'bold', $cp);
     $sharedJs = getSharedJS($bizName);
     $year = date('Y');
+    $heroImg = $assets['hero'] ?? 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80';
+
+    $pageTitle = ($subVariant === 'B') ? "{$bizName} — Cyber Aurora" : (($subVariant === 'C') ? "{$bizName} — Velocity Funnel" : "{$bizName} | Accelerate Your Vision");
 
     return <<<HTML
 <!DOCTYPE html>
@@ -417,7 +902,7 @@ function buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizService
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{$bizName} | Accelerate Your Vision</title>
+<title>{$pageTitle}</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -430,7 +915,7 @@ a { text-decoration: none; color: inherit; }
 .nav { position: sticky; top: 0; z-index: 100; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-bottom: 2px solid #0f172a; padding: 1.1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
 .logo { font-size: 1.4rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.4rem; }
 .logo-badge { background: var(--primary-gradient); color: #fff; border-radius: 6px; padding: 0.15rem 0.5rem; font-size: 0.85rem; }
-.nav-links { display: flex; align-items: center; gap: 2rem; font-weight: 600; font-size: 0.95rem; }
+.nav-links { display: flex; align-items: center; gap: 1.75rem; font-weight: 600; font-size: 0.95rem; }
 .nav-btn { background: var(--primary-gradient); color: #fff !important; padding: 0.6rem 1.4rem; border-radius: 12px; font-weight: 700; box-shadow: 4px 4px 0px #0f172a; border: 2px solid #0f172a; transition: transform 0.15s, box-shadow 0.15s; }
 .nav-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #0f172a; }
 .hamburger { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #0f172a; }
@@ -486,7 +971,9 @@ footer { background: #0f172a; color: #fff; padding: 3rem 2rem; border-top: 2px s
   <a href="#" class="logo"><span class="logo-badge">✦</span>{$bizName}</a>
   <div class="nav-links">
     <a href="#services">Features</a>
-    <a href="#contact">Contact</a>
+    <a href="#showcase">Results</a>
+    <a href="#testimonials">Reviews</a>
+    <a href="#faq">FAQ</a>
     <a href="#contact" class="nav-btn">Get Started &rarr;</a>
   </div>
   <button class="hamburger" onclick="toggleMobileMenu()">☰</button>
@@ -494,9 +981,13 @@ footer { background: #0f172a; color: #fff; padding: 3rem 2rem; border-top: 2px s
 
 <div id="mobile-drawer">
   <a href="#services">Features</a>
+  <a href="#showcase">Results</a>
+  <a href="#testimonials">Reviews</a>
+  <a href="#faq">FAQ</a>
   <a href="#contact">Contact</a>
 </div>
 
+<main>
 <header class="hero">
   <div class="hero-container">
     <div>
@@ -508,7 +999,7 @@ footer { background: #0f172a; color: #fff; padding: 3rem 2rem; border-top: 2px s
         <a href="#services" class="btn-outline-bold">View Capabilities</a>
       </div>
     </div>
-    <div class="hero-mockup">
+    <div class="hero-mockup" style="background: linear-gradient(135deg, rgba(15,23,42,0.92), rgba(15,23,42,0.78)), url('{$heroImg}') center/cover no-repeat;">
       <div class="mockup-header"><div class="mockup-dot"></div><div class="mockup-dot"></div><div class="mockup-dot"></div></div>
       <div class="mockup-box"><div style="font-size:0.85rem;color:#94a3b8">Growth Velocity</div><div class="mockup-stat">+340%</div></div>
       <div class="mockup-box"><div style="font-size:0.85rem;color:#94a3b8">Customer Conversion Rate</div><div class="mockup-stat" style="color:#10b981">4.8x</div></div>
@@ -522,6 +1013,12 @@ footer { background: #0f172a; color: #fff; padding: 3rem 2rem; border-top: 2px s
   <p class="section-subtitle">Everything you need to outpace competitors and turn visitors into loyal advocates.</p>
   <div class="bold-grid">{$featCards}</div>
 </section>
+
+{$showcaseHtml}
+
+{$testimonialsHtml}
+
+{$faqHtml}
 
 <div class="cta-banner">
   <h2>Ready to transform your results?</h2>
@@ -537,6 +1034,7 @@ footer { background: #0f172a; color: #fff; padding: 3rem 2rem; border-top: 2px s
       <p style="margin-bottom:0.75rem"><strong>📞 Phone:</strong> {$bizPhone}</p>
       <p style="margin-bottom:0.75rem"><strong>📧 Email:</strong> {$bizEmail}</p>
       <p><strong>📍 Address:</strong> {$bizAddress}</p>
+      {$mapEmbed}
     </div>
     <form class="contact-form" onsubmit="handleContactSubmit(event)">
       <input type="text" name="name" placeholder="Full Name" required>
@@ -546,6 +1044,7 @@ footer { background: #0f172a; color: #fff; padding: 3rem 2rem; border-top: 2px s
     </form>
   </div>
 </div>
+</main>
 
 <button id="back-to-top" title="Back to top">↑</button>
 
@@ -562,8 +1061,11 @@ HTML;
 
 // ═══════════════════════════════════════════════════════════════
 //  Design 3: Executive Luxury & Dark Mode
+//  Supports Sub-Variants: A (Obsidian Gold), B (Frosted Aurora), C (Private Office)
 // ═══════════════════════════════════════════════════════════════
-function buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp) {
+function buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets = null, $mapEmbed = null, $subVariant = 'A') {
+    if (!$assets) $assets = getNicheAssets($bizType, $bizName);
+    if ($mapEmbed === null) $mapEmbed = getMapEmbed($bizAddress);
     $servicesList = array_filter(array_map('trim', explode(',', $bizServices)));
     if (empty($servicesList)) $servicesList = ['Bespoke Architecture', 'Private Advisory', 'Autonomous Systems', 'Elite Support'];
 
@@ -571,10 +1073,17 @@ function buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizService
     $symbols = ['◈', '✦', '❖', '★', '◉', '▲'];
     foreach ($servicesList as $idx => $s) {
         $sy = $symbols[$idx % count($symbols)];
-        $luxCards .= "<div class='glass-card'><div class='glass-icon'>{$sy}</div><h3>" . htmlspecialchars($s) . "</h3><p>Uncompromising craftsmanship and tailored precision tailored specifically for {$bizAudience}.</p></div>";
+        $luxCards .= "<article class='glass-card'><div class='glass-icon'>{$sy}</div><h3>" . htmlspecialchars($s) . "</h3><p>Uncompromising craftsmanship and tailored precision tailored specifically for " . htmlspecialchars($bizAudience) . ".</p></article>";
     }
+
+    $showcaseHtml = getShowcaseHtml($bizName, $bizType, 'dark', $cp, $assets);
+    $testimonialsHtml = getTestimonialsHtml($bizName, $bizType, 'dark', $cp);
+    $faqHtml = getFaqHtml($bizName, $bizType, 'dark', $cp);
     $sharedJs = getSharedJS($bizName);
     $year = date('Y');
+    $heroImg = $assets['hero'] ?? 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80';
+
+    $pageTitle = ($subVariant === 'B') ? "{$bizName} — Sovereign Glassmorphism" : (($subVariant === 'C') ? "{$bizName} — Private Office Suite" : "{$bizName} — Executive Suite");
 
     return <<<HTML
 <!DOCTYPE html>
@@ -582,7 +1091,7 @@ function buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizService
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{$bizName} — Executive Suite</title>
+<title>{$pageTitle}</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -593,7 +1102,7 @@ a { text-decoration: none; color: inherit; }
 .nav-bar { position: sticky; top: 0; z-index: 100; background: rgba(9, 13, 22, 0.88); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding: 1.25rem 2rem; display: flex; justify-content: space-between; align-items: center; }
 .brand-title { font-size: 1.35rem; font-weight: 700; color: #fff; letter-spacing: 0.12em; text-transform: uppercase; display: flex; align-items: center; gap: 0.6rem; }
 .brand-gem { width: 8px; height: 8px; transform: rotate(45deg); background: var(--primary); box-shadow: 0 0 10px var(--primary); }
-.nav-menu { display: flex; gap: 2.5rem; align-items: center; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8; }
+.nav-menu { display: flex; gap: 2rem; align-items: center; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8; }
 .nav-menu a:hover { color: #fff; }
 .btn-lux { padding: 0.65rem 1.6rem; border-radius: 4px; background: rgba(255, 255, 255, 0.06); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.3s; }
 .btn-lux:hover { background: #fff; color: #090d16; box-shadow: 0 0 20px rgba(255,255,255,0.4); }
@@ -631,7 +1140,9 @@ footer { border-top: 1px solid rgba(255, 255, 255, 0.06); padding: 3.5rem 2rem; 
   <div class="brand-title"><div class="brand-gem"></div>{$bizName}</div>
   <div class="nav-menu">
     <a href="#services">Offerings</a>
-    <a href="#contact">Inquiries</a>
+    <a href="#showcase">Portfolio</a>
+    <a href="#testimonials">Accolades</a>
+    <a href="#faq">Inquiries</a>
     <a href="#contact" class="btn-lux">Consultation</a>
   </div>
   <button class="hamburger" onclick="toggleMobileMenu()">☰</button>
@@ -639,9 +1150,13 @@ footer { border-top: 1px solid rgba(255, 255, 255, 0.06); padding: 3.5rem 2rem; 
 
 <div id="mobile-drawer">
   <a href="#services">Offerings</a>
-  <a href="#contact">Inquiries</a>
+  <a href="#showcase">Portfolio</a>
+  <a href="#testimonials">Accolades</a>
+  <a href="#faq">Inquiries</a>
+  <a href="#contact">Contact</a>
 </div>
 
+<main>
 <header class="hero">
   <div class="hero-content">
     <div class="hero-pre">Bespoke {$bizType} Solutions</div>
@@ -651,11 +1166,27 @@ footer { border-top: 1px solid rgba(255, 255, 255, 0.06); padding: 3.5rem 2rem; 
   </div>
 </header>
 
+<div class="showcase-strip" style="max-width:1200px; margin:0 auto 3rem; padding:0 2rem;">
+  <div style="height:320px; border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); position:relative; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+    <img src="{$heroImg}" alt="{$bizName} flagship" style="width:100%; height:100%; object-fit:cover; filter:brightness(0.75);">
+    <div style="position:absolute; bottom:2rem; left:2rem; background:rgba(9,13,22,0.85); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.15); padding:1rem 1.5rem; border-radius:12px; max-width:420px;">
+      <div style="font-size:0.75rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.1em;">Flagship Experience</div>
+      <div style="font-size:1.1rem; color:#fff; font-weight:700; margin-top:0.25rem;">{$bizName} Signature Standard</div>
+    </div>
+  </div>
+</div>
+
 <section class="section" id="services">
   <div class="section-tag">Distinctive Capabilities</div>
   <h2 class="section-head">Crafted for Discerning Standards</h2>
   <div class="glass-grid">{$luxCards}</div>
 </section>
+
+{$showcaseHtml}
+
+{$testimonialsHtml}
+
+{$faqHtml}
 
 <section class="section" id="contact">
   <div class="contact-glass">
@@ -666,6 +1197,7 @@ footer { border-top: 1px solid rgba(255, 255, 255, 0.06); padding: 3.5rem 2rem; 
       <p style="margin-bottom:0.75rem"><strong>Direct:</strong> {$bizPhone}</p>
       <p style="margin-bottom:0.75rem"><strong>Confidential:</strong> {$bizEmail}</p>
       <p><strong>Headquarters:</strong> {$bizAddress}</p>
+      {$mapEmbed}
     </div>
     <form onsubmit="handleContactSubmit(event)">
       <input type="text" name="name" placeholder="Your Distinguished Name" required>
@@ -675,6 +1207,7 @@ footer { border-top: 1px solid rgba(255, 255, 255, 0.06); padding: 3.5rem 2rem; 
     </form>
   </div>
 </section>
+</main>
 
 <button id="back-to-top" title="Back to top">↑</button>
 
@@ -686,6 +1219,85 @@ footer { border-top: 1px solid rgba(255, 255, 255, 0.06); padding: 3.5rem 2rem; 
 </body>
 </html>
 HTML;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Helper: getSubDesigns (3 specialized sub-designs for chosen concept)
+// ═══════════════════════════════════════════════════════════════
+function getSubDesigns($conceptIndex, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed) {
+    if ($conceptIndex === 0 || $conceptIndex === 'classic' || $conceptIndex === '1') {
+        return [
+            [
+                'id' => '1A',
+                'name' => '1A · Conversion & Split Hero',
+                'badge' => 'High Conversion',
+                'description' => 'Direct value proposition, floating metrics bar, split-screen storytelling, and high-converting contact flow.',
+                'html' => buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A')
+            ],
+            [
+                'id' => '1B',
+                'name' => '1B · Bento Grid & Media Showcase',
+                'badge' => 'Media Rich',
+                'description' => 'Modern asymmetric bento layout, featured showcase cards, interactive hover states, and dynamic visual rhythm.',
+                'html' => buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'B')
+            ],
+            [
+                'id' => '1C',
+                'name' => '1C · Editorial Authority & Trust',
+                'badge' => 'Brand Authority',
+                'description' => 'Magazine-style typography, trust proof credentials, narrative feature rows, and prestigious client endorsements.',
+                'html' => buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'C')
+            ]
+        ];
+    } elseif ($conceptIndex === 1 || $conceptIndex === 'bold' || $conceptIndex === '2') {
+        return [
+            [
+                'id' => '2A',
+                'name' => '2A · Neo-Brutalist High Impact',
+                'badge' => 'High Impact',
+                'description' => 'Solid dark borders, vibrant drop-shadow badges, energetic neo-cards, and high-visibility CTAs.',
+                'html' => buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A')
+            ],
+            [
+                'id' => '2B',
+                'name' => '2B · Gradient Aurora & Cyber Fluid',
+                'badge' => 'Cyber Fluid',
+                'description' => 'Vibrant gradient mesh backdrop, glowing bento panels, 3D hover scale, and tech-forward atmosphere.',
+                'html' => buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'B')
+            ],
+            [
+                'id' => '2C',
+                'name' => '2C · High-Velocity Growth Funnel',
+                'badge' => 'Growth Funnel',
+                'description' => 'Sticky top announcement, conversion mockup card, metric badges, and fast-action lead capture.',
+                'html' => buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'C')
+            ]
+        ];
+    } else {
+        return [
+            [
+                'id' => '3A',
+                'name' => '3A · Midnight Obsidian & Gold',
+                'badge' => 'Prestige Gold',
+                'description' => 'Deep obsidian backdrop, gold accents, Cinzel typography, and signature flagship showcase.',
+                'html' => buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A')
+            ],
+            [
+                'id' => '3B',
+                'name' => '3B · Ambient Frosted Glass & Aurora',
+                'badge' => 'Frosted Glass',
+                'description' => 'Subtle ambient glows, frosted glass cards with 1px border highlights, and luxury accolades.',
+                'html' => buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'B')
+            ],
+            [
+                'id' => '3C',
+                'name' => '3C · Bespoke Private Office',
+                'badge' => 'Private Concierge',
+                'description' => 'Split executive layout, portfolio case studies, white-glove direct inquiry form, and headquarters map.',
+                'html' => buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'C')
+            ]
+        ];
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -705,12 +1317,99 @@ if ($action === 'save_design') {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  ACTION: flowcraft_generate (Autonomous AI-FlowCraft Engine)
+// ═══════════════════════════════════════════════════════════════
+if ($action === 'flowcraft_generate') {
+    $mode = $req['mode'] ?? 'static';
+    $assets = getNicheAssets($bizType, $bizName);
+    $mapEmbed = getMapEmbed($bizAddress);
+
+    $subdesigns1 = getSubDesigns(0, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed);
+    $subdesigns2 = getSubDesigns(1, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed);
+    $subdesigns3 = getSubDesigns(2, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed);
+
+    $design1 = $subdesigns1[0]['html'];
+    $design2 = $subdesigns2[0]['html'];
+    $design3 = $subdesigns3[0]['html'];
+
+    echo json_encode([
+        'success' => true,
+        'skills_pipeline' => [
+            'phase1' => 'Skills 1-2: Requirements & PRD Discussion',
+            'phase2' => 'Skills 3-9: System Architecture, DB/API & Visual Tokens (HTML5/CSS3)',
+            'phase3' => 'Skills 10-18: Standards, Glassmorphism, Maps & FAQ Engines',
+            'phase4' => 'Skills 19-21: Feature Development & Component Assembly',
+            'phase5' => 'Skills 22-26: Five-Layer Testing & Polish'
+        ],
+        'analysis' => [
+            'biz_name' => $bizName,
+            'biz_type' => $bizType,
+            'audience' => $bizAudience,
+            'palette'  => $palette,
+            'mode'     => $mode,
+            'tag'      => $assets['tag'],
+            'brief'    => "AI-FlowCraft 28-Skill Engine analyzed {$bizName} ({$bizType}) for target audience: {$bizAudience}. Synthesized 3 master concepts, each equipped with 3 bespoke HTML5/CSS3 sub-designs."
+        ],
+        'designs' => [
+            [
+                'id' => 'classic',
+                'name' => 'Concept 1 — Modern Minimal & Crisp',
+                'badge' => 'Clean & Professional',
+                'description' => 'Light balanced aesthetic, Plus Jakarta Sans typography, glassmorphism sticky navigation, and refined subtle cards.',
+                'style' => 'light',
+                'html' => $design1,
+                'subdesigns' => $subdesigns1
+            ],
+            [
+                'id' => 'bold',
+                'name' => 'Concept 2 — Bold Dynamic & Bento Grid',
+                'badge' => 'High-Impact & Modern',
+                'description' => 'Space Grotesk typography, vibrant gradient mesh, asymmetrical bento cards, and high-conversion CTA flow.',
+                'style' => 'vibrant',
+                'html' => $design2,
+                'subdesigns' => $subdesigns2
+            ],
+            [
+                'id' => 'editorial',
+                'name' => 'Concept 3 — Executive Luxury & Dark Mode',
+                'badge' => 'Sleek Dark Glassmorphism',
+                'description' => 'Deep obsidian backdrop, glowing ambient auroras, frosted glass panels, and luxury typography for high-end clientele.',
+                'style' => 'dark',
+                'html' => $design3,
+                'subdesigns' => $subdesigns3
+            ]
+        ],
+        'default_html' => $design1
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ACTION: flowcraft_subdesigns (3 Layout Sub-Designs for Chosen Concept)
+// ═══════════════════════════════════════════════════════════════
+if ($action === 'flowcraft_subdesigns') {
+    $conceptIndex = $req['concept_index'] ?? $req['concept_id'] ?? 0;
+    $assets = getNicheAssets($bizType, $bizName);
+    $mapEmbed = getMapEmbed($bizAddress);
+    $subdesigns = getSubDesigns($conceptIndex, $bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed);
+
+    echo json_encode([
+        'success' => true,
+        'concept_index' => $conceptIndex,
+        'subdesigns' => $subdesigns
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  ACTION: generate_3
 // ═══════════════════════════════════════════════════════════════
 if ($action === 'generate_3' || $action === 'generate') {
-    $design1 = buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp);
-    $design2 = buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp);
-    $design3 = buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp);
+    $assets = getNicheAssets($bizType, $bizName);
+    $mapEmbed = getMapEmbed($bizAddress);
+    $design1 = buildDesign1($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A');
+    $design2 = buildDesign2($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A');
+    $design3 = buildDesign3($bizName, $bizType, $bizTagline, $bizAudience, $bizServices, $bizPhone, $bizEmail, $bizAddress, $cp, $assets, $mapEmbed, 'A');
 
     echo json_encode([
         'success' => true,

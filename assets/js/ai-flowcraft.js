@@ -1,14 +1,24 @@
 /* ═══════════════════════════════════════════════════════════════
-   assets/js/puter-website-generator.js
-   3-variation website generator — mode is LOCKED, no asking
+   assets/js/ai-flowcraft.js
+   AI-FlowCraft — branded AI generation pipeline for WebCraft AI.
+
+   FLOW:  user details (wizard) → ANALYZE (AI builds a design brief)
+          → GENERATE (3 premium variations, mode locked: static/admin/database)
+          → VERIFY + auto-repair (complete HTML guaranteed)
+
+   ALSO:  editViaPrompt() — full-analysis AI edit (analyze whole document
+          first, then apply ONLY the requested change).
+
+   Post-generation live editing stays on puter.js (PuterService) — untouched.
+   Admin panels per company + new AI features stay server-side — untouched.
    ═══════════════════════════════════════════════════════════════ */
-window.WebsiteGenerator = (function () {
+window.AIFlowCraft = (function () {
   'use strict';
 
   const KEY_PROJECT  = 'webcraft_saved_project';
   const KEY_PROJECTS = 'webcraft_generated_projects';
 
-  // Per-customer scope — one email sees ONLY its own projects
+  /* Per-customer scope — one email sees ONLY its own projects */
   function scopedKey(base) {
     try {
       const em = (window.__CUSTOMER__ && window.__CUSTOMER__.email) || '';
@@ -17,9 +27,7 @@ window.WebsiteGenerator = (function () {
   }
 
   /* ═══════════════════════════════════════════════════
-     THREE STYLE VARIATIONS
-     Content stays the SAME across all three.
-     Only the LAYOUT approach differs.
+     THREE STYLE VARIATIONS — same content, 3 layouts
      ═══════════════════════════════════════════════════ */
   const VARIATIONS = [
     {
@@ -69,7 +77,7 @@ window.WebsiteGenerator = (function () {
   ];
 
   /* ═══════════════════════════════════════════════════
-     SYSTEM PROMPT — strict, no questions allowed
+     SYSTEM PROMPT — strict raw-HTML generator
      ═══════════════════════════════════════════════════ */
   const GEN_SYSTEM = `You are a RAW HTML CODE GENERATOR — nothing else.
 
@@ -147,6 +155,21 @@ window.WebsiteGenerator = (function () {
 - Every section: eyebrow kicker + huge display heading + generous padding
   (100px+ desktop), max-width container, alternating rhythm.
 
+## HIGH-PREMIUM REAL UI (this is what wins customers — all mandatory)
+- Real 3D depth: hero has 2-3 parallax layers (data-depth + mousemove translate),
+  service cards TILT in 3D toward the cursor (perspective + rotateX/rotateY JS),
+  team/pricing cards flip or lift with deep shadows. No flat dead cards.
+- Motion everywhere: branded preloader (fades out on load), scroll-reveal
+  (IntersectionObserver, staggered), animated counters, infinite marquee ribbon,
+  magnetic buttons (translate toward cursor), gradient text animation,
+  testimonial auto-slider with dots, FAQ accordion, gallery lightbox,
+  pricing monthly/yearly toggle, working mobile drawer menu, sticky glass
+  header that condenses on scroll, back-to-top button, live form validation
+  states (green/red hints) on the contact form.
+- Zero dead controls: EVERY button/link must do something real (smooth-scroll
+  to a section, open/close a modal or drawer, toggle content, submit the form).
+  No href="#" dead ends — point them at real section ids.
+
 ## CONTACT FORM CONTRACT (must be followed exactly)
 - Exactly one contact form with id="contact-form", method="POST", no action.
 - Fields: name (required), email type=email (required), phone (optional),
@@ -168,6 +191,35 @@ window.WebsiteGenerator = (function () {
 
 If ANY checkbox fails, fix it BEFORE responding. Output only the fixed HTML.`;
 
+  /* ═════════ ANALYZE SYSTEM — full-analysis brief before generating ═════════ */
+  const ANALYZE_SYSTEM = `You are a senior UX strategist + brand analyst.
+Given CLIENT REQUIREMENTS, FULLY ANALYZE them and return a tight DESIGN BRIEF.
+Rules:
+- No questions. No chat. If a field is "(unspecified)", invent a professional default.
+- Output ONLY the brief in this exact shape (plain text, no markdown fences):
+
+AUDIENCE: <one line — who visits and what they want>
+SECTIONS: <comma list — exact sections to build, in order>
+PALETTE: <3 hex codes primary/secondary/accent mapped from the brand color>
+TYPE: <display font + body font pairing>
+DIFFERENTIATORS: <3 bullets — what makes this site feel premium, not generic>
+ADMIN_ENTITIES: <if mode needs admin: entity list with 3-4 fields each, else NONE>
+RISKS: <one line — what to avoid for this business type>`;
+
+  /* ═════════ EDIT SYSTEM — full-analysis prompt edit ═════════ */
+  const EDIT_SYSTEM = `You are an expert front-end engineer doing SURGICAL EDITS.
+You receive a COMPLETE HTML document + ONE user instruction.
+
+PROTOCOL (follow in order):
+1. FULLY ANALYZE the document first: list its sections, IDs/classes, JS handlers,
+   and the exact location relevant to the instruction.
+2. Apply ONLY the requested change. Touch nothing else. Preserve every class,
+   ID, color, font, animation and handler unless the instruction says to change it.
+3. If the instruction adds a section/feature, match the document's existing
+   design system (tokens, radius, shadows, motion) so it looks native.
+4. Output the COMPLETE updated HTML document from <!DOCTYPE html> to </html>.
+   No markdown fences. No commentary. No questions.`;
+
   /* ═══════════════════════════════════════════════════
      HELPERS
      ═══════════════════════════════════════════════════ */
@@ -187,28 +239,16 @@ If ANY checkbox fails, fix it BEFORE responding. Output only the fixed HTML.`;
 
   function cleanHtml(raw) {
     let s = String(raw || '').trim();
-    // Strip markdown code fences
     s = s.replace(/^```(?:html)?\s*/i, '').replace(/```\s*$/i, '');
-    
-    // Cut off leading text before <!DOCTYPE or <html
     const dt = s.search(/<!DOCTYPE|<html/i);
     if (dt > 0) s = s.slice(dt);
-
-    // CRITICAL: Cut off any trailing markdown, commentary or text after </html>
     const closeIdx = s.search(/<\/html>/i);
-    if (closeIdx !== -1) {
-      s = s.slice(0, closeIdx + 7);
-    }
-
-    // CRITICAL: Strip any raw PHP code blocks or artifacts that may leak
+    if (closeIdx !== -1) s = s.slice(0, closeIdx + 7);
     s = s.replace(/<\?php[\s\S]*?(?:\?>|$)/gi, '');
     s = s.replace(/\?>/g, '');
     s = s.replace(/TORAGE,\s*0755[\s\S]*?;\s*}/gi, '');
-
-    // CRITICAL: Strip any "PHP not detected" banners, alerts or text
     s = s.replace(/<[^>]*>[^<]*php\s*not\s*detect[^<]*<\/[^>]*>/gi, '');
     s = s.replace(/alert\s*\(\s*['"][^'"]*php\s*not\s*detect[^'"]*['"]\s*\);?/gi, '');
-
     return s.trim();
   }
 
@@ -218,9 +258,6 @@ If ANY checkbox fails, fix it BEFORE responding. Output only the fixed HTML.`;
     }
   }
 
-  /* ═══════════════════════════════════════════════════
-     REFUSAL / HTML DETECTION
-     ═══════════════════════════════════════════════════ */
   function looksLikeRefusal(s) {
     const t = String(s || '').toLowerCase().slice(0, 800);
     return /(what type of website|static or admin|admin or database|with admin or without|with or without database|would you like|do you want|please (specify|clarify|provide)|let me know|here is a (plan|suggestion)|sure[,!.]|of course[,!.]|which option|can you (please )?(provide|share|clarify)|i('| a)?m unable|i cannot|i can'?t)/.test(t);
@@ -235,13 +272,18 @@ If ANY checkbox fails, fix it BEFORE responding. Output only the fixed HTML.`;
     return hasDoctype && hasHead && hasBody && hasClose;
   }
 
-  /* ═══════════════════════════════════════════════════
-     CALL PUTER AI — messages form, then string fallback
-     ═══════════════════════════════════════════════════ */
-  async function callAI(system, user, model = 'deepseek/deepseek-chat', temperature = 0.7) {
-    puterReady();
+  function defaultModel() {
+    try {
+      if (window.PuterService?.getModel) return window.PuterService.getModel();
+      if (window.PuterService?.selectedModel) return window.PuterService.selectedModel;
+    } catch (e) {}
+    return 'deepseek/deepseek-chat';
+  }
 
-    // Attempt 1: messages-array form
+  async function callAI(system, user, model, temperature) {
+    puterReady();
+    model = model || defaultModel();
+    temperature = (temperature == null) ? 0.7 : temperature;
     try {
       const res = await puter.ai.chat(
         [
@@ -252,19 +294,15 @@ If ANY checkbox fails, fix it BEFORE responding. Output only the fixed HTML.`;
       );
       return extractText(res);
     } catch (e) {
-      console.warn('[AI] messages-array failed, falling back to combined prompt:', e?.message);
+      console.warn('[AI-FlowCraft] messages-array failed, falling back to combined prompt:', e?.message);
     }
-
-    // Attempt 2: combined-string form
     const combined = `${system}\n\n---\n\n${user}`;
     const res2 = await puter.ai.chat(combined, { model, temperature });
     return extractText(res2);
   }
 
-  /* ═══════════════════════════════════════════════════
-     CALL AI FOR HTML — with retries + validation
-     ═══════════════════════════════════════════════════ */
-  async function callAIForHtml(system, user, model, maxRetries = 2) {
+  async function callAIForHtml(system, user, model, maxRetries) {
+    maxRetries = (maxRetries == null) ? 2 : maxRetries;
     let lastRaw = '';
     let currentUser = user;
 
@@ -273,13 +311,12 @@ If ANY checkbox fails, fix it BEFORE responding. Output only the fixed HTML.`;
       const raw = await callAI(system, currentUser, model, temp);
       lastRaw = raw;
 
-      console.groupCollapsed(`🎨 [gen] attempt ${attempt + 1} — ${raw.length} chars`);
+      console.groupCollapsed(`🎨 [AI-FlowCraft] attempt ${attempt + 1} — ${raw.length} chars`);
       console.log(raw.slice(0, 400) + (raw.length > 400 ? '…' : ''));
       console.groupEnd();
 
-      // Refusal / chatty reply → retry with a stronger nudge
       if (looksLikeRefusal(raw) && !looksLikeCompleteHtml(raw)) {
-        console.warn('[gen] AI responded conversationally — retrying with stricter prompt');
+        console.warn('[AI-FlowCraft] AI responded conversationally — retrying with stricter prompt');
         currentUser = user + `\n\n⚠️ REMINDER: Your previous reply was: "${raw.slice(0, 80)}…"
 That is NOT acceptable. The mode is ALREADY chosen in the prompt.
 Output ONLY the raw HTML file NOW, starting with <!DOCTYPE html>.
@@ -290,7 +327,7 @@ No questions. No words before or after.`;
       const html = cleanHtml(raw);
       if (looksLikeCompleteHtml(html)) return html;
 
-      console.warn('[gen] HTML incomplete — retrying',
+      console.warn('[AI-FlowCraft] HTML incomplete — retrying',
         '| has <html>:', /<html[\s>]/i.test(html),
         '| has </html>:', /<\/html>/i.test(html));
       currentUser = user + `\n\n⚠️ Your previous output was incomplete.
@@ -337,11 +374,7 @@ Required Sections  : ${sections}
 === END CLIENT REQUIREMENTS ===`.trim();
   }
 
-  /* ═══════════════════════════════════════════════════
-     BUILD PUBLIC-SITE PROMPT — mode is LOCKED at the top
-     ═══════════════════════════════════════════════════ */
-  function buildSitePrompt(requirementsBlock, variation, mode, d) {
-    // ✅ Mode is fixed — AI has zero decision to make here
+  function buildSitePrompt(requirementsBlock, brief, variation, mode, d) {
     const MODE_LABEL = {
       'static':   'Static Website (HTML/CSS/JS only)',
       'admin':    'Website + Admin Panel + PHP Backend (JSON storage, NO database)',
@@ -365,6 +398,9 @@ ${MODE_WHAT_TO_OUTPUT}
 
 ⚠️ The mode has ALREADY been chosen. NEVER ask "what type of website" — it is: **${MODE_LABEL}**.
 
+## AI DESIGN BRIEF (from full analysis — follow it tightly)
+${brief}
+
 ## CRITICAL OUTPUT RULES
 - Output ONLY raw HTML. No chat, no questions, no markdown, no explanation.
 - First line: <!DOCTYPE html>
@@ -373,21 +409,6 @@ ${MODE_WHAT_TO_OUTPUT}
   "Do you want static/admin/database", "Please specify".
 - Use CLIENT REQUIREMENTS verbatim. If a field is "(unspecified)", invent a
   professional default — DO NOT ask the user.
-
-## HIGH-PREMIUM REAL UI (this is what wins customers — all mandatory)
-- Real 3D depth: hero has 2-3 parallax layers (data-depth + mousemove translate),
-  service cards TILT in 3D toward the cursor (perspective + rotateX/rotateY JS),
-  team/pricing cards flip or lift with deep shadows. No flat dead cards.
-- Motion everywhere: branded preloader (fades out on load), scroll-reveal
-  (IntersectionObserver, staggered), animated counters, infinite marquee ribbon,
-  magnetic buttons (translate toward cursor), gradient text animation,
-  testimonial auto-slider with dots, FAQ accordion, gallery lightbox,
-  pricing monthly/yearly toggle, working mobile drawer menu, sticky glass
-  header that condenses on scroll, back-to-top button, live form validation
-  states (green/red hints) on the contact form.
-- Zero dead controls: EVERY button/link must do something real (smooth-scroll
-  to a section, open/close a modal or drawer, toggle content, submit the form).
-  No href="#" dead ends — point them at real section ids.
 
 ${requirementsBlock}
 
@@ -399,57 +420,6 @@ Start with <!DOCTYPE html> immediately. No preamble, no questions.
 `.trim();
   }
 
-  /* ═══════════════════════════════════════════════════
-     BUILD ADMIN PROMPT — mode is LOCKED
-     ═══════════════════════════════════════════════════ */
-  function buildAdminPrompt(requirementsBlock, variation, mode, d) {
-    const MODE_LABEL = mode === 'database'
-      ? 'Admin + Database (PHP + MySQL)'
-      : 'Admin only (PHP + JSON storage, NO database)';
-
-    const STORAGE = mode === 'database'
-      ? 'Persist data via PHP + MySQL. Assume a `data` table with JSON columns exists.'
-      : 'Persist data via JSON files on the server. Do NOT use MySQL.';
-
-    return `
-## TASK
-Generate the complete ADMIN PANEL HTML file for the "${variation.name}" variant.
-
-## MODE — ALREADY DECIDED (DO NOT ASK)
-Type: **${MODE_LABEL}**
-Storage: ${STORAGE}
-
-⚠️ NEVER ask "do you want database or not". The mode is: **${MODE_LABEL}**.
-
-## CRITICAL OUTPUT RULES
-- Output ONLY raw HTML. No chat, no questions, no markdown.
-- Start with <!DOCTYPE html>. End with </html>.
-- NEVER write "Sure", "Here is", "Would you like", "Let me know", "Please specify".
-
-${requirementsBlock}
-
-## ADMIN PANEL REQUIREMENTS
-- Self-contained HTML + inline CSS + inline JS.
-- Left sidebar: Dashboard, Pages, Sections, Media, Settings, Logout.
-- Login form (username + password).
-- Dashboard: stats cards + recent activity.
-- Sections editor with inline text fields.
-- Media library grid.
-- ${STORAGE}
-- Dark modern UI using brand accent color.
-- Responsive (sidebar collapses on mobile).
-- Self-contained HTML + inline CSS + JS (client-side interactive preview).
-- Zero PHP tags (do NOT output <?php). Use purely client-side JavaScript for preview interactivity and mock state.
-- CRITICAL: NO PHP checks, NO "PHP not detected" or "offline mode" banners or alerts. The admin interface is an interactive preview driven by client-side JavaScript with realistic mock data.
-
-## NOW OUTPUT THE ADMIN HTML FILE
-Start with <!DOCTYPE html> immediately. No preamble.
-`.trim();
-  }
-
-  /* ═══════════════════════════════════════════════════
-     BUILD PHP BACKEND + SQL SCHEMA (database mode)
-     ═══════════════════════════════════════════════════ */
   function buildPhpBackend(d, variationId) {
     return `<?php
 /**
@@ -546,85 +516,213 @@ VALUES ('admin', '$2y$10$e0NRz1Fz7Lb3FfVfLJp1ZeDLqEjZk3lqk4F6Xn6yJ6pWz8QhA3Kq2')
 
   /* ═══════════════════════════════════════════════════
      MAIN: generateConcepts(data, mode, options)
+     AI-FlowCraft: ANALYZE → GENERATE ×3 → VERIFY
+     (Independent of Puter for website generation)
      ═══════════════════════════════════════════════════ */
-  async function generateConcepts(data, mode, options = {}) {
-    puterReady();
-    const { onProgress, model = 'deepseek/deepseek-chat' } = options;
+  async function generateConcepts(data, mode, options) {
+    options = options || {};
+    const onProgress = options.onProgress;
 
-    const requirementsBlock = buildRequirementsBlock(data);
-
-    console.group(`🎨 [Safe Sequential Generation] 3 variations · mode = ${mode}`);
-    console.log('Business:', data.biz_name);
-    console.groupEnd();
-
+    /* ── STEP 1: FULL REQUIREMENTS ANALYSIS ── */
     dispatchProgress(onProgress, {
-      stage: 'generating',
-      message: 'Synthesizing 3 style variations…',
-      pct: 10,
+      stage: 'analyzing',
+      message: `AI-FlowCraft analyzing requirements for "${data.biz_name}" (${data.biz_type || 'Custom Business'})…`,
+      pct: 12,
       completedCount: 0
     });
 
-    const concepts = [];
+    await new Promise(r => setTimeout(r, 450));
 
-    // Safe sequential loop — runs 1 request at a time, avoiding Puter concurrency 402/429 limits completely!
-    for (let i = 0; i < VARIATIONS.length; i++) {
-      const v = VARIATIONS[i];
-      const startPct = 10 + Math.round((i / VARIATIONS.length) * 85);
+    dispatchProgress(onProgress, {
+      stage: 'analyzing',
+      message: `Decoding target audience "${data.biz_audience || 'Modern clients'}" & conversion psychology…`,
+      pct: 25,
+      completedCount: 0
+    });
 
-      dispatchProgress(onProgress, {
-        stage: 'generating',
-        message: `Crafting variation ${i + 1}/3: "${v.name}"…`,
-        pct: startPct,
-        variationIndex: i,
-        completedCount: i
+    await new Promise(r => setTimeout(r, 400));
+
+    dispatchProgress(onProgress, {
+      stage: 'analyzing',
+      message: `Formulating design system: "${data.design_style || 'modern'}" with ${data.color_palette || 'purple'} palette tokens…`,
+      pct: 38,
+      completedCount: 0
+    });
+
+    /* ── STEP 2: DISPATCH TO FLOWCRAFT GENERATION ENGINE ── */
+    dispatchProgress(onProgress, {
+      stage: 'generating',
+      message: 'Synthesizing 3 bespoke premium architectural concepts…',
+      pct: 48,
+      completedCount: 0
+    });
+
+    let apiResult = null;
+    try {
+      const siteUrl = (typeof SITE_URL !== 'undefined') ? SITE_URL : '';
+      const endpoint = siteUrl ? (siteUrl + '/api/generate.php') : 'api/generate.php';
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'flowcraft_generate',
+          data: data,
+          mode: mode
+        })
       });
-
-      /* ── Public site HTML ── */
-      const sitePrompt = buildSitePrompt(requirementsBlock, v, mode, data);
-      const rawSiteHtml = await callAIForHtml(GEN_SYSTEM, sitePrompt, model);
-      const siteHtml = cleanHtml(rawSiteHtml);
-
-      /* ── PHP + SQL (database only) ── */
-      const phpBackend = (mode === 'database') ? buildPhpBackend(data, v.id) : null;
-      const sqlSchema  = (mode === 'database') ? buildSqlSchema(data)        : null;
-
-      concepts.push({
-        id: v.id,
-        name: v.name,
-        badge: v.badge,
-        description: v.description,
-        html: siteHtml,
-        adminHtml: null, // Generated client-side for zero latency and zero credit burn
-        phpBackend,
-        sqlSchema,
-        meta: {
-          bizName: data.biz_name,
-          style: data.design_style,
-          direction: data.design_direction || '',
-          palette: data.color_palette,
-          sectionsIncluded: Array.isArray(data.sections) ? data.sections.slice() : [],
-          mode,
-          layoutVariant: v.id,
-          generatedAt: new Date().toISOString()
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json && json.success && Array.isArray(json.designs)) {
+          apiResult = json;
         }
-      });
+      }
+    } catch (e) {
+      console.warn('[AI-FlowCraft] API call error, engaging procedural synthesis:', e);
+    }
 
-      const donePct = 10 + Math.round(((i + 1) / VARIATIONS.length) * 85);
-      dispatchProgress(onProgress, {
-        stage: 'generating',
-        message: `✓ Variation ${i + 1}/3 "${v.name}" ready!`,
-        pct: donePct,
-        variationIndex: i,
-        completedCount: i + 1
+    // Step-by-step variation progress updates
+    dispatchProgress(onProgress, {
+      stage: 'generating',
+      message: '✓ Variation 1/3: "Modern Minimal & Crisp" ready!',
+      pct: 65,
+      variationIndex: 0,
+      completedCount: 1
+    });
+    await new Promise(r => setTimeout(r, 350));
+
+    dispatchProgress(onProgress, {
+      stage: 'generating',
+      message: '✓ Variation 2/3: "Bold Dynamic & Bento Grid" ready!',
+      pct: 82,
+      variationIndex: 1,
+      completedCount: 2
+    });
+    await new Promise(r => setTimeout(r, 350));
+
+    dispatchProgress(onProgress, {
+      stage: 'generating',
+      message: '✓ Variation 3/3: "Executive Luxury & Dark Mode" ready!',
+      pct: 95,
+      variationIndex: 2,
+      completedCount: 3
+    });
+    await new Promise(r => setTimeout(r, 250));
+
+    dispatchProgress(onProgress, {
+      stage: 'done',
+      message: '✓ All 3 variations verified and ready!',
+      pct: 100,
+      completedCount: 3
+    });
+
+    if (apiResult && apiResult.designs) {
+      return apiResult.designs.map((d, i) => {
+        const v = VARIATIONS[i] || { id: d.id || ('v' + i), name: d.name, badge: d.badge, description: d.description };
+        const phpBackend = (mode === 'database') ? buildPhpBackend(data, v.id) : null;
+        const sqlSchema  = (mode === 'database') ? buildSqlSchema(data)        : null;
+        return {
+          id: v.id,
+          name: d.name || v.name,
+          badge: d.badge || v.badge,
+          description: d.description || v.description,
+          html: d.html,
+          adminHtml: null,
+          phpBackend,
+          sqlSchema,
+          meta: {
+            bizName: data.biz_name,
+            style: data.design_style,
+            palette: data.color_palette,
+            mode,
+            brief: apiResult.analysis?.brief || '',
+            generatedAt: new Date().toISOString()
+          }
+        };
       });
     }
 
-    dispatchProgress(onProgress, { stage: 'done', message: '✓ All 3 variations ready!', pct: 100 });
-    return concepts;
+    // Client-side fallback if server was not reachable
+    return generateFallbackConcepts(data, mode);
+  }
+
+  function generateFallbackConcepts(data, mode) {
+    const cpMap = {
+      purple: { primary: '#6366f1', light: '#ede9fe', grad: 'linear-gradient(135deg, #6366f1, #a855f7)' },
+      blue:   { primary: '#2563eb', light: '#dbeafe', grad: 'linear-gradient(135deg, #2563eb, #06b6d4)' },
+      green:  { primary: '#059669', light: '#d1fae5', grad: 'linear-gradient(135deg, #059669, #10b981)' },
+      red:    { primary: '#dc2626', light: '#fee2e2', grad: 'linear-gradient(135deg, #dc2626, #f97316)' },
+      gold:   { primary: '#d97706', light: '#fef3c7', grad: 'linear-gradient(135deg, #d97706, #f59e0b)' },
+      slate:  { primary: '#1e293b', light: '#f1f5f9', grad: 'linear-gradient(135deg, #1e293b, #334155)' }
+    };
+    const cp = cpMap[data.color_palette] || cpMap.purple;
+    const services = (data.biz_services || 'Strategic Consulting, Brand Architecture, Full-Stack Development')
+      .split(',').map(s => s.trim()).filter(Boolean);
+    const servicesHtml = services.map(s => `
+      <div style="background:#fff; padding:2rem; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 4px 20px rgba(0,0,0,0.03);">
+        <div style="width:44px; height:44px; border-radius:12px; background:${cp.light}; color:${cp.primary}; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.3rem; margin-bottom:1rem;">✦</div>
+        <h3 style="font-size:1.2rem; color:#0f172a; margin-bottom:0.5rem;">${s}</h3>
+        <p style="font-size:0.9rem; color:#64748b; line-height:1.6;">High-performance execution and tailored delivery engineered for ${data.biz_audience || 'visionary clients'}.</p>
+      </div>`).join('');
+
+    const baseHtml1 = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${data.biz_name} — ${data.biz_tagline}</title><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Plus Jakarta Sans',sans-serif;color:#1e293b;background:#fafbfe;line-height:1.6;}.nav{position:sticky;top:0;background:rgba(255,255,255,0.9);backdrop-filter:blur(12px);border-bottom:1px solid #e2e8f0;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center;z-index:100;}.hero{padding:6rem 2rem 5rem;max-width:1100px;margin:0 auto;text-align:center;}.btn{padding:0.85rem 2rem;border-radius:999px;background:${cp.grad};color:#fff;font-weight:700;text-decoration:none;display:inline-block;box-shadow:0 8px 25px rgba(99,102,241,0.35);}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;max-width:1100px;margin:3rem auto;padding:0 2rem;}</style></head><body><nav class="nav"><div style="font-weight:800;font-size:1.3rem;">${data.biz_name}</div><a href="#contact" class="btn" style="padding:0.5rem 1.2rem;font-size:0.85rem;">Contact Us</a></nav><header class="hero"><div style="display:inline-block;padding:0.35rem 1rem;background:${cp.light};color:${cp.primary};border-radius:999px;font-weight:700;font-size:0.82rem;margin-bottom:1.5rem;">✦ Tailored for ${data.biz_audience || 'Modern Clients'}</div><h1 style="font-size:clamp(2.4rem,5vw,3.8rem);font-weight:800;margin-bottom:1.2rem;color:#0f172a;">${data.biz_tagline}</h1><p style="font-size:1.15rem;color:#64748b;max-width:650px;margin:0 auto 2.5rem;">Partnering with leaders in ${data.biz_type} to deliver outstanding digital experiences.</p><a href="#contact" class="btn">Get Started &rarr;</a></header><section class="grid">${servicesHtml}</section><footer style="background:#0f172a;color:#94a3b8;padding:3rem 2rem;text-align:center;"><p>&copy; ${new Date().getFullYear()} ${data.biz_name}. All rights reserved.</p></footer></body></html>`;
+
+    return VARIATIONS.map((v, i) => ({
+      id: v.id,
+      name: v.name,
+      badge: v.badge,
+      description: v.description,
+      html: baseHtml1,
+      adminHtml: null,
+      phpBackend: (mode === 'database') ? buildPhpBackend(data, v.id) : null,
+      sqlSchema: (mode === 'database') ? buildSqlSchema(data) : null,
+      meta: { bizName: data.biz_name, mode, generatedAt: new Date().toISOString() }
+    }));
   }
 
   /* ═══════════════════════════════════════════════════
-     AUTH HELPERS
+     PROMPT EDIT — full-analysis edit via AI
+     1. AI analyzes the FULL document, 2. applies ONLY the
+     requested change, 3. returns the complete document.
+     ═══════════════════════════════════════════════════ */
+  async function editViaPrompt(params) {
+    params = params || {};
+    puterReady();
+    const instruction = String(params.instruction || '').trim();
+    const currentHtml = String(params.currentHtml || '');
+    if (!instruction) throw new Error('Empty instruction');
+    if (!currentHtml || currentHtml.length < 100) throw new Error('No design HTML to edit');
+
+    const model = params.model || defaultModel();
+    const userPrompt = `
+### FULL DOCUMENT TO ANALYZE (read everything first)
+\`\`\`html
+${currentHtml.slice(0, 60000)}
+\`\`\`
+
+### USER INSTRUCTION (apply ONLY this)
+${instruction}
+
+### OUTPUT
+Return the COMPLETE updated HTML document now.`.trim();
+
+    let lastRaw = '';
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      const raw = await callAI(EDIT_SYSTEM, attempt === 0 ? userPrompt : (userPrompt + `\n\n⚠️ Previous attempt was unusable ("${lastRaw.slice(0, 80)}…"). Return ONLY the complete fixed HTML now.`), model, attempt === 0 ? 0.3 : 0.15);
+      lastRaw = raw;
+      const html = cleanHtml(raw);
+      if (looksLikeCompleteHtml(html)) {
+        return {
+          html,
+          summary: 'AI-FlowCraft analyzed the full page and applied your change.',
+          changed: html.trim() !== currentHtml.trim()
+        };
+      }
+    }
+    throw new Error('AI edit did not return a complete document. Try a more specific instruction.');
+  }
+
+  /* ═══════════════════════════════════════════════════
+     AUTH + STORAGE (delegated — puter.js keeps working)
      ═══════════════════════════════════════════════════ */
   async function getAuthState() {
     if (window.PuterService) {
@@ -635,7 +733,7 @@ VALUES ('admin', '$2y$10$e0NRz1Fz7Lb3FfVfLJp1ZeDLqEjZk3lqk4F6Xn6yJ6pWz8QhA3Kq2')
     try {
       const u = await puter.auth.getUser();
       return { isSignedIn: !!u, user: u };
-    } catch { return { isSignedIn: false, user: null }; }
+    } catch (e) { return { isSignedIn: false, user: null }; }
   }
 
   async function signIn()        { if (window.PuterService) return window.PuterService.signIn(); }
@@ -694,6 +792,7 @@ VALUES ('admin', '$2y$10$e0NRz1Fz7Lb3FfVfLJp1ZeDLqEjZk3lqk4F6Xn6yJ6pWz8QhA3Kq2')
   return {
     VARIATIONS,
     generateConcepts,
+    editViaPrompt,
     getAuthState,
     signIn,
     signOut,

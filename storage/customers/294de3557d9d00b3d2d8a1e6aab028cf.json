@@ -13,6 +13,18 @@
             "published_at": "2026-09-28 12:37:35",
             "next_payment_due": "2026-10-28",
             "site_active": true
+        },
+        "zenith-studio-6": {
+            "order_id": "WBL-2026-F2568D",
+            "site_name": "Zenith Studio",
+            "slug": "zenith-studio-6",
+            "package": "starter",
+            "amount": 1,
+            "live_url": "http:\/\/localhost\/project\/webbbuilder\/published\/zenith-studio-6\/",
+            "admin_url": null,
+            "published_at": "2026-09-29 13:18:08",
+            "next_payment_due": "2026-10-29",
+            "site_active": true
         }
     }
 }

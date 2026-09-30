@@ -1,5 +1,40 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) session_start();
+// No-cache: logout ku pirahu Back press panna stale list vara kudathu
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
 require_once dirname(__DIR__) . '/config/app.php';
+
+$customerUser  = $_SESSION['customer_user'] ?? null;
+$customerEmail = strtolower(trim($customerUser['email'] ?? ''));
+
+// Map published slug → owner email (local order files + Supabase)
+$slugOwners = [];
+$ordersDir = dirname(__DIR__) . '/storage/orders';
+if (is_dir($ordersDir)) {
+    foreach (glob($ordersDir . '/*.json') as $f) {
+        $o = json_decode(@file_get_contents($f), true);
+        if (!is_array($o) || empty($o['slug'])) continue;
+        $em = strtolower(trim($o['admin_email'] ?? ($o['client_email'] ?? '')));
+        if ($em) $slugOwners[$o['slug']] = $em;
+    }
+}
+if ($customerEmail && file_exists(dirname(__DIR__) . '/includes/db.php')) {
+    try {
+        require_once dirname(__DIR__) . '/includes/db.php';
+        $db = function_exists('getDb') ? getDb() : null;
+        if ($db) {
+            foreach ($db->query("SELECT slug, admin_email, client_email FROM orders")->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                if (empty($row['slug'])) continue;
+                $em = strtolower(trim($row['admin_email'] ?? ($row['client_email'] ?? '')));
+                if ($em) $slugOwners[$row['slug']] = $em;
+            }
+        }
+    } catch (Throwable $e) {}
+}
 
 // Scan published directory for live sites
 $sites = [];
@@ -8,6 +43,23 @@ foreach (scandir($dir) as $item) {
     if ($item === '.' || $item === '..' || !is_dir($dir . '/' . $item)) continue;
     $indexPath = $dir . '/' . $item . '/index.html';
     $metaPath  = $dir . '/' . $item . '/meta.json';
+
+    // Logged-in customers see ONLY their own projects here
+    if ($customerEmail) {
+        $owner = $slugOwners[$item] ?? null;
+        if ($owner === null && file_exists($metaPath)) {
+            $metaTmp = json_decode(@file_get_contents($metaPath), true) ?: [];
+            $oidTmp = $metaTmp['order_id'] ?? '';
+            if ($oidTmp) {
+                $ofTmp = $ordersDir . '/' . preg_replace('/[^A-Za-z0-9\-]/', '', $oidTmp) . '.json';
+                if (file_exists($ofTmp)) {
+                    $oTmp = json_decode(@file_get_contents($ofTmp), true) ?: [];
+                    $owner = strtolower(trim($oTmp['admin_email'] ?? ($oTmp['client_email'] ?? ''))) ?: null;
+                }
+            }
+        }
+        if ($owner !== $customerEmail) continue;
+    }
     
     $title = ucwords(str_replace(['-', '_'], ' ', $item));
     $publishedAt = file_exists($indexPath) ? date('M j, Y g:i A', filemtime($indexPath)) : 'Recently';
@@ -47,7 +99,10 @@ foreach (scandir($dir) as $item) {
     .site-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
     .site-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; overflow: hidden; transition: transform 0.2s, border-color 0.2s; display: flex; flex-direction: column; }
     .site-card:hover { transform: translateY(-3px); border-color: #6366f1; }
-    .site-preview { background: #1e293b; height: 160px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; }
+    .site-preview { background:#1e293b; height:180px; position:relative; overflow:hidden; }
+    .site-preview .preview-fallback { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:2.5rem; }
+    .site-preview iframe { position:absolute; top:0; left:0; width:1200px; height:800px; border:0; background:#fff;
+      transform:scale(.3); transform-origin:top left; pointer-events:none; }
     .site-body { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
     .site-title { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 0.35rem; }
     .site-meta { font-size: 0.8rem; color: #64748b; margin-bottom: 1rem; }
@@ -62,27 +117,48 @@ foreach (scandir($dir) as $item) {
 <body>
   <header class="header">
     <a href="<?= SITE_URL ?>" class="logo">⚡ <?= SITE_NAME ?></a>
-    <a href="<?= SITE_URL ?>/builder.php" class="btn">✦ Open AI Builder</a>
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <?php if ($customerEmail): ?>
+        <span style="font-size:.82rem;color:#c7d2fe;font-weight:700;">👤 <?= htmlspecialchars($customerUser['email']) ?></span>
+        <a href="<?= SITE_URL ?>/customer-portal.php" class="btn">My Projects</a>
+      <?php else: ?>
+        <a href="<?= SITE_URL ?>/customer-portal.php" class="btn">Login</a>
+        <a href="<?= SITE_URL ?>/builder.php" class="btn">✦ Open AI Builder</a>
+      <?php endif; ?>
+    </div>
   </header>
 
   <main class="container">
     <div class="hero">
-      <h1>🚀 Published Websites</h1>
-      <p>Live websites generated with AI and hosted seamlessly on your server.</p>
+      <?php if ($customerEmail): ?>
+        <h1>🌐 My Live Sites</h1>
+        <p>Websites published under <?= htmlspecialchars($customerUser['email']) ?> — <?= count($sites) ?> live.</p>
+      <?php else: ?>
+        <h1>🚀 Published Websites</h1>
+        <p>Live websites generated with AI and hosted seamlessly on your server. <a href="<?= SITE_URL ?>/customer-portal.php" style="color:#818cf8;font-weight:700;">Login</a> to see your own sites here.</p>
+      <?php endif; ?>
     </div>
 
     <?php if (empty($sites)): ?>
       <div class="empty-state">
         <div class="empty-icon">🌐</div>
-        <h2 style="font-size:1.3rem; margin-bottom:0.5rem">No websites published yet</h2>
-        <p style="color:#94a3b8; margin-bottom:1.5rem">Use the AI Builder to generate your first website and publish it with PayPal!</p>
-        <a href="<?= SITE_URL ?>/builder.php" class="btn">✦ Build &amp; Publish Website</a>
+        <?php if ($customerEmail): ?>
+          <h2 style="font-size:1.3rem; margin-bottom:0.5rem">No live sites under your email yet</h2>
+          <p style="color:#94a3b8; margin-bottom:1.5rem">Build and publish your first website — it will appear here.</p>
+        <?php else: ?>
+          <h2 style="font-size:1.3rem; margin-bottom:0.5rem">No websites published yet</h2>
+          <p style="color:#94a3b8; margin-bottom:1.5rem">Use the AI Builder to generate your first website and publish it with PayPal!</p>
+        <?php endif; ?>
+        <a href="<?= $customerEmail ? SITE_URL . '/builder.php' : SITE_URL . '/customer-portal.php?view=signup' ?>" class="btn">✦ Build &amp; Publish Website</a>
       </div>
     <?php else: ?>
       <div class="site-grid">
         <?php foreach ($sites as $site): ?>
           <div class="site-card">
-            <div class="site-preview">🌐</div>
+            <div class="site-preview">
+              <div class="preview-fallback">🌐</div>
+              <iframe src="<?= htmlspecialchars($site['url']) ?>" title="<?= htmlspecialchars($site['title']) ?> preview" loading="lazy" scrolling="no" sandbox="allow-scripts allow-same-origin"></iframe>
+            </div>
             <div class="site-body">
               <div>
                 <div class="site-title"><?= htmlspecialchars($site['title']) ?></div>

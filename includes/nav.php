@@ -1,12 +1,29 @@
 <?php
 // Shared Navbar — included in every page
+if (session_status() === PHP_SESSION_NONE) session_start();
+// No-cache: back button after logout must refetch (logged-in view never served stale)
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
+$customerUser = $_SESSION['customer_user'] ?? null;
 $current = basename($_SERVER['PHP_SELF']);
-$nav_links = [
-    'index.php'          => 'Home',
-    'builder.php'        => '✦ AI Builder',
-    'published/'         => 'Live Sites',
-    'client-intake.php'  => 'Get a Quote',
-    'contact.php'        => 'Contact',
+// Logged-in customers get a customer home: logo + Home go to their portal.
+// Guests see the public landing + Login.
+$homeHref = $customerUser ? SITE_URL . '/customer-portal.php' : SITE_URL . '/index.php';
+$nav_links = $customerUser ? [
+    'customer-portal.php' => 'Home',
+    'builder.php'         => '✦ AI Builder',
+    'published/'          => 'Live Sites',
+    'client-intake.php'   => 'Get a Quote',
+    'contact.php'         => 'Contact',
+] : [
+    'index.php'         => 'Home',
+    'builder.php'       => '✦ AI Builder',
+    'published/'        => 'Live Sites',
+    'client-intake.php' => 'Get a Quote',
+    'contact.php'       => 'Contact',
 ];
 ?>
 <!DOCTYPE html>
@@ -19,6 +36,7 @@ $nav_links = [
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/loader-3d.css">
 <style>
 /* ── GLOBAL RESETS ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -151,7 +169,7 @@ img{max-width:100%;display:block}
 </style>
 
 <nav class="navbar" role="navigation" aria-label="Main navigation">
-  <a href="index.php" class="nav-logo" aria-label="<?= SITE_NAME ?> Home">
+  <a href="<?= $homeHref ?>" class="nav-logo" aria-label="<?= SITE_NAME ?> Home">
     <div class="logo-icon">✦</div>
     <?= SITE_NAME ?>
   </a>
@@ -162,6 +180,12 @@ img{max-width:100%;display:block}
       <?= htmlspecialchars($label) ?>
     </a>
     <?php endforeach; ?>
+    <?php if ($customerUser): ?>
+      <span class="nav-link" style="background:var(--pl);font-weight:700;color:var(--pd);" title="Signed in">👤 <?= htmlspecialchars($customerUser['email']) ?></span>
+      <a href="<?= SITE_URL ?>/customer-portal.php?action=logout" class="nav-link">Logout</a>
+    <?php else: ?>
+      <a href="<?= SITE_URL ?>/customer-portal.php" class="nav-link cta">Login</a>
+    <?php endif; ?>
   </div>
   <button class="hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false">
     <span></span><span></span><span></span>
@@ -175,6 +199,12 @@ img{max-width:100%;display:block}
     <?= htmlspecialchars($label) ?>
   </a>
   <?php endforeach; ?>
+  <?php if ($customerUser): ?>
+    <span class="nav-link" style="color:var(--pd);font-weight:700;">👤 <?= htmlspecialchars($customerUser['email']) ?></span>
+    <a href="<?= SITE_URL ?>/customer-portal.php?action=logout" class="nav-link">Logout</a>
+  <?php else: ?>
+    <a href="<?= SITE_URL ?>/customer-portal.php" class="nav-link cta">Login</a>
+  <?php endif; ?>
 </div>
 
 <script>

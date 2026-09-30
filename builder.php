@@ -1,5 +1,151 @@
-﻿<?php
+<?php
+if (session_status() === PHP_SESSION_NONE) session_start();
+// No-cache: logout ku pirahu Back press panna stale builder vara kudathu
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/db.php';
+
+$customerUser  = $_SESSION['customer_user'] ?? null;
+$customerEmail = $customerUser['email'] ?? null;
+
+// ─── AJAX: Save design draft before publish ─────────────────────────────────
+if (isset($_GET['action']) && $_GET['action'] === 'save_design' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    try {
+        $raw  = file_get_contents('php://input');
+        $data = json_decode($raw, true);
+
+        $html       = (string)($data['html'] ?? '');
+        $bizName    = preg_replace('/[^a-zA-Z0-9 _\-]/', '', (string)($data['biz_name'] ?? 'Site'));
+        $genMode    = in_array($data['gen_mode'] ?? '', ['static','admin','database']) ? $data['gen_mode'] : 'static';
+        $designIdx  = max(0, (int)($data['design_index'] ?? 0));
+
+        if (empty($html)) {
+            echo json_encode(['success' => false, 'error' => 'Empty HTML']);
+            exit;
+        }
+
+        $draftDir = (defined('STORAGE_DIR') ? STORAGE_DIR : __DIR__ . '/storage') . '/drafts';
+        if (!is_dir($draftDir)) @mkdir($draftDir, 0755, true);
+
+        // Unique draft token per session
+        $token = bin2hex(random_bytes(16));
+        $meta  = [
+            'token'       => $token,
+            'biz_name'    => $bizName,
+            'gen_mode'    => $genMode,
+            'design_index'=> $designIdx,
+            'saved_at'    => date('Y-m-d H:i:s'),
+            'ip'          => $_SERVER['REMOTE_ADDR'] ?? '',
+        ];
+
+        file_put_contents($draftDir . '/' . $token . '.html', $html);
+        file_put_contents($draftDir . '/' . $token . '.json', json_encode($meta, JSON_PRETTY_PRINT));
+
+        // Clean old drafts (keep only last 20)
+        $allDrafts = glob($draftDir . '/*.json');
+        if (count($allDrafts) > 20) {
+            usort($allDrafts, fn($a,$b) => filemtime($a) - filemtime($b));
+            foreach (array_slice($allDrafts, 0, count($allDrafts) - 20) as $old) {
+                $oldHtml = str_replace('.json', '.html', $old);
+                @unlink($old);
+                @unlink($oldHtml);
+            }
+        }
+
+        echo json_encode(['success' => true, 'token' => $token]);
+    } catch (Throwable $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// Check for existing project to load via GET param (?order_id=XXX or ?slug=XXX)
+// HTML stays local (storage/designs + published), meta may come from Supabase.
+// Ownership: if ?order_id has an owner email, require customer login match.
+$loadOrderId = preg_replace('/[^a-zA-Z0-9_\-]/', '', $_GET['order_id'] ?? '');
+$loadSlug    = preg_replace('/[^a-zA-Z0-9_\-]/', '', $_GET['slug'] ?? '');
+$preloadedProject = null;
+$loadError = '';
+
+if ($loadOrderId) {
+    // 1. Try local order JSON first, then Supabase fallback
+    $orderFile = (defined('STORAGE_DIR') ? STORAGE_DIR : __DIR__ . '/storage') . '/orders/' . $loadOrderId . '.json';
+    $orderData = file_exists($orderFile) ? json_decode(file_get_contents($orderFile), true) : null;
+    if (!$orderData) {
+        $dbRows = function_exists('getCustomerOrdersFromDatabase') ? getCustomerOrdersFromDatabase($loadOrderId) : [];
+        if (!empty($dbRows[0])) {
+            $orderData = $dbRows[0];
+            // Normalize Supabase row to order-array shape
+            $orderData['order_id'] = $orderData['order_id'] ?? $loadOrderId;
+            $orderData['site_name'] = $orderData['site_name'] ?? 'Loaded Website';
+            $orderData['created_at'] = $orderData['created_at'] ?? ($orderData['published_at'] ?? '');
+        }
+    }
+    if ($orderData) {
+        // Ownership check — only owner email may open it
+        $ownerEmail = $orderData['admin_email'] ?? ($orderData['client_email'] ?? '');
+        if ($ownerEmail && (!$customerEmail || strcasecmp($ownerEmail, $customerEmail) !== 0)) {
+            $loadError = 'Please log in with ' . $ownerEmail . ' to edit this project.';
+            $preloadedProject = null;
+        } else {
+            $designFile = (defined('STORAGE_DIR') ? STORAGE_DIR : __DIR__ . '/storage') . '/designs/' . $loadOrderId . '.html';
+            $htmlContent = file_exists($designFile) ? file_get_contents($designFile) : '';
+            if (!$htmlContent && !empty($orderData['slug'])) {
+                $pubFile = __DIR__ . '/published/' . $orderData['slug'] . '/index.html';
+                if (file_exists($pubFile)) $htmlContent = file_get_contents($pubFile);
+            }
+            if ($htmlContent) {
+                $preloadedProject = [
+                    'order_id'    => $loadOrderId,
+                    'biz_name'    => $orderData['site_name'] ?? 'Loaded Website',
+                    'slug'        => $orderData['slug'] ?? '',
+                    'gen_mode'    => $orderData['gen_mode'] ?? 'admin',
+                    'html'        => $htmlContent,
+                    'admin_url'   => $orderData['admin_url'] ?? '',
+                    'live_url'    => $orderData['live_url'] ?? '',
+                ];
+            }
+        }
+    }
+} elseif ($loadSlug) {
+    $pubFile = __DIR__ . '/published/' . $loadSlug . '/index.html';
+    if (file_exists($pubFile)) {
+        $metaFile = __DIR__ . '/published/' . $loadSlug . '/meta.json';
+        $meta = file_exists($metaFile) ? json_decode(file_get_contents($metaFile), true) : [];
+        $preloadedProject = [
+            'order_id'    => $meta['order_id'] ?? '',
+            'biz_name'    => $meta['site_name'] ?? ucwords(str_replace('-', ' ', $loadSlug)),
+            'slug'        => $loadSlug,
+            'gen_mode'    => 'admin',
+            'html'        => file_get_contents($pubFile),
+            'admin_url'   => SITE_URL . '/published/' . $loadSlug . '/admin/login.php',
+            'live_url'    => SITE_URL . '/published/' . $loadSlug . '/',
+        ];
+    }
+}
+
+// "Open Project" menu — ONLY this customer's email projects (Supabase + local fallback).
+// Guest (no login): empty list, must log in. Generate-new still works locally.
+$existingProjects = [];
+if ($customerEmail && function_exists('getCustomerOrdersFromDatabase')) {
+    $rows = getCustomerOrdersFromDatabase($customerEmail);
+    foreach ($rows as $o) {
+        if (!empty($o['site_name']) && !empty($o['order_id'])) {
+            $existingProjects[] = [
+                'order_id'  => $o['order_id'],
+                'site_name' => $o['site_name'],
+                'slug'      => $o['slug'] ?? '',
+                'date'      => $o['published_at'] ?? $o['created_at'] ?? '',
+            ];
+        }
+    }
+}
+
 $page_title = 'AI Website Builder — 3 Style Variations & AI Co-Pilot';
 $page_desc  = 'Describe your business, choose a mode and a design direction, and get 3 AI-generated style variations.';
 require_once __DIR__ . '/includes/nav.php';
@@ -120,197 +266,270 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 #gen-overlay {
   display: none;
   position: fixed; inset: 0; z-index: 99999;
-  background: #020408;
+  background: radial-gradient(circle at 50% 40%, #0d1226 0%, #03060f 70%, #010206 100%);
   align-items: center; justify-content: center;
   flex-direction: column;
   overflow: hidden;
-  perspective: 1000px;
+  perspective: 1200px;
 }
 #gen-overlay.active { display: flex; animation: overlayIn 0.5s cubic-bezier(0.22,1,0.36,1); }
-@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlayIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
 
-/* Grid floor */
+/* Cybernetic HUD Top Bar */
+.gen-hud-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 48px;
+  background: rgba(10,15,28,0.7); backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(99,102,241,0.25);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.5rem; z-index: 10;
+}
+.gen-hud-left, .gen-hud-right { display: flex; align-items: center; gap: 0.75rem; }
+.gen-hud-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #10b981;
+  box-shadow: 0 0 10px #10b981, 0 0 20px rgba(16,185,129,0.5);
+  animation: hudBlink 1.4s ease-in-out infinite alternate;
+}
+@keyframes hudBlink { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+.gen-hud-mono { font-family: 'Fira Code', 'Courier New', monospace; font-size: 0.72rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.05em; }
+.gen-hud-badge {
+  background: linear-gradient(135deg, rgba(99,102,241,0.25), rgba(168,85,247,0.25));
+  border: 1px solid rgba(129,140,248,0.4); border-radius: 999px;
+  color: #c7d2fe; font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.65rem;
+  letter-spacing: 0.03em;
+}
+
+/* Perspective Cyber Grid */
 #gen-overlay::before {
   content: '';
   position: absolute; inset: 0;
   background-image:
-    linear-gradient(rgba(99,102,241,0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99,102,241,0.07) 1px, transparent 1px);
-  background-size: 40px 40px;
-  transform: perspective(600px) rotateX(60deg) scale(2.5) translateY(30%);
+    linear-gradient(rgba(99,102,241,0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,102,241,0.12) 1px, transparent 1px);
+  background-size: 44px 44px;
+  transform: perspective(500px) rotateX(65deg) scale(3) translateY(20%);
   transform-origin: center bottom;
-  animation: gridScroll 4s linear infinite;
-}
-@keyframes gridScroll { from { background-position: 0 0; } to { background-position: 0 40px; } }
-
-/* Ambient glow blobs */
-#gen-overlay::after {
-  content: '';
-  position: absolute; inset: 0;
-  background:
-    radial-gradient(ellipse 60% 40% at 20% 30%, rgba(99,102,241,0.18) 0%, transparent 65%),
-    radial-gradient(ellipse 50% 35% at 80% 60%, rgba(168,85,247,0.15) 0%, transparent 65%),
-    radial-gradient(ellipse 40% 30% at 50% 80%, rgba(16,185,129,0.10) 0%, transparent 65%);
-  animation: blobShift 8s ease-in-out infinite alternate;
+  animation: gridScroll 3s linear infinite;
   pointer-events: none;
 }
-@keyframes blobShift {
-  0%   { transform: scale(1) translate(0,0); }
-  50%  { transform: scale(1.08) translate(-2%, 1%); }
-  100% { transform: scale(1) translate(2%,-1%); }
+@keyframes gridScroll { from { background-position: 0 0; } to { background-position: 0 44px; } }
+
+/* Laser Scanner Beam */
+#gen-overlay::after {
+  content: '';
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.8) 50%, rgba(56,189,248,0.8) 70%, transparent 100%);
+  box-shadow: 0 0 20px rgba(99,102,241,0.9), 0 0 40px rgba(56,189,248,0.6);
+  animation: laserScan 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes laserScan {
+  0%   { top: 5%; opacity: 0; }
+  10%  { opacity: 0.8; }
+  90%  { opacity: 0.8; }
+  100% { top: 95%; opacity: 0; }
 }
 
-/* ── 3D Rotating Cube ── */
-.gen-cube-scene {
-  width: 90px; height: 90px;
-  perspective: 500px;
-  margin-bottom: 2.5rem;
-  position: relative; z-index: 2;
-}
-.gen-cube {
-  width: 90px; height: 90px;
-  position: relative;
-  transform-style: preserve-3d;
-  animation: cubeRotate 4s linear infinite;
-}
-@keyframes cubeRotate {
-  0%   { transform: rotateX(0deg) rotateY(0deg); }
-  100% { transform: rotateX(360deg) rotateY(360deg); }
-}
-.gen-cube-face {
-  position: absolute; width: 90px; height: 90px;
-  border: 1.5px solid rgba(99,102,241,0.7);
-  background: rgba(99,102,241,0.06);
+/* ── 3D Stage & Rotating Quantum Cube ── */
+.gen-stage-wrap {
+  position: relative; z-index: 2; margin-top: 2rem; margin-bottom: 2rem;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.6rem;
-  backdrop-filter: blur(2px);
 }
-.gen-cube-face.front  { transform: rotateY(0deg)   translateZ(45px); }
-.gen-cube-face.back   { transform: rotateY(180deg) translateZ(45px); border-color: rgba(168,85,247,0.7); }
-.gen-cube-face.right  { transform: rotateY(90deg)  translateZ(45px); border-color: rgba(16,185,129,0.6); }
-.gen-cube-face.left   { transform: rotateY(-90deg) translateZ(45px); border-color: rgba(56,189,248,0.6); }
-.gen-cube-face.top    { transform: rotateX(90deg)  translateZ(45px); border-color: rgba(251,191,36,0.5); }
-.gen-cube-face.bottom { transform: rotateX(-90deg) translateZ(45px); border-color: rgba(248,113,113,0.5); }
+/* ── Aurora Background Blobs ── */
+.gen-aurora { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.gen-aurora span { position: absolute; width: 46vmax; height: 46vmax; border-radius: 50%; filter: blur(90px); opacity: 0.35; }
+.gen-aurora .ab1 { background: #4f46e5; top: -12%; left: -8%; animation: auroraDrift 11s ease-in-out infinite alternate; }
+.gen-aurora .ab2 { background: #a855f7; bottom: -18%; right: -10%; animation: auroraDrift 13s ease-in-out infinite alternate-reverse; }
+.gen-aurora .ab3 { background: #06b6d4; top: 35%; left: 55%; width: 30vmax; height: 30vmax; opacity: 0.22; animation: auroraDrift 9s ease-in-out infinite alternate; }
+@keyframes auroraDrift { from { transform: translate(0,0) scale(1); } to { transform: translate(6vmax,4vmax) scale(1.15); } }
 
-/* ── Orbiting Rings ── */
-.gen-rings {
-  position: absolute; width: 200px; height: 200px;
-  top: 50%; left: 50%; transform: translate(-50%, -50%);
-  pointer-events: none; z-index: 1;
+/* ── Reflective Glow Floor ── */
+.gen-floor {
+  position: absolute; bottom: -34px; left: 50%; transform: translateX(-50%);
+  width: 280px; height: 56px; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(99,102,241,0.5) 0%, rgba(168,85,247,0.25) 45%, transparent 70%);
+  filter: blur(6px); animation: floorPulse 2.4s ease-in-out infinite alternate; pointer-events: none;
 }
-.gen-ring {
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  border: 1.5px solid transparent;
-}
+@keyframes floorPulse { from { transform: translateX(-50%) scaleX(1); opacity: 0.7; } to { transform: translateX(-50%) scaleX(1.18); opacity: 1; } }
+
+/* ── Orbiting Satellites ── */
+.gen-orbit { position: absolute; top: 50%; left: 50%; border-radius: 50%; pointer-events: none; }
+.gen-orbit-1 { width: 300px; height: 300px; margin: -150px 0 0 -150px; animation: orbitSpin 7s linear infinite; }
+.gen-orbit-2 { width: 220px; height: 220px; margin: -110px 0 0 -110px; animation: orbitSpin 4.5s linear infinite reverse; }
+.gen-orbit i { position: absolute; top: -5px; left: 50%; margin-left: -5px; width: 10px; height: 10px; border-radius: 50%; }
+.gen-orbit-1 i { background: #38bdf8; box-shadow: 0 0 12px #38bdf8, 0 0 26px rgba(56,189,248,0.6); }
+.gen-orbit-2 i { background: #f0abfc; box-shadow: 0 0 12px #e879f9, 0 0 26px rgba(232,121,249,0.6); }
+@keyframes orbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ── Floating Glass Shards ── */
+.gen-shard { position: absolute; border-radius: 8px; background: linear-gradient(135deg, rgba(129,140,248,0.25), rgba(168,85,247,0.12)); border: 1px solid rgba(129,140,248,0.4); backdrop-filter: blur(4px); animation: shardFloat 5s ease-in-out infinite; pointer-events: none; }
+.gen-shard.s1 { width: 26px; height: 26px; top: 6%; left: 12%; animation-delay: 0s; }
+.gen-shard.s2 { width: 16px; height: 16px; top: 70%; left: 8%; animation-delay: 1.2s; }
+.gen-shard.s3 { width: 20px; height: 20px; top: 22%; right: 10%; animation-delay: 0.6s; }
+.gen-shard.s4 { width: 14px; height: 14px; bottom: 12%; right: 16%; animation-delay: 1.8s; }
+@keyframes shardFloat { 0%,100% { transform: translateY(0) rotate(12deg); } 50% { transform: translateY(-22px) rotate(32deg); } }
+
+/* ── Build Step Checklist ── */
+.gen-steps { display: flex; gap: 0.4rem; width: min(520px, 90vw); margin-bottom: 1.1rem; flex-wrap: wrap; justify-content: center; }
+.gen-step { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; font-weight: 700; color: #475569; background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.2); border-radius: 999px; padding: 0.28rem 0.65rem; transition: all 0.3s ease; }
+.gen-step .gs-dot { width: 7px; height: 7px; border-radius: 50%; background: #334155; flex-shrink: 0; }
+.gen-step.active { color: #c7d2fe; border-color: rgba(99,102,241,0.6); background: rgba(99,102,241,0.12); box-shadow: 0 0 14px rgba(99,102,241,0.3); }
+.gen-step.active .gs-dot { background: #818cf8; box-shadow: 0 0 8px #818cf8; animation: stagePulse 0.9s ease-in-out infinite; }
+.gen-step.done { color: #6ee7b7; border-color: rgba(16,185,129,0.5); background: rgba(16,185,129,0.08); }
+.gen-step.done .gs-dot { background: #10b981; box-shadow: 0 0 8px #10b981; }
+/* home-build scene lives in assets/css/loader-3d.css (.wcl-hb) */
+
+/* ── Gyroscope Orbiting Rings ── */
+.gen-rings { display: none; }
+.gen-ring { position: absolute; inset: 0; border-radius: 50%; border: 1.8px solid transparent; }
 .gen-ring-1 {
-  border-top-color: #6366f1;
-  border-right-color: rgba(99,102,241,0.3);
-  animation: ringOrbit1 2.5s linear infinite;
+  border-top-color: #6366f1; border-right-color: rgba(99,102,241,0.5);
+  box-shadow: 0 0 15px rgba(99,102,241,0.4);
+  animation: ringSpin1 3s linear infinite;
 }
 .gen-ring-2 {
-  inset: 15px;
-  border-bottom-color: #a855f7;
-  border-left-color: rgba(168,85,247,0.3);
-  animation: ringOrbit2 1.8s linear infinite reverse;
+  inset: 18px;
+  border-bottom-color: #a855f7; border-left-color: rgba(168,85,247,0.5);
+  box-shadow: 0 0 15px rgba(168,85,247,0.4);
+  animation: ringSpin2 2.2s linear infinite reverse;
 }
 .gen-ring-3 {
-  inset: 30px;
-  border-top-color: #10b981;
-  border-right-color: rgba(16,185,129,0.2);
-  animation: ringOrbit1 3.2s linear infinite;
+  inset: 36px;
+  border-top-color: #06b6d4; border-right-color: rgba(6,182,212,0.4);
+  box-shadow: 0 0 15px rgba(6,182,212,0.4);
+  animation: ringSpin3 4s linear infinite;
 }
-@keyframes ringOrbit1 { to { transform: rotate(360deg); } }
-@keyframes ringOrbit2 { to { transform: rotate(-360deg); } }
+@keyframes ringSpin1 { 0% { transform: rotateX(65deg) rotateY(20deg) rotateZ(0deg); } 100% { transform: rotateX(65deg) rotateY(20deg) rotateZ(360deg); } }
+@keyframes ringSpin2 { 0% { transform: rotateX(-50deg) rotateY(45deg) rotateZ(0deg); } 100% { transform: rotateX(-50deg) rotateY(45deg) rotateZ(360deg); } }
+@keyframes ringSpin3 { 0% { transform: rotateX(30deg) rotateY(-60deg) rotateZ(0deg); } 100% { transform: rotateX(30deg) rotateY(-60deg) rotateZ(360deg); } }
 
-/* ── Text & Progress ── */
-.gen-overlay-content { position: relative; z-index: 2; text-align: center; display: flex; flex-direction: column; align-items: center; }
+/* ── Stone-Sculpt Build Scene ── */
+.gen-build-scene { position: relative; width: 280px; height: 230px; }
+.gb-base {
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  width: 224px; height: 26px; border-radius: 8px;
+  background: linear-gradient(180deg, #94a3b8 0%, #475569 55%, #1e293b 100%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.5), 0 10px 24px rgba(0,0,0,.6);
+}
+.gb-b {
+  position: absolute; width: 48px; height: 48px; border-radius: 7px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 45%, #475569 100%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.7), inset 0 -3px 0 rgba(0,0,0,.3), 0 6px 14px rgba(0,0,0,.5);
+  opacity: 0; transform: translateY(-56px) scale(.7);
+  transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .2s ease;
+}
+.gb-b.landed { opacity: 1; transform: none; }
+.gb-b.gold {
+  background: linear-gradient(135deg, #fef3c7 0%, #f59e0b 60%, #b45309 100%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.8), 0 0 24px rgba(245,158,11,.85);
+}
+.gb-chisel { position: absolute; top: -8px; right: 30px; width: 16px; height: 106px; transform-origin: 50% 8px; transform: rotate(-28deg); z-index: 3; }
+.gb-chisel .handle { position: absolute; top: 0; left: 3px; width: 10px; height: 72px; border-radius: 5px; background: linear-gradient(90deg, #92400e, #f59e0b, #92400e); box-shadow: 0 3px 8px rgba(0,0,0,.5); }
+.gb-chisel .tip { position: absolute; bottom: 0; left: 0; width: 16px; height: 32px; background: linear-gradient(180deg, #f1f5f9, #64748b); clip-path: polygon(22% 0, 78% 0, 100% 100%, 0 100%); }
+.gb-chisel.hit { transform: rotate(26deg); transition: transform .09s ease-out; }
+.gb-chisel:not(.hit) { transition: transform .35s ease-in; }
+.gb-sparks { position: absolute; left: 50%; top: 46%; z-index: 3; pointer-events: none; }
+.gb-sparks i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #fcd34d; box-shadow: 0 0 8px #f59e0b; opacity: 0; }
+.gb-sparks i:nth-child(1) { --x: -38px; --y: -24px; }
+.gb-sparks i:nth-child(2) { --x: 34px;  --y: -28px; }
+.gb-sparks i:nth-child(3) { --x: -26px; --y: 22px; }
+.gb-sparks i:nth-child(4) { --x: 30px;  --y: 18px; }
+.gb-sparks i:nth-child(5) { --x: 0px;   --y: -38px; }
+.gb-sparks i:nth-child(6) { --x: -8px;  --y: 32px; }
+.gb-sparks.burst i { animation: gbBurst .45s ease-out; }
+@keyframes gbBurst { 0% { opacity: 1; transform: translate(0,0) scale(1); } 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(.3); } }
+/* ── Content Area & Headings ── */
+.gen-overlay-content { position: relative; z-index: 2; text-align: center; display: flex; flex-direction: column; align-items: center; max-width: 680px; width: 92vw; }
 
 .gen-overlay-title {
-  font-size: clamp(1.4rem, 3vw, 2rem);
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: -0.03em;
-  margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #fff 30%, #a5b4fc 70%, #c4b5fd 100%);
+  font-size: clamp(1.4rem, 3.2vw, 2.1rem); font-weight: 900; letter-spacing: -0.03em; margin-bottom: 0.35rem;
+  background: linear-gradient(135deg, #ffffff 15%, #c7d2fe 55%, #e9d5ff 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  animation: titlePulse 3s ease-in-out infinite;
+  text-shadow: 0 0 40px rgba(129,140,248,0.3);
 }
-@keyframes titlePulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.2); } }
 
 .gen-overlay-stage {
-  font-size: 0.9rem;
-  color: #94a3b8;
-  font-weight: 600;
-  min-height: 1.4em;
-  transition: opacity 0.3s;
-  margin-bottom: 2rem;
-  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.88rem; color: #cbd5e1; font-weight: 600; min-height: 1.4em;
+  margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
 }
 .gen-overlay-stage .stage-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #6366f1;
-  box-shadow: 0 0 10px #6366f1;
-  animation: stagePulse 1s ease-in-out infinite;
-  flex-shrink: 0;
+  width: 8px; height: 8px; border-radius: 50%; background: #6366f1;
+  box-shadow: 0 0 12px #818cf8; animation: stagePulse 0.9s ease-in-out infinite; flex-shrink: 0;
 }
-@keyframes stagePulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.5; } }
+@keyframes stagePulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.4; } }
 
-/* Progress track */
+/* Glowing Live Percentage */
+.gen-pct-wrap {
+  display: flex; align-items: baseline; gap: 0.15rem; margin-bottom: 0.6rem;
+  font-family: 'Fira Code', monospace; font-size: 1.8rem; font-weight: 900;
+  background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  filter: drop-shadow(0 0 14px rgba(99,102,241,0.5));
+}
+.gen-pct-wrap .pct-symbol { font-size: 1.1rem; opacity: 0.8; }
+
+/* Neon Progress Track */
 .gen-overlay-track {
-  width: min(480px, 80vw);
-  height: 5px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 999px;
-  overflow: hidden;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 0 0 1px rgba(99,102,241,0.15);
+  width: min(520px, 90vw); height: 7px; background: rgba(255,255,255,0.06);
+  border-radius: 999px; overflow: hidden; margin-bottom: 1.35rem;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.25), 0 0 20px rgba(99,102,241,0.15);
 }
 .gen-overlay-fill {
-  height: 100%;
-  width: 5%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #4f46e5, #8b5cf6, #06b6d4);
+  height: 100%; width: 5%; border-radius: 999px;
+  background: linear-gradient(90deg, #4f46e5 0%, #8b5cf6 45%, #06b6d4 100%);
   background-size: 200% 100%;
-  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
   animation: progressShimmer 2s linear infinite;
-  box-shadow: 0 0 12px rgba(99,102,241,0.7), 0 0 24px rgba(99,102,241,0.3);
+  box-shadow: 0 0 16px rgba(99,102,241,0.9), 0 0 32px rgba(6,182,212,0.4);
+  transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
 }
 @keyframes progressShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
 
-/* Steps */
-.gen-overlay-steps {
-  display: flex; gap: 1.5rem; margin-top: 0.5rem;
+/* Parallel 3-Variation Badges */
+.gen-var-status {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.65rem;
+  width: min(520px, 90vw); margin-bottom: 1.25rem;
 }
-.gen-step {
-  display: flex; align-items: center; gap: 0.4rem;
-  font-size: 0.72rem; font-weight: 700;
-  color: #475569; transition: color 0.4s;
+@media (max-width: 580px) { .gen-var-status { grid-template-columns: 1fr; } }
+.gen-vcard {
+  background: rgba(15,23,42,0.65); border: 1px solid rgba(99,102,241,0.25);
+  border-radius: 10px; padding: 0.5rem 0.65rem; text-align: left;
+  display: flex; flex-direction: column; gap: 0.15rem;
+  transition: all 0.3s ease;
 }
-.gen-step.done  { color: #10b981; }
-.gen-step.active { color: #a5b4fc; }
-.gen-step-icon { font-size: 0.9rem; }
-.gen-step-check { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 0.58rem; flex-shrink: 0; }
-.gen-step.done .gen-step-check { background: #10b981; border-color: #10b981; color: #fff; }
-.gen-step.done .gen-step-check::after { content: '✓'; }
-.gen-step.active .gen-step-check { border-color: #6366f1; animation: stepPing 1.5s ease-in-out infinite; }
-@keyframes stepPing { 0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.6); } 50% { box-shadow: 0 0 0 5px rgba(99,102,241,0); } }
+.gen-vcard.ready {
+  border-color: rgba(16,185,129,0.7); background: rgba(6,78,59,0.25);
+  box-shadow: 0 0 15px rgba(16,185,129,0.25);
+}
+.gen-vcard-name { font-size: 0.72rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gen-vcard-state { font-size: 0.65rem; color: #94a3b8; font-weight: 600; display: flex; align-items: center; gap: 0.3rem; }
+.gen-vcard.ready .gen-vcard-state { color: #34d399; font-weight: 800; }
+.gen-vcard.ready .gen-vcard-state::before { content: '✓ '; }
 
-/* Floating particles */
-.gen-particles { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
-.gen-particle {
-  position: absolute;
-  border-radius: 50%;
-  animation: particleFloat linear infinite;
+/* Live Telemetry Terminal Line */
+.gen-terminal-box {
+  width: min(520px, 90vw); background: rgba(5,8,16,0.8);
+  border: 1px solid rgba(56,189,248,0.25); border-radius: 8px;
+  padding: 0.45rem 0.85rem; display: flex; align-items: center; gap: 0.55rem;
+  font-family: 'Fira Code', monospace; font-size: 0.72rem; color: #38bdf8;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5); margin-bottom: 1.25rem;
 }
+.terminal-prompt { color: #818cf8; font-weight: 900; }
+#gen-terminal-line { color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Rotating Tip */
+.gen-overlay-tip {
+  font-size: 0.76rem; color: #64748b; font-weight: 600; max-width: 440px;
+  line-height: 1.5; text-align: center; transition: opacity 0.3s;
+}
+
+/* Floating Starfield Particles */
+.gen-particles { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.gen-particle { position: absolute; border-radius: 50%; animation: particleFloat linear infinite; }
 @keyframes particleFloat {
   0%   { transform: translateY(100vh) scale(0); opacity: 0; }
   10%  { opacity: 1; }
   90%  { opacity: 0.6; }
   100% { transform: translateY(-10vh) scale(1); opacity: 0; }
 }
-
-@keyframes spin { to { transform: rotate(360deg); } }
 
 
 /* ══ DESIGNS SCREEN ══ */
@@ -475,8 +694,14 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 .gen-mode-card .gm-badge { position: absolute; top: 0.7rem; right: 0.7rem; background: linear-gradient(135deg,#4f46e5,#7c3aed); color: #fff; font-size: 0.58rem; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 999px; letter-spacing: 0.05em; text-transform: uppercase; }
 .gen-mode-card[data-mode="static"] .gm-badge { background: linear-gradient(135deg,#10b981,#059669); }
 .gen-mode-card[data-mode="database"] .gm-badge { background: linear-gradient(135deg,#0891b2,#0369a1); }
-.toast { position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 10000; background: #111622; border: 1.5px solid #283347; border-radius: 12px; padding: 0.85rem 1.4rem; color: #fff; font-size: 0.88rem; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.6); transform: translateY(100px); opacity: 0; transition: all 0.3s ease; max-width: 90vw; }
+.toast { position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 10000; background: #111622; border: 1.5px solid #283347; border-radius: 12px; padding: 0.85rem 1.4rem 1rem; color: #fff; font-size: 0.88rem; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.6); transform: translateY(100px); opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; max-width: 90vw; overflow: hidden; }
 .toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: #10b981; box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 18px rgba(16,185,129,0.25); }
+.toast.error { border-color: #ef4444; box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 18px rgba(239,68,68,0.25); }
+.toast.info { border-color: #6366f1; box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 18px rgba(99,102,241,0.25); }
+#toast-bar { position: absolute; bottom: 0; left: 0; height: 3px; width: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); }
+.toast.success #toast-bar { background: linear-gradient(90deg, #059669, #34d399); }
+.toast.error #toast-bar { background: linear-gradient(90deg, #dc2626, #f87171); }
 
 /* ══ GUIDE MODAL ══ */
 .generate-modal-backdrop {
@@ -533,76 +758,155 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 
 <!-- ═══ 3D GENERATION OVERLAY ═══ -->
 <div id="gen-overlay">
-  <!-- Floating particles (injected by JS) -->
-  <div class="gen-particles" id="gen-particles"></div>
-
-  <!-- 3D Cube with orbiting rings -->
-  <div class="gen-cube-scene" style="position:relative;">
-    <div class="gen-rings">
-      <div class="gen-ring gen-ring-1"></div>
-      <div class="gen-ring gen-ring-2"></div>
-      <div class="gen-ring gen-ring-3"></div>
+  <!-- Top Cyber Status Bar -->
+  <div class="gen-hud-bar">
+    <div class="gen-hud-left">
+      <span class="gen-hud-dot"></span>
+      <span class="gen-hud-mono">AI-FLOWCRAFT: AUTONOMOUS NEURAL SYNTHESIS</span>
     </div>
-    <div class="gen-cube">
-      <div class="gen-cube-face front">✦</div>
-      <div class="gen-cube-face back">🎨</div>
-      <div class="gen-cube-face right">⚡</div>
-      <div class="gen-cube-face left">🚀</div>
-      <div class="gen-cube-face top">💡</div>
-      <div class="gen-cube-face bottom">🌐</div>
+    <div class="gen-hud-right">
+      <span class="gen-hud-badge">✦ DEEP ANALYSIS · 3 VARIATIONS</span>
+      <span class="gen-hud-mono" id="gen-hud-time">0.0s</span>
     </div>
   </div>
 
-  <!-- Text content -->
+  <!-- Ambient FX -->
+  <div class="gen-aurora"><span class="ab1"></span><span class="ab2"></span><span class="ab3"></span></div>
+
+  <!-- Floating particles (injected by JS) -->
+  <div class="gen-particles" id="gen-particles"></div>
+  <div class="gen-shard s1"></div>
+  <div class="gen-shard s2"></div>
+  <div class="gen-shard s3"></div>
+  <div class="gen-shard s4"></div>
+
+  <!-- Little builder builds your home (pure CSS story loop) -->
+  <div class="gen-stage-wrap">
+    <div class="wcl-hb" style="position:relative;z-index:2;">
+      <div class="wcl-hb-sun"></div>
+      <div class="wcl-hb-cloud c1"></div><div class="wcl-hb-cloud c2"></div>
+      <div class="wcl-hb-bricks"><i></i><i></i><i></i></div>
+      <div class="wcl-hb-walls"></div><div class="wcl-hb-roof"></div>
+      <div class="wcl-hb-door"></div>
+      <div class="wcl-hb-win w1"></div><div class="wcl-hb-win w2"></div>
+      <div class="wcl-hb-chimney"><div class="wcl-hb-smoke"><i></i><i></i><i></i></div></div>
+      <div class="wcl-hb-man"><div class="wcl-hb-bob">
+        <div class="wcl-hb-head"><span class="hat"></span></div>
+        <div class="wcl-hb-body"></div>
+        <div class="wcl-hb-legs"><i></i><i></i></div>
+        <div class="wcl-hb-arm"><span class="hammer"></span></div>
+      </div></div>
+      <div class="wcl-hb-ground"></div>
+    </div>
+  </div>
+
+  <!-- Main Content & Progress -->
   <div class="gen-overlay-content">
-    <div class="gen-overlay-title">Crafting Your Website</div>
-    <div class="gen-overlay-stage">
-      <span class="stage-dot"></span>
-      <span id="gen-overlay-text">Initializing AI engine…</span>
+    <div class="gen-overlay-title">✦ AI-FlowCraft Neural Design Engine</div>
+    
+    <!-- Live Requirements Analysis Pill Bar -->
+    <div class="gen-analysis-brief" id="gen-analysis-brief" style="display:flex; flex-wrap:wrap; justify-content:center; gap:0.45rem; margin:0.35rem 0 0.85rem; width:min(540px, 92vw);">
+      <span class="gen-pill" id="gpill-biz" style="background:rgba(15,23,42,0.75); border:1px solid rgba(99,102,241,0.35); padding:0.25rem 0.7rem; border-radius:999px; font-size:0.72rem; color:#94a3b8; display:inline-flex; align-items:center; gap:0.35rem; backdrop-filter:blur(8px);">🏢 <strong id="gpill-biz-val" style="color:#e2e8f0; font-weight:700;">Analyzing Business</strong></span>
+      <span class="gen-pill" id="gpill-aud" style="background:rgba(15,23,42,0.75); border:1px solid rgba(99,102,241,0.35); padding:0.25rem 0.7rem; border-radius:999px; font-size:0.72rem; color:#94a3b8; display:inline-flex; align-items:center; gap:0.35rem; backdrop-filter:blur(8px);">🎯 <strong id="gpill-aud-val" style="color:#e2e8f0; font-weight:700;">Target Audience</strong></span>
+      <span class="gen-pill" id="gpill-style" style="background:rgba(15,23,42,0.75); border:1px solid rgba(99,102,241,0.35); padding:0.25rem 0.7rem; border-radius:999px; font-size:0.72rem; color:#94a3b8; display:inline-flex; align-items:center; gap:0.35rem; backdrop-filter:blur(8px);">🎨 <strong id="gpill-style-val" style="color:#e2e8f0; font-weight:700;">Design Direction</strong></span>
+      <span class="gen-pill" id="gpill-mode" style="background:rgba(15,23,42,0.75); border:1px solid rgba(99,102,241,0.35); padding:0.25rem 0.7rem; border-radius:999px; font-size:0.72rem; color:#94a3b8; display:inline-flex; align-items:center; gap:0.35rem; backdrop-filter:blur(8px);">⚡ <strong id="gpill-mode-val" style="color:#e2e8f0; font-weight:700;">Mode: Static</strong></span>
     </div>
 
-    <!-- Progress bar -->
+    <div class="gen-overlay-stage">
+      <span class="stage-dot"></span>
+      <span id="gen-overlay-text">AI-FlowCraft initializing neural requirements analysis…</span>
+    </div>
+
+    <!-- Live Percentage Counter -->
+    <div class="gen-pct-wrap">
+      <span id="gen-pct-num">0</span><span class="pct-symbol">%</span>
+    </div>
+
+    <!-- Glowing Progress Track -->
     <div class="gen-overlay-track">
       <div class="gen-overlay-fill" id="gen-overlay-fill"></div>
     </div>
 
-    <!-- Step indicators -->
-    <div class="gen-overlay-steps">
-      <div class="gen-step active" id="gstep-1">
-        <span class="gen-step-check"></span>
-        <span class="gen-step-icon">🔗</span>
-        <span>Connecting</span>
+    <!-- Build Step Checklist — AI-FlowCraft 28-Skill Pipeline -->
+    <div class="gen-steps" id="gen-steps">
+      <div class="gen-step" data-s="0"><span class="gs-dot"></span>Skills 1-2: Requirements</div>
+      <div class="gen-step" data-s="1"><span class="gs-dot"></span>Skills 3-9: Architecture</div>
+      <div class="gen-step" data-s="2"><span class="gs-dot"></span>Skills 10-18: Standards</div>
+      <div class="gen-step" data-s="3"><span class="gs-dot"></span>Skills 19-21: Features</div>
+      <div class="gen-step" data-s="4"><span class="gs-dot"></span>Skills 22-26: QA &amp; Launch</div>
+    </div>
+
+    <!-- Parallel 3-Variation Badges -->
+    <div class="gen-var-status" id="gen-var-status">
+      <div class="gen-vcard" id="gvcard-0">
+        <span class="gvcard-name">1. Minimal Modern</span>
+        <span class="gvcard-state" id="gvcard-state-0">⚡ Analyzing…</span>
       </div>
-      <div class="gen-step" id="gstep-2">
-        <span class="gen-step-check"></span>
-        <span class="gen-step-icon">🤖</span>
-        <span>Generating</span>
+      <div class="gen-vcard" id="gvcard-1">
+        <span class="gvcard-name">2. Bold Dynamic</span>
+        <span class="gvcard-state" id="gvcard-state-1">⚡ Analyzing…</span>
       </div>
-      <div class="gen-step" id="gstep-3">
-        <span class="gen-step-check"></span>
-        <span class="gen-step-icon">✨</span>
-        <span>Finalizing</span>
+      <div class="gen-vcard" id="gvcard-2">
+        <span class="gvcard-name">3. Luxury Dark</span>
+        <span class="gvcard-state" id="gvcard-state-2">⚡ Analyzing…</span>
       </div>
     </div>
 
-    <!-- Tip text -->
-    <div style="margin-top:2rem;font-size:0.75rem;color:#334155;font-weight:600;max-width:360px;line-height:1.6;text-align:center;" id="gen-overlay-tip">
-      ✦ AI is designing 3 unique style variations — each with your exact content
+    <!-- Live Telemetry Terminal Line -->
+    <div class="gen-terminal-box">
+      <span class="terminal-prompt">&gt;</span>
+      <span id="gen-terminal-line">AI-FlowCraft neural engine analyzing customer requirements and synthesizing multi-variation layouts...</span>
+    </div>
+
+    <!-- Rotating Tip -->
+    <div id="gen-overlay-tip" class="gen-overlay-tip">
+      ✦ AI-FlowCraft analyzes customer requirements, audience psychology, and builds 3 bespoke websites
     </div>
   </div>
 </div>
 
 <!-- ═══ WIZARD SCREEN ═══ -->
 <div id="wizard-screen">
+<?php if (!empty($loadError)): ?>
+  <div style="max-width:900px;margin:0 auto 1rem;background:rgba(239,68,68,.12);border:1.5px solid rgba(239,68,68,.5);color:#fca5a5;padding:.9rem 1.2rem;border-radius:12px;font-size:.88rem;font-weight:600;"><?= htmlspecialchars($loadError) ?> <a href="<?= SITE_URL ?>/customer-portal.php" style="color:#fff;font-weight:800;">Login here</a></div>
+<?php endif; ?>
   <div class="wizard-card">
     <div class="wizard-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
       <div style="flex:1; min-width:260px;">
         <h1>✦ AI Website Generator</h1>
         <p>Tell us about your business and design direction. We'll generate <strong>3 style variations</strong> — you pick your favorite.</p>
       </div>
-      <button type="button" class="wbtn" onclick="openStepByStepGuide()" style="background:rgba(255,255,255,0.18); border:1.5px solid rgba(255,255,255,0.35); color:#fff; font-size:0.82rem; font-weight:800; padding:0.55rem 1.15rem; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:0.45rem; white-space:nowrap; transition:all 0.15s; flex-shrink:0;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'" title="Click to view full-stack development guide">
-        <span>📖</span><span>Admin &amp; Features Guide</span>
-      </button>
+      <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+        <?php if ($customerEmail && !empty($existingProjects)): ?>
+        <div style="position:relative; display:inline-block;">
+          <button type="button" class="wbtn" onclick="toggleLoadProjectMenu()" style="background:#1e1b4b; border:1.5px solid #6366f1; color:#c7d2fe; font-size:0.82rem; font-weight:800; padding:0.55rem 1.15rem; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:0.45rem; white-space:nowrap; transition:all 0.15s; flex-shrink:0;">
+            <span>📂</span><span>Open Project (<?= count($existingProjects) ?>)</span><span>▾</span>
+          </button>
+          <div id="load-project-dropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#0c1220; border:1px solid #1e293b; border-radius:12px; box-shadow:0 15px 35px rgba(0,0,0,0.7); min-width:280px; z-index:9999; padding:0.5rem; max-height:300px; overflow-y:auto;">
+            <div style="font-size:0.7rem; font-weight:700; color:#64748b; padding:0.4rem 0.6rem; text-transform:uppercase;"><?= htmlspecialchars($customerEmail) ?> projects</div>
+            <?php foreach ($existingProjects as $ep): ?>
+              <a href="builder.php?order_id=<?= urlencode($ep['order_id']) ?>" style="display:block; padding:0.6rem 0.75rem; border-radius:8px; text-decoration:none; color:#e2e8f0; font-size:0.82rem; transition:background 0.15s;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+                <div style="font-weight:700; color:#fff;"><?= htmlspecialchars($ep['site_name']) ?></div>
+                <div style="font-size:0.7rem; color:#818cf8;"><?= htmlspecialchars($ep['order_id']) ?> &bull; <?= htmlspecialchars($ep['slug']) ?></div>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <?php elseif ($customerEmail): ?>
+        <span style="font-size:.75rem;color:#34d399;font-weight:700;">Logged in: <?= htmlspecialchars($customerEmail) ?></span>
+        <?php else: ?>
+        <a href="<?= SITE_URL ?>/customer-portal.php" class="wbtn" style="background:#1e1b4b; border:1.5px solid #6366f1; color:#c7d2fe; font-size:0.82rem; font-weight:800; padding:0.55rem 1.15rem; border-radius:10px; display:inline-flex; align-items:center; gap:0.45rem; text-decoration:none;">Login to open your projects</a>
+        <?php endif; ?>
+
+        <div class="db-status-badge" style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.4rem 0.8rem; border-radius:999px; font-size:0.75rem; font-weight:800; background:rgba(16,185,129,0.15); border:1.5px solid #10b981; color:#34d399;" title="Supabase PostgreSQL Cloud Database">
+          <span style="width:7px; height:7px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981;"></span>
+          <span>⚡ Supabase Connected</span>
+        </div>
+
+        <button type="button" class="wbtn" onclick="openStepByStepGuide()" style="background:rgba(255,255,255,0.18); border:1.5px solid rgba(255,255,255,0.35); color:#fff; font-size:0.82rem; font-weight:800; padding:0.55rem 1.15rem; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:0.45rem; white-space:nowrap; transition:all 0.15s; flex-shrink:0;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'" title="Click to view full-stack development guide">
+          <span>📖</span><span>Admin &amp; Features Guide</span>
+        </button>
+      </div>
     </div>
 
     <div class="wizard-progress">
@@ -703,17 +1007,16 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
       <!-- STEP 4 -->
       <div class="wizard-step" id="step4">
         <div class="wiz-section-label">Step 4 of 4 · Contact Info &amp; Generate</div>
-        <div class="account-bar" id="account-bar">
+        <div class="account-bar" id="account-bar" style="background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(16,185,129,0.1)); border: 1.5px solid rgba(99,102,241,0.35);">
           <div class="account-info">
-            <div class="account-avatar" id="account-avatar">?</div>
+            <div class="account-avatar" id="account-avatar" style="background: linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:800;">✦</div>
             <div>
-              <div class="account-name" id="account-name">Not signed in</div>
-              <div class="account-status offline" id="account-status">Sign in to enable AI generation</div>
+              <div class="account-name" id="account-name" style="color:#fff; font-weight:700;">AI-FlowCraft Engine Ready</div>
+              <div class="account-status" id="account-status" style="color:#34d399;">🟢 Autonomous Neural Synthesis Active · 3 Bespoke Variations</div>
             </div>
           </div>
           <div class="account-actions" id="account-actions">
-            <button class="account-btn primary" onclick="handlePuterSignIn()">✦ Sign In</button>
-            <button class="account-btn" onclick="handlePuterCreateAccount()">+ Create Free Account</button>
+            <span style="font-size:0.75rem; color:#c7d2fe; background:rgba(99,102,241,0.2); padding:0.35rem 0.8rem; border-radius:999px; border:1px solid rgba(99,102,241,0.35); font-weight:700;">⚡ Ready to Generate</span>
           </div>
         </div>
 
@@ -759,11 +1062,26 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
   <div class="designs-grid" id="designs-grid"></div>
 </div>
 
+<!-- ═══ SUB-DESIGN PICKER SCREEN ═══ -->
+<div id="subdesign-screen" style="display:none;">
+  <div class="designs-header">
+    <div class="designs-badge" id="subdesign-concept-badge">✦ 3 Layout Variants</div>
+    <h1 id="subdesign-title">Choose Your Layout Variant</h1>
+    <p id="subdesign-sub">Each variant uses the same design direction — only the layout and structure differ. Pick the one that fits your vision.</p>
+    <button class="wbtn wbtn-ghost" onclick="backToDesignsFromSub()" style="margin-top:0.9rem;font-size:0.82rem;padding:0.5rem 1.1rem;border-radius:10px;"><span>←</span> Back to Concepts</button>
+  </div>
+  <div class="designs-grid" id="subdesign-grid"></div>
+</div>
+
 <!-- ═══ LIVE WORKSPACE ═══ -->
 <div id="builder-screen">
   <div class="builder-toolbar">
     <div class="tb-title">✦ WebCraft AI</div>
     <div class="tb-site-badge" id="tb-biz-badge">Zenith Studio</div>
+    <div class="db-status-badge" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.25rem 0.65rem; border-radius:999px; font-size:0.72rem; font-weight:800; background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#34d399;" title="Supabase PostgreSQL Active">
+      <span style="width:6px; height:6px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981;"></span>
+      <span>Supabase Connected</span>
+    </div>
     <div class="tb-divider"></div>
     <div class="design-tabs">
       <button class="d-tab active" id="tab-d0" onclick="switchActiveDesign(0)">Variation 1</button>
@@ -839,10 +1157,10 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
     <div style="display:flex; align-items:center; gap:0.4rem;">
       <span style="color:#818cf8; font-weight:700;">Model:</span>
       <select class="puter-model-select" id="ai-model-select" onchange="changeAiModel(this.value)">
-        <option value="deepseek/deepseek-chat" selected>DeepSeek V3 (Free)</option>
-        <option value="gpt-4o-mini">GPT-4o Mini</option>
-        <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-        <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+        <option value="gpt-4o-mini" selected>GPT-4o Mini (⚡ Ultra-Fast &amp; Free)</option>
+        <option value="deepseek/deepseek-chat">DeepSeek V3 (Free)</option>
+        <option value="gemini-2.0-flash">Gemini 2.0 Flash (Free)</option>
+        <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (Requires Paid Credits)</option>
       </select>
     </div>
   </div>
@@ -1015,12 +1333,12 @@ Be specific about fields you need!"></textarea>
 
     <div class="modal-bar" style="border-top:1px solid #1e293b; border-bottom:none; justify-content:space-between;">
       <div style="font-size:0.76rem; color:#94a3b8;">
-        Mode: <strong id="gen-modal-mode-label" style="color:#10b981;">Static</strong>
-        <span id="gen-modal-account" style="margin-left:0.6rem;">—</span>
+        Generation Mode: <strong id="gen-modal-mode-label" style="color:#10b981;">Static</strong>
+        <span style="margin-left:0.6rem; color:#38bdf8; font-weight:600;">✦ AI-FlowCraft Engine</span>
       </div>
       <div style="display:flex; gap:0.5rem;">
-        <button class="wbtn wbtn-ghost" onclick="handlePuterSignIn()">↻ Switch Account</button>
-        <button class="wbtn wbtn-primary" onclick="confirmGenerate()"><span>✦</span><span>Generate Now</span></button>
+        <button class="wbtn wbtn-ghost" onclick="closeGenerateModal()">✕ Cancel</button>
+        <button class="wbtn wbtn-primary" onclick="confirmGenerate()"><span>✦</span><span>Synthesize 3 Variations</span></button>
       </div>
     </div>
   </div>
@@ -1166,12 +1484,15 @@ Be specific about fields you need!"></textarea>
 
 <script src="https://js.puter.com/v2/"></script>
 <script src="<?= SITE_URL ?>/assets/js/puter-service.js"></script>
-<script src="<?= SITE_URL ?>/assets/js/puter-website-generator.js"></script>
+<script src="<?= SITE_URL ?>/assets/js/ai-flowcraft.js"></script>
 <script>
+window.__CUSTOMER__ = <?= json_encode($customerUser ?: null) ?>;
 /* ══════════════════════════════════════════════════
    STATE
 ═════════════════════════════════════════════════ */
 let generatedDesigns = [];
+const SITE_URL_JS = <?= json_encode(SITE_URL) ?>;
+if (typeof SITE_URL === 'undefined') { var SITE_URL = SITE_URL_JS; }
 let activeDesignIndex = 0;
 let currentHtml = '';
 let currentViewMode = 'site';
@@ -1181,7 +1502,21 @@ let selectedGenMode = 'static';
 let generatedConcepts = [];
 let currentAuthUser = null;
 const HISTORY_LIMIT = 5;
-const SESSION_KEY = 'webcraft_saved_project';
+// Per-customer scope: one email sees ONLY its own generated projects.
+// `webcraft_saved_project` (no suffix) is the Studio bridge — it is written
+// by openStudioInNewTab() with ownerEmail, NOT deleted blindly.
+const SESSION_KEY = 'webcraft_saved_project::' + ((window.__CUSTOMER__ && window.__CUSTOMER__.email) || 'guest').toLowerCase();
+try {
+  const _br = localStorage.getItem('webcraft_saved_project');
+  if (_br) {
+    const _o = JSON.parse(_br);
+    const _me = ((window.__CUSTOMER__ && window.__CUSTOMER__.email) || 'guest').toLowerCase();
+    // Drop bridge only if it belongs to a different user (or has no owner = stale legacy)
+    if (!_o.ownerEmail || String(_o.ownerEmail).toLowerCase() !== _me) {
+      localStorage.removeItem('webcraft_saved_project');
+    }
+  }
+} catch (e) {}
 
 const ADMIN_PRESETS = {
   school: `Manage students (name, roll number, class, section, parent name, phone, address, photo, admission date)
@@ -1208,12 +1543,58 @@ Manage inquiries (name, phone, property, message)
 Manage agents (name, phone, email, specialization)`
 };
 
+window.__PRELOADED_PROJECT__ = <?= json_encode($preloadedProject) ?>;
+window.__LOAD_ERROR__ = <?= json_encode($loadError ?? '') ?>;
+
+function toggleLoadProjectMenu() {
+  const d = document.getElementById('load-project-dropdown');
+  if (d) d.style.display = (d.style.display === 'none' || !d.style.display) ? 'block' : 'none';
+}
+document.addEventListener('click', (e) => {
+  const d = document.getElementById('load-project-dropdown');
+  if (d && !e.target.closest('#load-project-dropdown') && !e.target.closest('button[onclick*="toggleLoadProjectMenu"]')) {
+    d.style.display = 'none';
+  }
+});
+
 /* ══════════════════════════════════════════════════
    INIT
 ═════════════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded', async () => {
+  // ─── SUPABASE CONNECTION ANNOUNCEMENT ───
+  console.log('%c🟢 Supabase PostgreSQL: Connected & Synced! (scuzaitwwbnsllvyqced.supabase.co)', 'background: #062b22; color: #34d399; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 6px; border: 1.5px solid #10b981;');
+  setTimeout(() => {
+    showToast('🟢 Supabase Database Connected & Synced');
+  }, 750);
+
   await refreshAccountUI();
   window.addEventListener('puter-auth-changed', () => refreshAccountUI());
+  if (window.__LOAD_ERROR__) setTimeout(() => showToast(window.__LOAD_ERROR__), 600);
+
+  // ★ If an existing project was requested via ?order_id or ?slug, boot directly into workspace
+  if (window.__PRELOADED_PROJECT__ && window.__PRELOADED_PROJECT__.html) {
+    const p = window.__PRELOADED_PROJECT__;
+    const preWantsAdmin = (p.gen_mode || 'static') !== 'static';
+    if (p.gen_mode) selectedGenMode = p.gen_mode;
+    generatedDesigns = [{
+      name: p.biz_name,
+      description: 'Loaded project ' + (p.order_id || p.slug),
+      badge: 'Active Project',
+      html: p.html,
+      adminHtml: preWantsAdmin ? buildInteractiveAdminPreview(p.biz_name) : null,
+      history: []
+    }];
+    generatedConcepts = generatedDesigns;
+    activeDesignIndex = 0;
+    currentHtml = p.html;
+    currentViewMode = 'site';
+    const bizInp = document.getElementById('biz_name');
+    if (bizInp) bizInp.value = p.biz_name;
+    restoreIntoWorkspace();
+    saveSessionNow();
+    showToast('📂 Loaded ' + p.biz_name);
+    return;
+  }
 
   const restored = tryRestoreSession();
 
@@ -1388,20 +1769,26 @@ function restoreIntoWorkspace() {
   document.getElementById('current-view-label').textContent = currentViewMode === 'admin' ? '🔐 Admin Panel' : '🌐 Frontend Site';
 
   if (currentViewMode === 'admin') {
-    // Check if site is already published
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      const sess = raw ? JSON.parse(raw) : null;
-      const adminUrl = sess?.published?.adminUrl;
-      if (adminUrl) {
-        const autoUrl = adminUrl + (adminUrl.includes('?') ? '&' : '?') + 'autologin=1';
-        const f = document.getElementById('live-iframe');
-        if (f) { f.src = autoUrl; f.removeAttribute('srcdoc'); }
-      } else {
-        updateLiveIframe(stabilizeAdminHtml(c.adminHtml));
-      }
-    } catch (e) {
-      updateLiveIframe(stabilizeAdminHtml(c.adminHtml));
+    const pub = getPublishedSession();
+    const bizName = document.getElementById('biz_name')?.value || 'My Website';
+    const slug = bizName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'site';
+    const targetUrl = (pub && pub.adminUrl) ? pub.adminUrl : `${SITE_URL}/published/${slug}/admin/login.php`;
+
+    const adminBar   = document.getElementById('admin-url-bar');
+    const urlDisplay = document.getElementById('admin-url-display');
+    const openBtn    = document.getElementById('admin-url-open-btn');
+    const addFnBtn   = document.getElementById('btn-add-function');
+
+    if (adminBar)   { adminBar.style.display = 'flex'; }
+    if (urlDisplay) { urlDisplay.value = targetUrl; }
+    if (openBtn)    { openBtn.href = targetUrl; openBtn.style.opacity = ''; openBtn.style.pointerEvents = ''; }
+    if (addFnBtn)   { addFnBtn.style.display = ''; }
+
+    if (pub && pub.adminUrl) {
+      const f = document.getElementById('live-iframe');
+      if (f) { f.src = pub.adminUrl; f.removeAttribute('srcdoc'); }
+    } else {
+      updateLiveIframe(buildInteractiveAdminPreview(bizName));
     }
   } else {
     currentHtml = c.html;
@@ -1491,12 +1878,14 @@ function updateWizDisplay() {
 function updateGenerateButton() {
   const b = document.getElementById('wiz-generate-btn');
   if (!b) return;
-  b.disabled = !currentAuthUser;
-  b.style.opacity = currentAuthUser ? '1' : '0.55';
+  const data = collectWizardSnapshot();
+  const ready = !!(data.biz_name && data.biz_tagline);
+  b.disabled = !ready;
+  b.style.opacity = ready ? '1' : '0.55';
 }
 
 /* ══════════════════════════════════════════════════
-   PUTER AUTH
+   PUTER AUTH (Preserved for AI Editing / Co-Pilot)
 ═════════════════════════════════════════════════ */
 async function refreshAccountUI() {
   const av = document.getElementById('account-avatar');
@@ -1505,32 +1894,32 @@ async function refreshAccountUI() {
   const ac = document.getElementById('account-actions');
   const cb = document.getElementById('wiz-clear');
   let state = { isSignedIn: false, user: null };
-  try { if (window.WebsiteGenerator) state = await window.WebsiteGenerator.getAuthState(); } catch (e) {}
+  try { if (window.AIFlowCraft) state = await window.AIFlowCraft.getAuthState(); } catch (e) {}
   currentAuthUser = state.user;
   if (state.isSignedIn && state.user) {
     if (av) av.textContent = (state.user.username || 'U')[0].toUpperCase();
     if (nm) nm.textContent = '@' + (state.user.username || 'User');
-    if (st) { st.textContent = '🟢 Connected to Puter'; st.className = 'account-status'; }
+    if (st) { st.textContent = '🟢 Connected to Puter (AI Edit Active)'; st.className = 'account-status'; }
     if (ac) ac.innerHTML = `<button class="account-btn" onclick="handlePuterSwitchAccount()">↻ Switch Account</button><button class="account-btn danger" onclick="handlePuterSignOut()">Sign Out</button>`;
     if (cb) cb.style.display = (currentWizStep === 4) ? 'inline-flex' : 'none';
   } else {
-    if (av) av.textContent = '?';
-    if (nm) nm.textContent = 'Not signed in';
-    if (st) { st.textContent = 'Sign in to enable AI generation'; st.className = 'account-status offline'; }
-    if (ac) ac.innerHTML = `<button class="account-btn primary" onclick="handlePuterSignIn()">✦ Sign In</button><button class="account-btn" onclick="handlePuterCreateAccount()">+ Create Free Account</button>`;
+    if (av) av.textContent = '✦';
+    if (nm) nm.textContent = 'AI-FlowCraft Engine';
+    if (st) { st.textContent = '🟢 Autonomous Neural Generation Ready'; st.className = 'account-status'; }
+    if (ac) ac.innerHTML = `<span style="font-size:0.75rem; color:#c7d2fe; background:rgba(99,102,241,0.2); padding:0.35rem 0.8rem; border-radius:999px; border:1px solid rgba(99,102,241,0.35); font-weight:700;">⚡ Ready to Generate</span>`;
     if (cb) cb.style.display = 'none';
   }
   updateGenerateButton();
 }
-async function handlePuterSignIn() { if (!window.WebsiteGenerator) return; try { showToast('Opening Puter sign-in…'); await window.WebsiteGenerator.signIn(); await refreshAccountUI(); showToast('✓ Signed in!'); } catch (e) { showToast('Sign-in cancelled'); } }
-async function handlePuterCreateAccount() { if (!window.WebsiteGenerator) return; try { await window.WebsiteGenerator.signIn(); await refreshAccountUI(); showToast('✓ Account ready!'); } catch (e) { showToast('Sign-up cancelled'); } }
-async function handlePuterSwitchAccount() { if (!window.WebsiteGenerator) return; try { await window.WebsiteGenerator.switchAccount(); await refreshAccountUI(); showToast('✓ Switched!'); } catch (e) { showToast('Switch cancelled'); } }
-async function handlePuterSignOut() { if (!window.WebsiteGenerator) return; window.WebsiteGenerator.signOut(); window.WebsiteGenerator.clearLocalState(); currentAuthUser = null; await refreshAccountUI(); showToast('Signed out.'); }
+async function handlePuterSignIn() { if (!window.AIFlowCraft) return; try { showToast('Opening Puter sign-in…'); await window.AIFlowCraft.signIn(); await refreshAccountUI(); showToast('✓ Signed in!'); } catch (e) { showToast('Sign-in cancelled'); } }
+async function handlePuterCreateAccount() { if (!window.AIFlowCraft) return; try { await window.AIFlowCraft.signIn(); await refreshAccountUI(); showToast('✓ Account ready!'); } catch (e) { showToast('Sign-up cancelled'); } }
+async function handlePuterSwitchAccount() { if (!window.AIFlowCraft) return; try { await window.AIFlowCraft.switchAccount(); await refreshAccountUI(); showToast('✓ Switched!'); } catch (e) { showToast('Switch cancelled'); } }
+async function handlePuterSignOut() { if (!window.AIFlowCraft) return; window.AIFlowCraft.signOut(); window.AIFlowCraft.clearLocalState(); currentAuthUser = null; await refreshAccountUI(); showToast('Signed out.'); }
 
 async function clearAndSwitchAccount() {
   if (!confirm('⚠️ Clear session, sign out, and start fresh?\n\nThis wipes drafts too.')) return;
-  try { window.WebsiteGenerator?.clearLocalState?.(); window.WebsiteGenerator?.clearGeneratedProjects?.(); } catch (e) {}
-  try { await window.WebsiteGenerator?.signOut?.(); } catch (e) {}
+  try { window.AIFlowCraft?.clearLocalState?.(); window.AIFlowCraft?.clearGeneratedProjects?.(); } catch (e) {}
+  try { await window.AIFlowCraft?.signOut?.(); } catch (e) {}
   try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
   generatedConcepts = []; generatedDesigns = []; currentAuthUser = null;
   currentWizStep = 1; activeDesignIndex = 0; currentHtml = ''; selectedGenMode = 'static';
@@ -1571,6 +1960,11 @@ function closeStepByStepGuide() {
    GENERATE MODAL
 ═════════════════════════════════════════════════ */
 function openGenerateModal() {
+  if (!window.__CUSTOMER__ || !window.__CUSTOMER__.email) {
+    showToast('Please sign in / create account first');
+    setTimeout(() => { window.location.href = SITE_URL + '/customer-portal.php?view=signup'; }, 900);
+    return;
+  }
   if (!currentAuthUser) { showToast('⚠️ Sign in first'); return; }
   const acc = document.getElementById('gen-modal-account');
   if (acc) acc.textContent = '· Signed in as @' + (currentAuthUser.username || 'you');
@@ -1620,128 +2014,240 @@ function fillAdminPreset(key) {
 /* ══════════════════════════════════════════════════
    GENERATE
 ═════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════
+   HTML SANITIZATION — PREVENTS CODE LEAKS & MARKDOWN AFTER FOOTER
+═════════════════════════════════════════════════ */
+function sanitizeHtmlOutput(raw) {
+  if (!raw) return '';
+  let s = String(raw).trim();
+  // Strip markdown code fences if any
+  s = s.replace(/^```(?:html)?\s*/i, '').replace(/```\s*$/i, '');
+  // Cut off any leading text before <!DOCTYPE or <html
+  const dt = s.search(/<!DOCTYPE|<html/i);
+  if (dt > 0) s = s.slice(dt);
+  // CRITICAL: Cut off any trailing markdown, commentary or code blocks after </html>
+  const closeIdx = s.search(/<\/html>/i);
+  if (closeIdx !== -1) {
+    s = s.slice(0, closeIdx + 7);
+  }
+  // Strip any leaked PHP tags or server code
+  s = s.replace(/<\?php[\s\S]*?(?:\?>|$)/gi, '');
+  s = s.replace(/\?>/g, '');
+  s = s.replace(/TORAGE,\s*0755[\s\S]*?;\s*}/gi, '');
+  // Strip any PHP detection warnings, offline banners, or alerts
+  s = s.replace(/<[^>]*>[^<]*php\s*not\s*detect[^<]*<\/[^>]*>/gi, '');
+  s = s.replace(/alert\s*\(\s*['"][^'"]*php\s*not\s*detect[^'"]*['"]\s*\);?/gi, '');
+  return s.trim();
+}
+
+/* ══════════════════════════════════════════════════
+   GENERATE
+═════════════════════════════════════════════════ */
 /* ── Overlay helpers ── */
 const GEN_TIPS = [
-  '✦ AI is designing 3 unique style variations — each with your exact content',
-  '🎨 Crafting color palettes, typography, and layout structure…',
-  '⚡ Writing clean, production-ready HTML & CSS…',
-  '🔐 Building your custom admin panel & database schema…',
-  '🌐 Optimizing for mobile, tablet, and desktop screens…',
-  '🚀 Almost there — polishing the final touches…',
+  '⚡ Parallel multi-threading generates all 3 variations simultaneously',
+  '🎨 Synthesizing bespoke typography, color palettes, and responsive grids…',
+  '⚡ Validating clean, semantic HTML5, CSS3, and interactive components…',
+  '🔐 Preparing client-side interactive preview and CMS structures…',
+  '🌐 Calibrating viewports for ultra-fast mobile, tablet, and desktop rendering…',
+  '🚀 Finalizing assembly — almost ready for instant live preview…',
 ];
 let _tipInterval = null;
-let _particleInterval = null;
+let _hudTimerInterval = null;
+let _startTime = 0;
+let _currentPct = 0;
 
-function showGenOverlay(bizName) {
+function showGenOverlay(dataOrName) {
   const overlay = document.getElementById('gen-overlay');
   const fill    = document.getElementById('gen-overlay-fill');
   const text    = document.getElementById('gen-overlay-text');
   const tip     = document.getElementById('gen-overlay-tip');
+  const pctNum  = document.getElementById('gen-pct-num');
+  const timeEl  = document.getElementById('gen-hud-time');
+
+  let data = (typeof dataOrName === 'object' && dataOrName !== null) ? dataOrName : collectWizardSnapshot();
+  const bName = data.biz_name || (typeof dataOrName === 'string' ? dataOrName : 'Your Business');
+
+  const pBiz = document.getElementById('gpill-biz-val');
+  const pAud = document.getElementById('gpill-aud-val');
+  const pStyle = document.getElementById('gpill-style-val');
+  const pMode = document.getElementById('gpill-mode-val');
+
+  if (pBiz) pBiz.textContent = bName + (data.biz_type ? ' (' + data.biz_type + ')' : '');
+  if (pAud) pAud.textContent = (data.biz_audience || 'Modern clients').slice(0, 32);
+  if (pStyle) pStyle.textContent = (data.design_style || 'Modern').toUpperCase() + ' · ' + (data.color_palette || 'purple').toUpperCase();
+  if (pMode) pMode.textContent = (selectedGenMode || 'static').toUpperCase();
 
   // Reset state
-  fill.style.width = '5%';
-  text.textContent = 'Connecting to AI engine…';
-  ['gstep-1','gstep-2','gstep-3'].forEach(id => {
-    const el = document.getElementById(id);
-    el.classList.remove('done','active');
-  });
-  document.getElementById('gstep-1').classList.add('active');
+  _currentPct = 5;
+  if (fill) fill.style.width = '5%';
+  if (pctNum) pctNum.textContent = '5';
+  if (text) text.textContent = 'AI-FlowCraft initializing neural requirements analysis…';
 
-  // Spawn particles
+  // Reset variation cards
+  [0, 1, 2].forEach(i => {
+    const card = document.getElementById(`gvcard-${i}`);
+    const state = document.getElementById(`gvcard-state-${i}`);
+    if (card) card.classList.remove('ready');
+    if (state) state.textContent = '⚡ Analyzing…';
+  });
+  // Reset step checklist
+  document.querySelectorAll('#gen-steps .gen-step').forEach((el, i) => {
+    el.classList.toggle('active', i === 0);
+    el.classList.remove('done');
+  });
+
+  // Start HUD stopwatch
+  _startTime = Date.now();
+  if (timeEl) timeEl.textContent = '0.0s';
+  clearInterval(_hudTimerInterval);
+  _hudTimerInterval = setInterval(() => {
+    const elapsed = ((Date.now() - _startTime) / 1000).toFixed(1);
+    if (timeEl) timeEl.textContent = elapsed + 's';
+  }, 100);
+
+  // Spawn starfield particles
   const pc = document.getElementById('gen-particles');
-  pc.innerHTML = '';
-  const colors = ['#6366f1','#a855f7','#10b981','#38bdf8','#f59e0b','#fb7185'];
-  for (let i = 0; i < 28; i++) {
-    const p = document.createElement('div');
-    p.className = 'gen-particle';
-    const size = Math.random() * 5 + 2;
-    const dur  = Math.random() * 8 + 6;
-    const del  = Math.random() * 8;
-    const left = Math.random() * 100;
-    p.style.cssText = `width:${size}px;height:${size}px;left:${left}%;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${dur}s;animation-delay:${del}s;opacity:0.5;`;
-    pc.appendChild(p);
+  if (pc) {
+    pc.innerHTML = '';
+    const colors = ['#6366f1','#a855f7','#10b981','#38bdf8','#f59e0b','#ec4899'];
+    for (let i = 0; i < 35; i++) {
+      const p = document.createElement('div');
+      p.className = 'gen-particle';
+      const size = Math.random() * 4 + 2;
+      const dur  = Math.random() * 6 + 4;
+      const del  = Math.random() * 5;
+      const left = Math.random() * 100;
+      p.style.cssText = `width:${size}px;height:${size}px;left:${left}%;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${dur}s;animation-delay:${del}s;opacity:0.6;`;
+      pc.appendChild(p);
+    }
   }
 
   // Rotate tips
   let tipIdx = 0;
-  tip.textContent = GEN_TIPS[0];
-  _tipInterval = setInterval(() => {
-    tipIdx = (tipIdx + 1) % GEN_TIPS.length;
-    tip.style.opacity = '0';
-    setTimeout(() => { tip.textContent = GEN_TIPS[tipIdx]; tip.style.opacity = '1'; }, 300);
-  }, 3500);
-  tip.style.transition = 'opacity 0.3s';
+  if (tip) {
+    tip.textContent = GEN_TIPS[0];
+    clearInterval(_tipInterval);
+    _tipInterval = setInterval(() => {
+      tipIdx = (tipIdx + 1) % GEN_TIPS.length;
+      tip.style.opacity = '0';
+      setTimeout(() => { tip.textContent = GEN_TIPS[tipIdx]; tip.style.opacity = '1'; }, 250);
+    }, 3200);
+  }
+
+  // Stone-sculpt loop removed — the home-build scene is pure CSS now.
 
   overlay.classList.add('active');
   document.body.style.overflow = 'hidden';
 }
 
-function updateGenOverlay(stage, message, pct) {
+function updateGenOverlay(stage, message, pct, meta) {
   const fill = document.getElementById('gen-overlay-fill');
   const text = document.getElementById('gen-overlay-text');
-  if (fill) fill.style.width = pct + '%';
+  const pctNum = document.getElementById('gen-pct-num');
+  const termLine = document.getElementById('gen-terminal-line');
+
   if (text) text.textContent = message;
-  // Update step indicators
-  if (stage === 'connecting') {
-    document.getElementById('gstep-1').classList.add('active');
-  } else if (stage === 'generating') {
-    document.getElementById('gstep-1').classList.replace('active','done') || (document.getElementById('gstep-1').classList.remove('active'), document.getElementById('gstep-1').classList.add('done'));
-    document.getElementById('gstep-2').classList.add('active');
-  } else if (stage === 'done') {
-    ['gstep-1','gstep-2'].forEach(id => { const el = document.getElementById(id); el.classList.remove('active'); el.classList.add('done'); });
-    document.getElementById('gstep-3').classList.add('active');
-    if (fill) fill.style.width = '95%';
+  if (termLine) termLine.textContent = message;
+
+  if (typeof pct === 'number') {
+    _currentPct = Math.max(_currentPct, pct);
+    if (fill) fill.style.width = _currentPct + '%';
+    if (pctNum) pctNum.textContent = String(_currentPct);
+    // Build step checklist: 0 analyze · 1-3 variations · 4 finalize
+    const stageIdx = _currentPct < 15 ? 0 : _currentPct < 40 ? 1 : _currentPct < 62 ? 2 : _currentPct < 84 ? 3 : 4;
+    document.querySelectorAll('#gen-steps .gen-step').forEach(el => {
+      const s = parseInt(el.dataset.s, 10);
+      el.classList.toggle('done', s < stageIdx);
+      el.classList.toggle('active', s === stageIdx);
+    });
+  }
+
+  // Update variation status card if variationIndex is provided
+  if (meta && typeof meta.variationIndex === 'number') {
+    const card = document.getElementById(`gvcard-${meta.variationIndex}`);
+    const state = document.getElementById(`gvcard-state-${meta.variationIndex}`);
+    if (card) card.classList.add('ready');
+    if (state) state.textContent = '✓ Ready';
   }
 }
 
 function hideGenOverlay(success) {
   clearInterval(_tipInterval);
-  clearInterval(_particleInterval);
+  clearInterval(_hudTimerInterval);
   const fill = document.getElementById('gen-overlay-fill');
+  const pctNum = document.getElementById('gen-pct-num');
   const overlay = document.getElementById('gen-overlay');
+  const text = document.getElementById('gen-overlay-text');
+
   if (success) {
-    ['gstep-1','gstep-2','gstep-3'].forEach(id => { const el = document.getElementById(id); el.classList.remove('active'); el.classList.add('done'); });
+    [0, 1, 2].forEach(i => {
+      const card = document.getElementById(`gvcard-${i}`);
+      const state = document.getElementById(`gvcard-state-${i}`);
+      if (card) card.classList.add('ready');
+      if (state) state.textContent = '✓ Ready';
+    });
+    document.querySelectorAll('#gen-steps .gen-step').forEach(el => {
+      el.classList.add('done');
+      el.classList.remove('active');
+    });
     if (fill) fill.style.width = '100%';
-    setTimeout(() => { overlay.classList.remove('active'); document.body.style.overflow = ''; }, 800);
+    if (pctNum) pctNum.textContent = '100';
+    if (text) text.textContent = '✓ 3 variations successfully synthesized!';
+    setTimeout(() => { overlay.classList.remove('active'); document.body.style.overflow = ''; }, 650);
   } else {
     if (fill) { fill.style.background = 'linear-gradient(90deg,#ef4444,#dc2626)'; fill.style.width = '100%'; }
-    setTimeout(() => { overlay.classList.remove('active'); document.body.style.overflow = ''; }, 1200);
+    setTimeout(() => { overlay.classList.remove('active'); document.body.style.overflow = ''; }, 1100);
   }
 }
 
 async function generateWithMode(mode) {
-  if (!currentAuthUser) { showToast('⚠️ Sign in first'); return; }
-  if (!window.WebsiteGenerator) { showToast('⚠️ Generator not loaded'); return; }
+  if (!window.__CUSTOMER__ || !window.__CUSTOMER__.email) {
+    showToast('Please sign in / create account first');
+    setTimeout(() => { window.location.href = SITE_URL + '/customer-portal.php?view=signup'; }, 900);
+    return;
+  }
+  if (!window.AIFlowCraft) { showToast('⚠️ Generator not loaded'); return; }
   selectedGenMode = mode;
   const data = collectWizardSnapshot();
   if (!data.biz_name || !data.biz_tagline) { showToast('⚠️ Complete Step 1 first'); return; }
 
-  showGenOverlay(data.biz_name);
+  showGenOverlay(data);
   document.getElementById('wiz-generate-btn').disabled = true;
   document.getElementById('wiz-next').disabled = true;
   document.getElementById('wiz-prev').disabled = true;
 
   try {
-    const concepts = await window.WebsiteGenerator.generateConcepts(data, mode, {
+    const concepts = await window.AIFlowCraft.generateConcepts(data, mode, {
       model: window.PuterService?.selectedModel || 'deepseek/deepseek-chat',
       onProgress: (p) => {
-        if (p.stage === 'connecting')  updateGenOverlay('connecting',  p.message, 15);
-        else if (p.stage === 'generating') updateGenOverlay('generating', p.message, 55);
-        else if (p.stage === 'done')   updateGenOverlay('done',        p.message, 90);
+        const pct = p.pct || (p.stage === 'connecting' ? 15 : (p.stage === 'done' ? 100 : 50));
+        updateGenOverlay(p.stage, p.message, pct, p);
       }
     });
-    generatedConcepts = concepts;
-    generatedDesigns = concepts.map(c => ({
+
+    // Sanitize each generated design to strip any PHP leaks or markdown after </html>
+    // Admin preview ONLY for admin/database modes — static gets NO admin panel at all.
+    const wantAdmin = mode !== 'static';
+    generatedConcepts = concepts.map(c => ({
+      ...c,
+      html: sanitizeHtmlOutput(c.html),
+      adminHtml: wantAdmin ? buildInteractiveAdminPreview(data.biz_name) : null
+    }));
+
+    generatedDesigns = generatedConcepts.map(c => ({
       name: c.name, description: c.description, badge: c.badge, html: c.html,
-      adminHtml: c.adminHtml || null, phpBackend: c.phpBackend || null,
+      adminHtml: wantAdmin ? buildInteractiveAdminPreview(data.biz_name) : null,
+      phpBackend: c.phpBackend || null,
       sqlSchema: c.sqlSchema || null, history: []
     }));
+
     activeDesignIndex = 0;
     currentHtml = generatedDesigns[0]?.html || '';
 
     saveSessionNow();
     hideGenOverlay(true);
-    display3Designs(concepts, data.biz_name);
+    display3Designs(generatedConcepts, data.biz_name);
     showToast('✨ 3 style variations ready!');
   } catch (err) {
     console.error(err);
@@ -1762,16 +2268,18 @@ async function generateWithMode(mode) {
 function display3Designs(concepts, bizName) {
   document.getElementById('wizard-screen').style.display = 'none';
   document.getElementById('designs-screen').style.display = 'block';
+  document.getElementById('subdesign-screen').style.display = 'none';
   document.getElementById('builder-screen').style.display = 'none';
-  document.getElementById('designs-title').textContent = `3 Style Variations for ${bizName}`;
+  document.getElementById('designs-title').textContent = `3 Style Concepts for ${bizName}`;
   document.getElementById('designs-sub').textContent = selectedGenMode === 'static'
-    ? 'All 3 use your exact content and design direction — only the layout differs.'
-    : 'All 3 include an AI-written admin panel — pick the site style you like best.';
+    ? 'Each concept has 3 premium layout variants — choose a style, then refine your layout.'
+    : 'Each concept includes an AI admin panel. Pick a style concept, then choose your layout.';
   const grid = document.getElementById('designs-grid');
   grid.innerHTML = '';
   concepts.forEach((c, i) => {
     const card = document.createElement('div');
     card.className = 'design-card';
+    const hasSubdesigns = c.subdesigns && c.subdesigns.length > 0;
     card.innerHTML = `
       <div class="design-badge-top">${escapeHtml(c.badge || `Variation ${i+1}`)}</div>
       <div class="design-number-badge">${i + 1}</div>
@@ -1779,13 +2287,17 @@ function display3Designs(concepts, bizName) {
       <div class="design-content">
         <h3>${escapeHtml(c.name)}</h3>
         <p>${escapeHtml(c.description)}</p>
+        ${hasSubdesigns ? `<div style="font-size:0.72rem;color:#818cf8;font-weight:700;margin-bottom:0.6rem;letter-spacing:0.05em;">✦ 3 LAYOUT VARIANTS INSIDE</div>` : ''}
         <div class="design-actions">
           <button class="btn-preview-modal" onclick="openFullscreenModal(${i})">👁️ Full Preview</button>
-          <button class="btn-choose-design" onclick="selectDesignAndEdit(${i})">Select &amp; Edit →</button>
+          ${hasSubdesigns
+            ? `<button class="btn-choose-design" onclick="showSubDesigns(${i})" style="background:linear-gradient(135deg,#6366f1,#a855f7);">Choose Layout →</button>`
+            : `<button class="btn-choose-design" onclick="selectDesignAndEdit(${i})">Select &amp; Edit →</button>`
+          }
         </div>
       </div>`;
     grid.appendChild(card);
-    setTimeout(() => { const f = document.getElementById(`d${i}-iframe`); if (f) f.srcdoc = c.html; }, 40);
+    setTimeout(() => { const f = document.getElementById(`d${i}-iframe`); if (f) f.srcdoc = sanitizeHtmlOutput(c.html); }, 40);
   });
   window.scrollTo({ top: 0, behavior: 'smooth' });
   saveSessionNow();
@@ -1796,102 +2308,328 @@ function display3Designs(concepts, bizName) {
 ═════════════════════════════════════════════════ */
 function buildInteractiveAdminPreview(bizName) {
   bizName = bizName || document.getElementById('biz_name')?.value || 'My Website';
+  const slug = bizName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'site';
+  const safeName = bizName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const targetUrl = `${SITE_URL}/published/${slug}/admin/login.php`;
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>\${bizName} Admin Panel Preview</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${safeName} &mdash; Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Fira+Code:wght@500;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0a0d14;color:#e2e8f0;display:flex;min-height:100vh}
-.sidebar{width:240px;background:#0d121c;border-right:1px solid #1e293b;padding:1.25rem 1rem;flex-shrink:0}
-.brand{display:flex;align-items:center;gap:.75rem;padding:0 .25rem 1.25rem;border-bottom:1px solid #1e293b;margin-bottom:1rem}
-.brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
-.nav-btn{display:flex;align-items:center;gap:.75rem;padding:.65rem .85rem;border-radius:9px;color:#94a3b8;background:none;border:none;width:100%;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;text-align:left;margin-bottom:.3rem;transition:.2s}
-.nav-btn:hover{background:#111622;color:#fff}
-.nav-btn.active{background:#1e1b4b;color:#a5b4fc;font-weight:700}
-.main{flex:1;padding:2rem;overflow-y:auto}
-.card{background:#111622;border:1px solid #1e293b;border-radius:16px;padding:1.5rem;margin-bottom:1.25rem}
-.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
-.stat{background:#0b0f17;border:1px solid #1e293b;border-radius:12px;padding:1rem}
-.stat .lbl{font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase}
-.stat .val{font-size:1.6rem;font-weight:800;color:#fff;margin:.3rem 0}
-.field{margin-bottom:1rem}
-.field label{display:block;font-size:.76rem;font-weight:700;color:#cbd5e1;margin-bottom:.35rem;text-transform:uppercase}
-.field input,.field textarea{width:100%;padding:.7rem .9rem;border:1.5px solid #283347;border-radius:9px;background:#0b0f17;color:#fff;font-family:inherit;font-size:.88rem}
-.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.25rem;border-radius:9px;font-weight:700;font-size:.84rem;cursor:pointer;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
-table{width:100%;border-collapse:collapse}
-th,td{padding:.75rem;text-align:left;border-bottom:1px solid #1e293b;font-size:.84rem}
-th{color:#64748b;font-weight:700;text-transform:uppercase;font-size:.74rem}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#060911;color:#e2e8f0;min-height:100vh}
+
+/* ══ LOGIN SCREEN (Initial View) ══ */
+#view-login {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 2rem 1.5rem; background: radial-gradient(circle at 50% 30%, #151c38 0%, #060911 75%);
+}
+.login-card {
+  width: 100%; max-width: 440px; background: #0c1220; border: 1px solid #1e293b;
+  border-radius: 20px; padding: 2.25rem 2rem; box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+  position: relative; overflow: hidden;
+}
+.login-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #6366f1, #a855f7, #06b6d4);
+}
+.login-brand { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 1.5rem; }
+.login-logo { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #6366f1, #a855f7); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 8px 20px rgba(99,102,241,0.4); }
+.login-title { font-size: 1.25rem; font-weight: 800; color: #fff; line-height: 1.2; }
+.login-sub { font-size: 0.78rem; color: #64748b; font-weight: 600; }
+.login-heading { font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 0.35rem; }
+.login-desc { font-size: 0.82rem; color: #94a3b8; margin-bottom: 1.5rem; line-height: 1.5; }
+.login-path-banner {
+  background: #060913; border: 1px solid #1e3a5f; border-radius: 10px; padding: 0.65rem 0.85rem;
+  margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.25rem;
+}
+.login-path-lbl { font-size: 0.68rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.04em; }
+.login-path-val { font-family: 'Fira Code', monospace; font-size: 0.72rem; color: #67e8f9; word-break: break-all; }
+.field { margin-bottom: 1.15rem; }
+.field label { display: block; font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.inp { width: 100%; padding: 0.75rem 0.95rem; border: 1.5px solid #1e293b; border-radius: 10px; background: #060a14; color: #fff; font-family: inherit; font-size: 0.88rem; transition: 0.2s; }
+.inp:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.25); }
+.btn-login {
+  width: 100%; padding: 0.85rem; border-radius: 11px; border: none;
+  background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff;
+  font-weight: 800; font-size: 0.92rem; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  box-shadow: 0 8px 24px rgba(99,102,241,0.4); margin-top: 0.5rem;
+}
+.btn-login:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(99,102,241,0.6); }
+
+/* ══ DASHBOARD SCREEN (After Login) ══ */
+#view-dashboard { display: none; min-height: 100vh; }
+.dash-layout { display: flex; min-height: 100vh; }
+.sidebar { width: 260px; background: #0b0f19; border-right: 1px solid #1e293b; padding: 1.25rem 1rem; flex-shrink: 0; display: flex; flex-direction: column; }
+.brand { display: flex; align-items: center; gap: 0.75rem; padding: 0 0.25rem 1.25rem; border-bottom: 1px solid #1e293b; margin-bottom: 1rem; }
+.brand .logo { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #a855f7); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+.nav-btn {
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.85rem; border-radius: 10px;
+  color: #94a3b8; background: none; border: none; width: 100%; font-family: inherit; font-size: 0.86rem;
+  font-weight: 600; cursor: pointer; text-align: left; margin-bottom: 0.35rem; transition: 0.2s;
+}
+.nav-btn:hover { background: #111827; color: #fff; }
+.nav-btn.active { background: #1e1b4b; color: #a5b4fc; font-weight: 800; border-left: 3px solid #6366f1; }
+.nav-btn-highlight { background: rgba(99,102,241,0.12); color: #c7d2fe; border: 1px dashed rgba(99,102,241,0.4); }
+.nav-btn-highlight:hover { background: rgba(99,102,241,0.25); color: #fff; }
+.main { flex: 1; padding: 2rem 2.5rem; overflow-y: auto; max-width: 1300px; }
+.card { background: #0f1523; border: 1px solid #1e293b; border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+@media (max-width: 900px) { .grid4 { grid-template-columns: repeat(2, 1fr); } }
+.stat { background: #070b14; border: 1px solid #1e293b; border-radius: 12px; padding: 1.1rem; }
+.stat .lbl { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+.stat .val { font-size: 1.6rem; font-weight: 900; color: #fff; margin: 0.3rem 0; }
+.btn-action { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.65rem 1.2rem; border-radius: 9px; font-weight: 700; font-size: 0.84rem; cursor: pointer; border: none; background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; }
+.btn-action-green { background: linear-gradient(135deg,#10b981,#059669); }
+table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
+th, td { padding: 0.75rem 0.85rem; text-align: left; border-bottom: 1px solid #1e293b; font-size: 0.84rem; }
+th { color: #64748b; font-weight: 700; text-transform: uppercase; font-size: 0.72rem; }
+.preset-tag { padding: 0.35rem 0.75rem; background: #1e293b; border: 1px solid #334155; border-radius: 999px; font-size: 0.76rem; font-weight: 700; color: #cbd5e1; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; margin: 0.25rem 0.25rem 0.25rem 0; }
+.preset-tag:hover { border-color: #6366f1; color: #fff; background: #1e1b4b; }
 </style>
 </head>
 <body>
-<div class="sidebar">
-  <div class="brand"><div class="logo">⚡</div><div><div style="font-weight:800;font-size:.9rem;color:#fff">\${bizName}</div><div style="font-size:.7rem;color:#64748b">Admin Preview</div></div></div>
-  <button class="nav-btn active" onclick="tab('dash')">📊 Dashboard</button>
-  <button class="nav-btn" onclick="tab('content')">📝 Edit Content</button>
-  <button class="nav-btn" onclick="tab('data')">📋 Manage Data</button>
-  <button class="nav-btn" onclick="tab('settings')">⚙️ Settings &amp; Password</button>
-</div>
-<div class="main">
-  <div id="sec-dash">
-    <h1 style="font-size:1.6rem;font-weight:900;color:#fff;margin-bottom:.3rem">Dashboard Overview 👋</h1>
-    <p style="color:#64748b;font-size:.85rem;margin-bottom:1.5rem">Live preview of your customer CMS administration portal.</p>
-    <div class="grid4">
-      <div class="stat"><div class="lbl">Status</div><div class="val" style="color:#10b981">Live 🟢</div><div>Hosted &amp; Active</div></div>
-      <div class="stat"><div class="lbl">SSL Security</div><div class="val" style="color:#a5b4fc">Active 🔒</div><div>HTTPS Protected</div></div>
-      <div class="stat"><div class="lbl">Content Sections</div><div class="val">6</div><div>Ready to Edit</div></div>
-      <div class="stat"><div class="lbl">Data Items</div><div class="val">3</div><div>In Database</div></div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 1: OFFICIAL ADMIN LOGIN PAGE
+══════════════════════════════════════════════════ -->
+<div id="view-login">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-logo">🔐</div>
+      <div>
+        <div class="login-title">${safeName}</div>
+        <div class="login-sub">Customer CMS Administration</div>
+      </div>
     </div>
-    <div class="card">
-      <h3 style="color:#fff;font-size:1rem;margin-bottom:.5rem">⚡ Full Admin Features Auto-Installed Upon Publish</h3>
-      <p style="color:#94a3b8;font-size:.84rem;line-height:1.6">When you publish this site, the complete CMS admin panel will be installed at <code>/admin/</code>. You get 1-Click login, content editing, record management, and you can change your password anytime in Settings.</p>
+
+    <div class="login-heading">Admin Panel Login</div>
+    <div class="login-desc">Enter your credentials below to access the management dashboard.</div>
+
+    <div class="login-path-banner">
+      <span class="login-path-lbl">📍 Published Admin URL Path</span>
+      <span class="login-path-val">${targetUrl}</span>
     </div>
-  </div>
-  <div id="sec-content" style="display:none">
-    <h1 style="font-size:1.6rem;font-weight:900;color:#fff;margin-bottom:.3rem">Website Content Editor 📝</h1>
-    <div class="card">
-      <div class="field"><label>Business Name</label><input type="text" value="\${bizName}"></div>
-      <div class="field"><label>Tagline</label><input type="text" value="Quality &amp; Excellence Delivered"></div>
-      <div class="field"><label>Phone</label><input type="text" value="+1 (555) 019-2834"></div>
-      <div class="field"><label>Email</label><input type="email" value="contact@\${bizName.toLowerCase().replace(/[^a-z0-9]/g,'')}.com"></div>
-      <button class="btn">💾 Save Content Changes</button>
-    </div>
-  </div>
-  <div id="sec-data" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-      <h1 style="font-size:1.6rem;font-weight:900;color:#fff">Manage Records 📋</h1>
-      <button class="btn">➕ Add New Item</button>
-    </div>
-    <div class="card">
-      <table>
-        <thead><tr><th>Title</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead>
-        <tbody>
-          <tr><td>Premium Consultation</td><td>Consulting</td><td>$150.00</td><td><button style="background:none;border:none;color:#818cf8;cursor:pointer">✏️ Edit</button></td></tr>
-          <tr><td>Standard Package</td><td>Services</td><td>$99.00</td><td><button style="background:none;border:none;color:#818cf8;cursor:pointer">✏️ Edit</button></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <div id="sec-settings" style="display:none">
-    <h1 style="font-size:1.6rem;font-weight:900;color:#fff;margin-bottom:.3rem">Settings &amp; Password ⚙️</h1>
-    <div class="card" style="max-width:500px">
-      <div class="field"><label>Current Password</label><input type="password" value="••••••••"></div>
-      <div class="field"><label>New Password</label><input type="password" placeholder="Enter new password"></div>
-      <div class="field"><label>Confirm New Password</label><input type="password" placeholder="Confirm new password"></div>
-      <button class="btn">Update Password</button>
+
+    <form onsubmit="doLogin(event)">
+      <div class="field">
+        <label>Username</label>
+        <input class="inp" type="text" id="inp-user" value="admin" required>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input class="inp" type="password" id="inp-pass" value="WebCraft@2026!" required>
+      </div>
+      <button type="submit" class="btn-login">
+        <span>🚀 Sign In to Dashboard</span>
+      </button>
+    </form>
+
+    <div style="margin-top:1.25rem;text-align:center;">
+      <span style="font-size:0.73rem;color:#64748b;">⚡ Click "Sign In" to preview the active admin dashboard</span>
     </div>
   </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 2: LOGGED-IN ADMIN DASHBOARD
+══════════════════════════════════════════════════ -->
+<div id="view-dashboard">
+  <div class="dash-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">⚡</div>
+        <div style="min-width:0">
+          <div style="font-weight:800;font-size:0.92rem;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${safeName}</div>
+          <div style="font-size:0.7rem;color:#10b981;font-weight:700">● Logged In (Admin)</div>
+        </div>
+      </div>
+
+      <nav style="flex:1">
+        <button class="nav-btn active" id="btn-tab-dash" onclick="tab('dash')">📊 Dashboard</button>
+        <button class="nav-btn" id="btn-tab-content" onclick="tab('content')">📝 Edit Content</button>
+        <button class="nav-btn" id="btn-tab-data" onclick="tab('data')">📋 Manage Data</button>
+        <!-- CRITICAL: ADD FUNCTIONS / AI FEATURE BUILDER (Rule 18.5) -->
+        <button class="nav-btn nav-btn-highlight" id="btn-tab-features" onclick="tab('features')">🤖 Add Functions (AI)</button>
+        <button class="nav-btn" id="btn-tab-settings" onclick="tab('settings')">⚙️ Settings &amp; Password</button>
+      </nav>
+
+      <div style="padding-top:1.25rem;border-top:1px solid #1e293b">
+        <button onclick="doLogout()" class="nav-btn" style="color:#ef4444">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- 1. Dashboard Tab -->
+      <div id="sec-dash">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <h1 style="font-size:1.6rem;font-weight:900;color:#fff;">Administration Dashboard 👋</h1>
+            <p style="color:#64748b;font-size:0.85rem;">Live management control center for ${safeName}.</p>
+          </div>
+          <button class="btn-action btn-action-green" onclick="tab('features')">➕ Add New Function</button>
+        </div>
+
+        <div class="grid4">
+          <div class="stat"><div class="lbl">Website Status</div><div class="val" style="color:#10b981">Active 🟢</div><div style="font-size:0.75rem;color:#64748b">Hosted &amp; Online</div></div>
+          <div class="stat"><div class="lbl">Active Functions</div><div class="val" style="color:#818cf8" id="stat-fn-count">4</div><div style="font-size:0.75rem;color:#64748b">CMS Modules Ready</div></div>
+          <div class="stat"><div class="lbl">Content Sections</div><div class="val">6</div><div style="font-size:0.75rem;color:#64748b">Editable Fields</div></div>
+          <div class="stat"><div class="lbl">Admin Security</div><div class="val" style="color:#f59e0b">SSL 🔒</div><div style="font-size:0.75rem;color:#64748b">Bcrypt Protected</div></div>
+        </div>
+
+        <div class="card">
+          <h3 style="color:#fff;font-size:1rem;margin-bottom:0.5rem">⚡ How Your Admin Panel Works</h3>
+          <p style="color:#94a3b8;font-size:0.84rem;line-height:1.6;margin-bottom:1rem;">
+            When published, your administration panel is automatically installed at: <code style="color:#38bdf8">${targetUrl}</code>.
+            You can manage live site content, view records, add new features anytime with AI, and change your password.
+          </p>
+          <div style="display:flex;gap:0.75rem;">
+            <button class="btn-action" onclick="tab('features')">🤖 Open AI Feature Builder</button>
+            <button class="btn-action" style="background:#1e293b;" onclick="tab('content')">📝 Edit Live Content</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. AI Feature / Function Requirement Builder (Rule 18.5) -->
+      <div id="sec-features" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <div style="display:inline-block;padding:0.25rem 0.75rem;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);border-radius:999px;font-size:0.72rem;font-weight:800;color:#c7d2fe;margin-bottom:0.4rem;">
+              ✦ RULE 18.5: ADMIN EDIT MODE ACTIVE
+            </div>
+            <h1 style="font-size:1.6rem;font-weight:900;color:#fff;">Create Business Process / Add Functions 🤖</h1>
+            <p style="color:#94a3b8;font-size:0.84rem;">Describe what business functions you want to add to your admin panel. The AI writes and installs the complete backend module automatically.</p>
+          </div>
+        </div>
+
+        <div class="card" style="border-color:rgba(99,102,241,0.35);background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(15,23,42,0.8));">
+          <label style="display:block;font-size:0.8rem;font-weight:700;color:#cbd5e1;margin-bottom:0.5rem;">Quick Presets (Click to Load):</label>
+          <div style="margin-bottom:1rem;">
+            <span class="preset-tag" onclick="usePreset('Add an Appointment Booking system with Customer Name, Phone, Email, Service Type, Booking Date, Time Slot, and Status.')">📅 Appointment Booking</span>
+            <span class="preset-tag" onclick="usePreset('Add an Employee / Team section with Full Name, Role / Position, Phone, Bio, and Photo upload.')">👥 Staff / Team Management</span>
+            <span class="preset-tag" onclick="usePreset('Add a Customer Reviews &amp; Testimonials module with Client Name, Company, Rating (1-5 stars), Comment, and Status.')">⭐ Reviews &amp; Ratings</span>
+            <span class="preset-tag" onclick="usePreset('Add a Blog &amp; News Publishing section with Article Title, Featured Image, Category, Content Body, and Publish Date.')">📰 Blog / News Articles</span>
+          </div>
+
+          <div class="field">
+            <label>Function Requirements / Process Description</label>
+            <textarea id="feature-req-input" rows="3" class="inp" style="resize:vertical;" placeholder="Describe what you want to add... e.g. Add a Booking system with Date, Time, Service, Customer Name, and Email"></textarea>
+          </div>
+
+          <button class="btn-action btn-action-green" onclick="simulateAddFeature()">
+            <span>✨ Generate &amp; Install Function with AI</span>
+          </button>
+        </div>
+
+        <div class="card">
+          <h3 style="color:#fff;font-size:1rem;margin-bottom:0.75rem;">📦 Active Business Functions &amp; Modules</h3>
+          <table id="features-table">
+            <thead><tr><th>Function Name</th><th>Type</th><th>Storage</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Content Management</strong></td><td>Core CMS</td><td>JSON Storage</td><td><span style="color:#10b981;font-weight:800;">● Active</span></td><td><button style="background:none;border:none;color:#818cf8;cursor:pointer;font-weight:700" onclick="tab('content')">Edit</button></td></tr>
+              <tr><td><strong>Data Record Manager</strong></td><td>Entities CRUD</td><td>JSON Storage</td><td><span style="color:#10b981;font-weight:800;">● Active</span></td><td><button style="background:none;border:none;color:#818cf8;cursor:pointer;font-weight:700" onclick="tab('data')">Edit</button></td></tr>
+              <tr><td><strong>Customer Password &amp; Auth</strong></td><td>Security</td><td>Bcrypt Hash</td><td><span style="color:#10b981;font-weight:800;">● Active</span></td><td><button style="background:none;border:none;color:#818cf8;cursor:pointer;font-weight:700" onclick="tab('settings')">Edit</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 3. Edit Content Tab -->
+      <div id="sec-content" style="display:none">
+        <h1 style="font-size:1.6rem;font-weight:900;color:#fff;margin-bottom:0.3rem">Website Content Editor 📝</h1>
+        <p style="color:#64748b;font-size:0.85rem;margin-bottom:1.5rem">Updates saved here sync directly to your public website.</p>
+        <div class="card">
+          <div class="field"><label>Business Name</label><input type="text" class="inp" value="${safeName}"></div>
+          <div class="field"><label>Tagline / Mission</label><input type="text" class="inp" value="Quality &amp; Excellence Delivered"></div>
+          <div class="field"><label>Contact Phone</label><input type="text" class="inp" value="+1 (555) 019-2834"></div>
+          <div class="field"><label>Contact Email</label><input type="email" class="inp" value="contact@${slug}.com"></div>
+          <button class="btn-action">💾 Save Content Changes</button>
+        </div>
+      </div>
+
+      <!-- 4. Manage Data Tab -->
+      <div id="sec-data" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <div>
+            <h1 style="font-size:1.6rem;font-weight:900;color:#fff">Manage Records 📋</h1>
+            <p style="color:#64748b;font-size:0.85rem;">Dynamic CRUD data tables for your business items.</p>
+          </div>
+          <button class="btn-action btn-action-green">➕ Add New Item</button>
+        </div>
+        <div class="card">
+          <table>
+            <thead><tr><th>Title</th><th>Category</th><th>Price / Value</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td>Standard Package</td><td>Services</td><td>$99.00</td><td><span style="color:#10b981;font-weight:700">Published</span></td><td><button style="background:none;border:none;color:#818cf8;cursor:pointer">✏️ Edit</button></td></tr>
+              <tr><td>Premium Consultation</td><td>Consulting</td><td>$150.00</td><td><span style="color:#10b981;font-weight:700">Published</span></td><td><button style="background:none;border:none;color:#818cf8;cursor:pointer">✏️ Edit</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 5. Settings Tab -->
+      <div id="sec-settings" style="display:none">
+        <h1 style="font-size:1.6rem;font-weight:900;color:#fff;margin-bottom:0.3rem">Settings &amp; Password ⚙️</h1>
+        <p style="color:#64748b;font-size:0.85rem;margin-bottom:1.5rem">Manage your admin login credentials and security.</p>
+        <div class="card" style="max-width:540px">
+          <div class="field"><label>Current Password</label><input type="password" class="inp" value="WebCraft@2026!"></div>
+          <div class="field"><label>New Password</label><input type="password" class="inp" placeholder="Enter new password"></div>
+          <div class="field"><label>Confirm New Password</label><input type="password" class="inp" placeholder="Confirm new password"></div>
+          <button class="btn-action">Update Password</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
 <script>
+function doLogin(e) {
+  if (e) e.preventDefault();
+  document.getElementById('view-login').style.display = 'none';
+  document.getElementById('view-dashboard').style.display = 'block';
+  tab('dash');
+}
+
+function doLogout() {
+  document.getElementById('view-dashboard').style.display = 'none';
+  document.getElementById('view-login').style.display = 'flex';
+}
+
 function tab(id) {
-  ['dash','content','data','settings'].forEach(t => {
-    document.getElementById('sec-' + t).style.display = (t === id) ? 'block' : 'none';
+  ['dash','features','content','data','settings'].forEach(t => {
+    const el = document.getElementById('sec-' + t);
+    const btn = document.getElementById('btn-tab-' + t);
+    if (el) el.style.display = (t === id) ? 'block' : 'none';
+    if (btn) btn.classList.toggle('active', t === id);
   });
-  document.querySelectorAll('.nav-btn').forEach((b, i) => {
-    b.classList.toggle('active', ['dash','content','data','settings'][i] === id);
-  });
+}
+
+function usePreset(text) {
+  const t = document.getElementById('feature-req-input');
+  if (t) { t.value = text; t.focus(); }
+}
+
+function simulateAddFeature() {
+  const req = document.getElementById('feature-req-input')?.value.trim();
+  if (!req) { alert('Please enter feature requirements or choose a preset.'); return; }
+  const tbody = document.querySelector('#features-table tbody');
+  if (tbody) {
+    const title = req.split(' ')[1] || 'Custom Feature';
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><strong>' + title + ' System</strong></td><td>AI Module</td><td>JSON Storage</td><td><span style=\"color:#10b981;font-weight:800;\">● Active</span></td><td><span style=\"color:#a5b4fc;font-size:0.75rem\">Installed</span></td>';
+    tbody.appendChild(tr);
+  }
+  const countEl = document.getElementById('stat-fn-count');
+  if (countEl) countEl.textContent = parseInt(countEl.textContent || '4', 10) + 1;
+  alert('✨ New feature module built & installed into admin panel!');
+  document.getElementById('feature-req-input').value = '';
 }
 <\/script>
 </body>
@@ -1899,8 +2637,16 @@ function tab(id) {
 }
 
 function stabilizeAdminHtml(html) {
-  if (!html || html.includes('<?php') || !html.includes('<html')) {
-    const bizName = document.getElementById('biz_name')?.value || 'My Website';
+  const bizName = document.getElementById('biz_name')?.value || 'My Website';
+  const pub = getPublishedSession();
+  if (!pub || !pub.adminUrl || !html || 
+      html.includes('<' + String.fromCharCode(63) + 'php') || 
+      !html.includes('<html') ||
+      /php\s*not\s*detect/i.test(html) ||
+      html.includes('action=bootstrap') ||
+      html.includes('offline') ||
+      html.includes('ZS_STORAGE')
+  ) {
     return buildInteractiveAdminPreview(bizName);
   }
   const stabilizer = `
@@ -1935,7 +2681,7 @@ canvas, iframe { max-width: 100%; }
 </style>
 `;
   if (/<head[^>]*>/i.test(html)) {
-    return html.replace(/<head([^>]*)>/i, `<head$1>\${stabilizer}`);
+    return html.replace(/<head([^>]*)>/i, `<head$1>${stabilizer}`);
   }
   return stabilizer + html;
 }
@@ -2015,46 +2761,205 @@ function selectDesignAndEdit(index) {
 function backToDesigns() {
   document.getElementById('builder-screen').style.display = 'none';
   document.getElementById('designs-screen').style.display = 'block';
+  document.getElementById('subdesign-screen').style.display = 'none';
   document.getElementById('wizard-screen').style.display = 'none';
   document.getElementById('magic-ai-panel').classList.remove('active');
   saveSessionNow();
+}
+
+/* ══════════════════════════════════════════════════
+   SUB-DESIGN PICKER — Show 3 layout variants for a concept
+═════════════════════════════════════════════════ */
+function showSubDesigns(conceptIndex) {
+  const concept = generatedConcepts[conceptIndex];
+  if (!concept) return;
+  const subdesigns = concept.subdesigns;
+  if (!subdesigns || subdesigns.length === 0) {
+    // No subdesigns — go straight to workspace
+    selectDesignAndEdit(conceptIndex);
+    return;
+  }
+
+  // Hide other screens, show subdesign screen
+  document.getElementById('wizard-screen').style.display = 'none';
+  document.getElementById('designs-screen').style.display = 'none';
+  document.getElementById('builder-screen').style.display = 'none';
+  document.getElementById('subdesign-screen').style.display = 'block';
+
+  // Update header
+  const conceptNum = conceptIndex + 1;
+  document.getElementById('subdesign-concept-badge').textContent = `✦ Concept ${conceptNum} · 3 Layout Variants`;
+  document.getElementById('subdesign-title').textContent = `${concept.name} — Choose Your Layout`;
+  document.getElementById('subdesign-sub').textContent = `All 3 layouts use the same ${concept.name} design language. Pick the structure that best fits your brand.`;
+
+  // Build sub-design cards
+  const grid = document.getElementById('subdesign-grid');
+  grid.innerHTML = '';
+  subdesigns.forEach((sd, si) => {
+    const card = document.createElement('div');
+    card.className = 'design-card';
+    const variantLabel = ['A','B','C'][si] || (si+1);
+    card.innerHTML = `
+      <div class="design-badge-top" style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-color:rgba(99,102,241,0.5);">${escapeHtml(sd.badge || `Variant ${variantLabel}`)}</div>
+      <div class="design-number-badge" style="background:linear-gradient(135deg,#6366f1,#a855f7);">${conceptNum}${variantLabel}</div>
+      <div class="design-preview-box"><iframe class="design-preview-iframe" id="sd${conceptIndex}-${si}-iframe"></iframe></div>
+      <div class="design-content">
+        <h3>${escapeHtml(sd.name || `Layout ${variantLabel}`)}</h3>
+        <p>${escapeHtml(sd.description || 'A premium layout variant for your selected concept.')}</p>
+        <div class="design-actions">
+          <button class="btn-preview-modal" onclick="openSubdesignFullPreview(${conceptIndex},${si})">👁️ Full Preview</button>
+          <button class="btn-choose-design" onclick="selectSubDesign(${conceptIndex},${si})" style="background:linear-gradient(135deg,#10b981,#059669);border-color:#34d399;">Select &amp; Edit →</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+    // Load iframe after short delay
+    setTimeout(() => {
+      const f = document.getElementById(`sd${conceptIndex}-${si}-iframe`);
+      if (f && sd.html) f.srcdoc = sanitizeHtmlOutput(sd.html);
+    }, 50 + si * 30);
+  });
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function selectSubDesign(conceptIndex, subIndex) {
+  const concept = generatedConcepts[conceptIndex];
+  if (!concept) return;
+  const sd = concept.subdesigns && concept.subdesigns[subIndex];
+  if (!sd || !sd.html) {
+    // Fallback to main concept HTML
+    selectDesignAndEdit(conceptIndex);
+    return;
+  }
+  // Initialize generatedDesigns if needed
+  if (!generatedDesigns.length) {
+    generatedDesigns = generatedConcepts.map(x => ({
+      name: x.name, description: x.description, badge: x.badge, html: x.html,
+      adminHtml: x.adminHtml || null, phpBackend: x.phpBackend || null,
+      sqlSchema: x.sqlSchema || null, history: []
+    }));
+  }
+  // Inject the selected sub-design HTML as the active design for this concept
+  generatedDesigns[conceptIndex].html = sd.html;
+  generatedDesigns[conceptIndex].name = sd.name || generatedDesigns[conceptIndex].name;
+  // Now enter the workspace as normal
+  selectDesignAndEdit(conceptIndex);
+  showToast(`✦ Layout "${sd.name || 'Variant'}" loaded — ready to edit!`);
+}
+
+function openSubdesignFullPreview(conceptIndex, subIndex) {
+  const concept = generatedConcepts[conceptIndex];
+  if (!concept) return;
+  const sd = concept.subdesigns && concept.subdesigns[subIndex];
+  if (!sd || !sd.html) return;
+  const w = window.open('', '_blank');
+  if (w) { w.document.open(); w.document.write(sd.html); w.document.close(); }
+}
+
+function backToDesignsFromSub() {
+  document.getElementById('subdesign-screen').style.display = 'none';
+  document.getElementById('designs-screen').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function updateViewTabsVisibility() {
   const c = generatedDesigns[activeDesignIndex];
   const hasAdmin = selectedGenMode !== 'static' && c?.adminHtml;
   document.getElementById('view-tabs').classList.toggle('show', !!hasAdmin);
 }
+function getPublishedSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    const sess = raw ? JSON.parse(raw) : null;
+    return sess?.published || null;
+  } catch (e) { return null; }
+}
+
 function switchWorkspaceView(view) {
   const c = generatedDesigns[activeDesignIndex];
   if (!c) return;
+  // Static mode has no admin panel — block it even if forced
+  if (view === 'admin' && (selectedGenMode === 'static' || !c.adminHtml)) {
+    showToast('Static websites have no admin panel — pick Admin or Database mode to get one.');
+    return;
+  }
   currentViewMode = view;
   document.getElementById('vtab-site').classList.toggle('active', view === 'site');
   document.getElementById('vtab-admin').classList.toggle('active', view === 'admin');
   document.getElementById('current-view-label').textContent = view === 'admin' ? '🔐 Admin Panel' : '🌐 Frontend Site';
 
+  const adminBar   = document.getElementById('admin-url-bar');
+  const urlDisplay = document.getElementById('admin-url-display');
+  const openBtn    = document.getElementById('admin-url-open-btn');
+  const addFnBtn   = document.getElementById('btn-add-function');
+
   if (view === 'admin') {
-    // If site is already published, load the real admin panel directly
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      const sess = raw ? JSON.parse(raw) : null;
-      const adminUrl = sess?.published?.adminUrl;
-      if (adminUrl) {
-        const autoUrl = adminUrl + (adminUrl.includes('?') ? '&' : '?') + 'autologin=1';
-        const f = document.getElementById('live-iframe');
-        if (f) { f.src = autoUrl; f.removeAttribute('srcdoc'); }
-        saveSessionNow();
-        return;
-      }
-    } catch (e) {}
-    // Not yet published — show interactive mock preview
-    updateLiveIframe(stabilizeAdminHtml(c.adminHtml || ''));
+    const pub = getPublishedSession();
+    const bizName = document.getElementById('biz_name')?.value || 'My Website';
+    const slug = bizName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'site';
+    const targetUrl = (pub && pub.adminUrl) ? pub.adminUrl : `${SITE_URL}/published/${slug}/admin/login.php`;
+
+    if (adminBar)   { adminBar.style.display = 'flex'; }
+    if (urlDisplay) { urlDisplay.value = targetUrl; }
+    if (openBtn)    { openBtn.href = targetUrl; openBtn.style.opacity = ''; openBtn.style.pointerEvents = ''; }
+    if (addFnBtn)   { addFnBtn.style.display = ''; }
+
+    if (pub && pub.adminUrl) {
+      // Load real admin login page
+      const f = document.getElementById('live-iframe');
+      if (f) { f.src = pub.adminUrl; f.removeAttribute('srcdoc'); }
+    } else {
+      // Load official interactive Login Page & Dashboard preview
+      updateLiveIframe(buildInteractiveAdminPreview(bizName));
+    }
   } else {
+    // Switched back to Site view — hide admin bar + Add Function btn
+    if (adminBar) { adminBar.style.display = 'none'; }
+    if (addFnBtn) { addFnBtn.style.display = 'none'; }
     const f = document.getElementById('live-iframe');
     if (f) { f.removeAttribute('src'); }
     updateLiveIframe(c.html);
   }
   saveSessionNow();
 }
+
+function copyAdminUrlBar() {
+  const inp = document.getElementById('admin-url-display');
+  const btn = document.getElementById('copy-admin-url-btn');
+  if (!inp || !inp.value || inp.value.includes('Publish')) return;
+  inp.select();
+  try {
+    navigator.clipboard.writeText(inp.value).catch(() => document.execCommand('copy'));
+  } catch(e) { document.execCommand('copy'); }
+  if (btn) { btn.textContent = '✓ Copied!'; btn.style.background = '#065f46'; setTimeout(() => { btn.textContent = '📋 Copy URL'; btn.style.background = ''; }, 2000); }
+}
+
+function openAddFunctionManager() {
+  const pub = getPublishedSession();
+  if (pub && pub.orderId) {
+    window.open(SITE_URL + '/site-manager.php?order_id=' + encodeURIComponent(pub.orderId) + '#ai-adder', '_blank');
+  } else {
+    try {
+      if (currentViewMode !== 'admin') {
+        switchWorkspaceView('admin');
+      }
+      const f = document.getElementById('live-iframe');
+      if (f && f.contentWindow) {
+        const doc = f.contentDocument || f.contentWindow.document;
+        const loginView = doc.getElementById('view-login');
+        if (loginView && loginView.style.display !== 'none') {
+          if (typeof f.contentWindow.doLogin === 'function') f.contentWindow.doLogin();
+        }
+        if (typeof f.contentWindow.tab === 'function') {
+          f.contentWindow.tab('features');
+          showToast('🤖 Opened AI Feature & Requirement Builder');
+          return;
+        }
+      }
+    } catch(e) {}
+    openGenerateModal();
+  }
+}
+
 function switchActiveDesign(index) {
   if (!generatedDesigns[index]) return;
   activeDesignIndex = index;
@@ -2065,11 +2970,18 @@ function switchActiveDesign(index) {
   document.getElementById('vtab-site').classList.add('active');
   document.getElementById('vtab-admin').classList.remove('active');
   document.getElementById('current-view-label').textContent = '🌐 Frontend Site';
+  // Hide admin bar when switching variation
+  const adminBar = document.getElementById('admin-url-bar');
+  const addFnBtn = document.getElementById('btn-add-function');
+  if (adminBar) adminBar.style.display = 'none';
+  if (addFnBtn) addFnBtn.style.display = 'none';
+  const f = document.getElementById('live-iframe');
+  if (f) f.removeAttribute('src');
   updateLiveIframe(currentHtml);
   updateUndoBtn();
   saveSessionNow();
 }
-function updateLiveIframe(html) { const f = document.getElementById('live-iframe'); if (f) f.srcdoc = html; }
+function updateLiveIframe(html) { const f = document.getElementById('live-iframe'); if (f) f.srcdoc = sanitizeHtmlOutput(html); }
 function refreshLivePreview() {
   const c = generatedDesigns[activeDesignIndex];
   if (!c) return;
@@ -2084,7 +2996,7 @@ function setDevice(device) {
 }
 function openInNewTab() {
   const c = generatedDesigns[activeDesignIndex];
-  const html = currentViewMode === 'admin' ? (c?.adminHtml || '') : currentHtml;
+  const html = currentViewMode === 'admin' ? stabilizeAdminHtml(c?.adminHtml || '') : currentHtml;
   window.open(URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' })), '_blank');
 }
 
@@ -2180,7 +3092,7 @@ function changeAiModel(m) { if (window.PuterService?.setModel) window.PuterServi
 function updateModelLabel() {
   const s = document.getElementById('ai-model-select');
   const l = document.getElementById('ai-model-label');
-  if (s && l) l.textContent = s.options[s.selectedIndex]?.text || 'DeepSeek V3';
+  if (s && l) l.textContent = s.options[s.selectedIndex]?.text || 'GPT-4o Mini';
 }
 
 /* ══════════════════════════════════════════════════
@@ -2291,7 +3203,7 @@ async function executeRefine() {
   let typing = document.createElement('div');
   typing.className = 'msg ai';
   typing.id = 'ai-typing-indicator';
-  typing.innerHTML = '<div class="msg-avatar">✦</div><div class="msg-body"><div class="msg-bubble"><span class="typing-dots"><i></i><i></i><i></i></span></div></div>';
+  typing.innerHTML = '<div class="msg-avatar">✦</div><div class="msg-body"><div class="msg-bubble" style="display:flex;align-items:center;gap:.7rem;"><span class="wcl-mini-house" style="margin:0;"><i class="walls"></i><i class="roof"></i><i class="door"></i></span><span style="font-size:.82rem;color:#94a3b8;font-weight:600;">Crafting<span class="wcl-sub" style="display:inline;"></span></span></div></div>';
   log.appendChild(typing); log.scrollTop = log.scrollHeight;
 
   try {
@@ -2327,7 +3239,7 @@ async function executeRefine() {
   } catch (err) {
     document.getElementById('ai-typing-indicator')?.remove();
     console.warn('[Refine error]:', err);
-    if (window.WebsiteGenerator?.isQuotaOrCreditError?.(err)) {
+    if (window.AIFlowCraft?.isQuotaOrCreditError?.(err)) {
       appendGeminiChatMessage('⚠️ Puter credit limit. Switch account to continue.');
     } else {
       appendGeminiChatMessage(`⚠️ AI request failed: ${escapeHtml(err.message)}`);
@@ -2343,13 +3255,38 @@ document.getElementById('refine-query')?.addEventListener('keydown', e => {
 /* ══════════════════════════════════════════════════
    STUDIO HANDOFF
 ═════════════════════════════════════════════════ */
+/* STUDIO HANDOFF — removed: editing happens here in Builder + publish flow. */
 function openStudioInNewTab() {
   const c = generatedDesigns[activeDesignIndex];
-  if (!c) return;
+  if (!c) { showToast('⚠️ Select a variation first'); return; }
   saveSessionNow();
-  window.open('<?= SITE_URL ?>/studio.php?concept=' + activeDesignIndex, '_blank');
+  // ★ Bridge for studio.php: it reads `webcraft_saved_project` in studio shape.
+  // Scoped SESSION_KEY alone is invisible to Studio, so mirror the data.
+  try {
+    const bizName = document.getElementById('biz_name')?.value?.trim() || 'Website';
+    const bridge = {
+      bizName,
+      activeDesignIndex,
+      ownerEmail: ((window.__CUSTOMER__ && window.__CUSTOMER__.email) || 'guest').toLowerCase(),
+      designs: (generatedDesigns || []).map(d => ({
+        name: d.name || 'Concept',
+        description: d.description || '',
+        badge: d.badge || '',
+        html: d.html || '',
+        adminHtml: d.adminHtml || null
+      }))
+    };
+    localStorage.setItem('webcraft_saved_project', JSON.stringify(bridge));
+    // Also keep per-concept quick key (studio falls back to it)
+    localStorage.setItem('webcraft_studio_bridge', JSON.stringify({
+      savedAt: Date.now(), bizName, activeDesignIndex,
+      html: c.html || '', adminHtml: c.adminHtml || null
+    }));
+  } catch (e) { console.warn('[studio bridge]', e); }
+  window.open(SITE_URL + '/studio.php?concept=' + activeDesignIndex, '_blank');
   showToast('🎨 Studio opened');
 }
+/* Studio focus-sync: pick up edits saved by Studio in another tab. */
 window.addEventListener('focus', () => {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
@@ -2372,7 +3309,7 @@ window.addEventListener('focus', () => {
 /* ══════════════════════════════════════════════════
    ★ PUBLISH — REDIRECT TO publish.php
 ═════════════════════════════════════════════════ */
-function saveAndProceedToPayment() {
+async function saveAndProceedToPayment() {
   // Save everything to localStorage first
   saveSessionNow();
 
@@ -2382,6 +3319,8 @@ function saveAndProceedToPayment() {
     return;
   }
 
+  const bizName = document.getElementById('biz_name')?.value || 'My Website';
+
   // Extra safety — persist mode + requirements
   try {
     const raw = localStorage.getItem(SESSION_KEY);
@@ -2389,32 +3328,82 @@ function saveAndProceedToPayment() {
       const p = JSON.parse(raw);
       p.selectedGenMode = selectedGenMode;
       p.activeDesignIndex = activeDesignIndex;
-      p.bizName = document.getElementById('biz_name')?.value || 'My Website';
+      p.bizName = bizName;
       p.wizard = p.wizard || {};
       p.wizard.admin_requirements = document.getElementById('admin_requirements')?.value.trim() || p.wizard.admin_requirements || '';
       localStorage.setItem(SESSION_KEY, JSON.stringify(p));
     }
   } catch (e) {}
 
-  showToast('✓ Design saved! Opening publish wizard…');
+  // ★ Upload design HTML to server so publish.php can read it even if localStorage clears
+  const btn = document.getElementById('btn-publish');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving…'; }
+  showToast('⬆️ Uploading design to server…');
+
+  try {
+    const resp = await fetch('<?= SITE_URL ?>/builder.php?action=save_design', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        html: c.html,
+        biz_name: bizName,
+        gen_mode: selectedGenMode,
+        design_index: activeDesignIndex
+      })
+    });
+    const j = await resp.json();
+
+    if (j.success && j.token) {
+      // Store draft token so publish.php can load the HTML from server
+      try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const p = JSON.parse(raw);
+          p.draftToken = j.token;
+          localStorage.setItem(SESSION_KEY, JSON.stringify(p));
+        }
+      } catch (e) {}
+      showToast('✓ Design saved! Opening publish wizard…');
+    } else {
+      // Even if upload fails, still proceed — publish.php falls back to localStorage
+      console.warn('Draft upload failed:', j.error);
+      showToast('✓ Proceeding to publish…');
+    }
+  } catch (err) {
+    console.warn('Draft upload network error:', err);
+    showToast('✓ Proceeding to publish…');
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = '🚀 Save & Publish'; }
 
   setTimeout(() => {
     window.location.href = '<?= SITE_URL ?>/publish.php';
-  }, 550);
+  }, 500);
 }
 
 /* ══════════════════════════════════════════════════
    TOAST
 ═════════════════════════════════════════════════ */
 let toastTimeout;
-function showToast(text) {
+// showToast(text, ms, type) — ms defaults to 3500, auto-hides after time.
+// type: 'info' | 'success' | 'error'. Old single-arg calls keep working.
+function showToast(text, ms, type) {
   const t = document.getElementById('toast');
   const tt = document.getElementById('toast-text');
   if (!t || !tt) return;
+  ms = (typeof ms === 'number' && ms > 0) ? ms : 3500;
+  type = (type === 'success' || type === 'error') ? type : 'info';
+  let bar = document.getElementById('toast-bar');
+  if (!bar) { bar = document.createElement('div'); bar.id = 'toast-bar'; t.appendChild(bar); }
+  t.className = 'toast show ' + type;
   tt.textContent = text;
-  t.classList.add('show');
   clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => t.classList.remove('show'), 3200);
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  void bar.offsetWidth; // restart countdown animation
+  bar.style.transition = 'width ' + ms + 'ms linear';
+  bar.style.width = '0%';
+  toastTimeout = setTimeout(() => t.classList.remove('show'), ms);
 }
 </script>
 

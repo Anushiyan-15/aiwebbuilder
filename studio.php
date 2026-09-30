@@ -3513,22 +3513,95 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       if (toggleBtn) toggleBtn.textContent = langState.switcherVisible ? '👁️ Hide Switcher' : '👁️ Show Switcher';
     });
 
+    /* ★ Studio bridge source — which scoped builder key we loaded from (for write-back) */
+    let studioScopedSourceKey = null;
+
+    function studioTryParse(raw) {
+      if (!raw) return null;
+      try { const o = JSON.parse(raw); return (o && typeof o === 'object') ? o : null; }
+      catch (e) { return null; }
+    }
+
+    /* Normalize builder-session shape OR studio shape → studio shape */
+    function studioNormalize(p) {
+      if (!p || typeof p !== 'object') return null;
+      const designs = Array.isArray(p.designs) && p.designs.length ? p.designs
+        : (Array.isArray(p.concepts) && p.concepts.length ? p.concepts : null);
+      if (!designs || !designs.length) return null;
+      // Must have at least one non-empty html
+      const hasHtml = designs.some(d => d && typeof d.html === 'string' && d.html.trim().length > 50);
+      if (!hasHtml) return null;
+      const biz = p.bizName || p.biz_name || (p.wizard && p.wizard.biz_name) || 'My Website';
+      return {
+        bizName: biz,
+        activeDesignIndex: (typeof p.activeDesignIndex === 'number') ? p.activeDesignIndex : 0,
+        ownerEmail: p.ownerEmail || null,
+        designs: designs.map((d, i) => ({
+          name: d.name || ('Concept ' + (i + 1)),
+          description: d.description || '',
+          badge: d.badge || '',
+          html: d.html || '',
+          adminHtml: d.adminHtml || null
+        }))
+      };
+    }
+
     function loadProjectData() {
       const urlParams = new URLSearchParams(window.location.search);
       const p = parseInt(urlParams.get('concept') || '0', 10);
       activeConceptIndex = isNaN(p) ? 0 : p;
       currentStudioView = (urlParams.get('view') === 'admin') ? 'admin' : 'site';
 
+      let best = null;
+      studioScopedSourceKey = null;
+
+      // 1) Scan all per-customer builder sessions: webcraft_saved_project::<email>
+      //    These are authoritative — builder's saveSessionNow() writes here.
       try {
-        const raw = localStorage.getItem('webcraft_saved_project');
-        if (raw) projectData = JSON.parse(raw);
-      } catch (e) {
-        console.warn('[studio] localStorage parse failed:', e);
-        projectData = null;
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k || k.indexOf('webcraft_saved_project::') !== 0) continue;
+          const norm = studioNormalize(studioTryParse(localStorage.getItem(k)));
+          if (!norm) continue;
+          // Prefer the session that actually has the requested concept with real HTML
+          const candHtml = (norm.designs[activeConceptIndex] && norm.designs[activeConceptIndex].html) || '';
+          const bestHtml = (best && best.designs[activeConceptIndex] && best.designs[activeConceptIndex].html) || '';
+          if (!best || (candHtml.trim().length > bestHtml.trim().length)) {
+            best = norm;
+            studioScopedSourceKey = k;
+          }
+        }
+        if (best) console.log('[studio] loaded from scoped key:', studioScopedSourceKey);
+      } catch (e) { console.warn('[studio] scoped scan failed', e); }
+
+      // 2) Bridge keys written by builder openStudioInNewTab()
+      if (!best) {
+        const bridge = studioNormalize(studioTryParse(localStorage.getItem('webcraft_saved_project')));
+        if (bridge) { best = bridge; console.log('[studio] loaded from bridge: webcraft_saved_project'); }
       }
+      if (!best) {
+        try {
+          const qb = studioTryParse(localStorage.getItem('webcraft_studio_bridge'));
+          if (qb && typeof qb.html === 'string' && qb.html.trim().length > 50) {
+            best = {
+              bizName: qb.bizName || 'My Website',
+              activeDesignIndex: (typeof qb.activeDesignIndex === 'number') ? qb.activeDesignIndex : activeConceptIndex,
+              designs: [{ name: 'Concept 1', html: qb.html, adminHtml: qb.adminHtml || null }]
+            };
+            console.log('[studio] loaded from quick bridge: webcraft_studio_bridge');
+          }
+        } catch (e) {}
+      }
+
+      projectData = best;
 
       if (!projectData || !Array.isArray(projectData.designs) || projectData.designs.length === 0) {
         console.warn('[studio] No project data in localStorage — using fallback.');
+        try {
+          const keys = [];
+          for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+          console.warn('[studio] localStorage keys:', keys.filter(k => k && k.indexOf('webcraft') === 0).join(', ') || '(none)');
+        } catch (e) {}
         projectData = {
           bizName: 'Apex Studio',
           activeDesignIndex: 0,
@@ -3537,6 +3610,12 @@ p{color:#64748b;max-width:520px;line-height:1.6}
             html: WC_FALLBACK_HTML
           }]
         };
+        window.__STUDIO_NO_DATA__ = true;
+        setTimeout(() => {
+          if (typeof showToast === 'function') showToast('⚠️ No design found — builder-la irunthu variation select panni "Edit in Studio" click pannunga', 6000, 'error');
+        }, 600);
+      } else {
+        window.__STUDIO_NO_DATA__ = false;
       }
 
       if (activeConceptIndex < 0 || activeConceptIndex >= projectData.designs.length) {
@@ -3592,7 +3671,31 @@ p{color:#64748b;max-width:520px;line-height:1.6}
     }
 
     function saveProjectData() {
-      if (projectData) localStorage.setItem('webcraft_saved_project', JSON.stringify(projectData));
+      if (!projectData) return;
+      try { localStorage.setItem('webcraft_saved_project', JSON.stringify(projectData)); } catch (e) {}
+      // ★ Write back into the scoped builder session so builder focus-sync sees edits.
+      // Builder reads SESSION_KEY = webcraft_saved_project::<email> with {designs, concepts,...}.
+      try {
+        const targets = [];
+        if (studioScopedSourceKey) targets.push(studioScopedSourceKey);
+        // Also fan-out to every scoped session that already has designs (same browser, same user)
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.indexOf('webcraft_saved_project::') === 0 && targets.indexOf(k) === -1) targets.push(k);
+        }
+        targets.forEach(k => {
+          try {
+            const raw = localStorage.getItem(k);
+            const sess = raw ? JSON.parse(raw) : {};
+            sess.designs = projectData.designs;
+            sess.concepts = projectData.designs;
+            sess.bizName = projectData.bizName || sess.bizName;
+            sess.activeDesignIndex = activeConceptIndex;
+            sess.savedAt = Date.now();
+            localStorage.setItem(k, JSON.stringify(sess));
+          } catch (e) {}
+        });
+      } catch (e) {}
     }
 
     function switchStudioConcept(index) {
@@ -6493,5 +6596,4 @@ ${WC_ANIMATION_RUNTIME}
     }
   </script>
 </body>
-
 </html>

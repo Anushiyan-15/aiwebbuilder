@@ -69,6 +69,9 @@ class AdminPanelGenerator {
         // 9. Write settings.php (with Change Password feature)
         file_put_contents($adminDir . '/settings.php', self::getSettingsPhpCode($siteName));
 
+        // 9b. Write features.php (AI Feature & Requirement Builder)
+        file_put_contents($adminDir . '/features.php', self::getFeaturesPhpCode($siteName, $orderId));
+
         // 10. Seed initial data files for entities
         foreach ($entities as $ent) {
             $entId = is_array($ent) ? ($ent['id'] ?? 'items') : 'items';
@@ -424,6 +427,7 @@ tr:hover td{background:#0b0f17}
     <a href="index.php" class="nav-item <?= \$activeTab === 'dashboard' ? 'active' : '' ?>">📊 Dashboard</a>
     <a href="content.php" class="nav-item <?= \$activeTab === 'content' ? 'active' : '' ?>">📝 Edit Content</a>
     <a href="manage.php" class="nav-item <?= \$activeTab === 'manage' ? 'active' : '' ?>">📋 Manage Data</a>
+    <a href="features.php" class="nav-item <?= \$activeTab === 'features' ? 'active' : '' ?>" style="color:#c7d2fe;background:rgba(99,102,241,0.12);border:1px dashed rgba(99,102,241,0.4)">🤖 Add Functions (AI)</a>
     <a href="settings.php" class="nav-item <?= \$activeTab === 'settings' ? 'active' : '' ?>">⚙️ Settings &amp; Password</a>
   </nav>
 
@@ -1045,6 +1049,94 @@ renderAdminHeader('settings', 'Settings & Password');
     </form>
   </div>
 </div>
+
+<?php renderAdminFooter(); ?>
+PHP;
+    }
+
+    /**
+     * Code for features.php (AI Feature Adder & Requirement Builder)
+     */
+    private static function getFeaturesPhpCode(string $siteName, string $orderId): string {
+        $safeSite = htmlspecialchars($siteName, ENT_QUOTES);
+        $safeOid  = htmlspecialchars($orderId, ENT_QUOTES);
+
+        return <<<PHP
+<?php
+require_once __DIR__ . '/layout.php';
+renderAdminHeader('🤖 Add Functions (AI Feature Builder)', 'features', '$safeSite');
+?>
+
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
+  <div>
+    <div style="display:inline-block;padding:0.25rem 0.75rem;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);border-radius:999px;font-size:0.72rem;font-weight:800;color:#c7d2fe;margin-bottom:0.4rem;">
+      ✦ SECTION 18.5: ADMIN EDIT MODE
+    </div>
+    <h1 class="page-title">Add Functions &amp; Business Process Builder 🤖</h1>
+    <p style="color:#94a3b8;font-size:.88rem">Use the AI Co-Pilot to describe new functions, modules, or database records for $safeSite.</p>
+  </div>
+  <?php if ('$safeOid'): ?>
+  <a href="../../site-manager.php?order_id=$safeOid#ai-adder" target="_blank" class="btn btn-primary">
+    <span>✨ Open Advanced AI Studio &rarr;</span>
+  </a>
+  <?php endif; ?>
+</div>
+
+<div class="card" style="border-color:rgba(99,102,241,0.35);background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(15,23,42,0.8));">
+  <div style="font-size:.82rem;font-weight:700;color:#cbd5e1;margin-bottom:.5rem">Quick Presets (Click to Load):</div>
+  <div style="margin-bottom:1rem">
+    <button type="button" class="btn btn-ghost" style="padding:.4rem .8rem;font-size:.78rem;margin:0 .3rem .3rem 0" onclick="usePreset('Add an Appointment Booking system with Customer Name, Phone, Email, Service Type, Booking Date, Time Slot, and Status.')">📅 Appointment Booking</button>
+    <button type="button" class="btn btn-ghost" style="padding:.4rem .8rem;font-size:.78rem;margin:0 .3rem .3rem 0" onclick="usePreset('Add an Employee / Team Directory with Full Name, Role / Position, Phone, Bio, and Photo.')">👥 Staff / Team Management</button>
+    <button type="button" class="btn btn-ghost" style="padding:.4rem .8rem;font-size:.78rem;margin:0 .3rem .3rem 0" onclick="usePreset('Add a Customer Reviews &amp; Testimonials module with Client Name, Company, Rating (1-5 stars), Comment, and Status.')">⭐ Reviews &amp; Ratings</button>
+    <button type="button" class="btn btn-ghost" style="padding:.4rem .8rem;font-size:.78rem;margin:0 .3rem .3rem 0" onclick="usePreset('Add a Blog &amp; News Publishing section with Article Title, Featured Image, Category, Content Body, and Publish Date.')">📰 Blog / News Articles</button>
+  </div>
+
+  <div class="field">
+    <label class="lbl">Describe The Function / Business Process to Add</label>
+    <textarea id="feature-req-input" rows="4" class="inp" placeholder="e.g. Add an Appointment Booking system with Customer Name, Phone, Email, Date, Time, and Status..."></textarea>
+  </div>
+
+  <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+    <button type="button" class="btn btn-success" onclick="installFeature()">
+      <span>✨ Generate &amp; Install Module</span>
+    </button>
+    <?php if ('$safeOid'): ?>
+    <a href="../../site-manager.php?order_id=$safeOid#ai-adder" target="_blank" style="color:#a5b4fc;font-size:.82rem;text-decoration:none">
+      Or use your Website Manager AI Feature Adder &rarr;
+    </a>
+    <?php endif; ?>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="color:#fff;font-size:1.05rem;margin-bottom:1rem">📦 Installed Business Modules</h3>
+  <table>
+    <thead><tr><th>Module Name</th><th>Type</th><th>Storage</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Content Management</strong></td><td>Core CMS</td><td>JSON Storage</td><td><span class="badge badge-green">Active</span></td><td><a href="content.php" style="color:#818cf8;font-weight:700;text-decoration:none">Edit</a></td></tr>
+      <tr><td><strong>Dynamic Records Manager</strong></td><td>Entities CRUD</td><td>JSON Storage</td><td><span class="badge badge-green">Active</span></td><td><a href="manage.php" style="color:#818cf8;font-weight:700;text-decoration:none">Edit</a></td></tr>
+      <tr><td><strong>Admin Authentication</strong></td><td>Security &amp; Passwords</td><td>Bcrypt Hash</td><td><span class="badge badge-green">Active</span></td><td><a href="settings.php" style="color:#818cf8;font-weight:700;text-decoration:none">Edit</a></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+function usePreset(t) {
+  const el = document.getElementById('feature-req-input');
+  if (el) { el.value = t; el.focus(); }
+}
+
+function installFeature() {
+  const req = document.getElementById('feature-req-input').value.trim();
+  if (!req) { showToast('⚠️ Please describe what you want to add'); return; }
+  const oid = '$safeOid';
+  if (oid) {
+    window.location.href = '../../site-manager.php?order_id=' + encodeURIComponent(oid) + '#ai-adder';
+  } else {
+    showToast('✨ Feature generator initialized!');
+  }
+}
+</script>
 
 <?php renderAdminFooter(); ?>
 PHP;

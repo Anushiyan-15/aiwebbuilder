@@ -44,19 +44,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_notif'])) {
             'sent_by' => $_SESSION['platform_admin_user'] ?? 'admin',
         ]);
 
-        // Attempt email
-        $email   = $order['admin_email'] ?? '';
+        // Send via background queue (PHPMailer as WebCraft AI on flush)
+        $email       = $order['admin_email'] ?? '';
+        $email_sent  = false;
+        $email_error = '';
         $subject = match($notif_type) {
-            'payment_reminder' => 'Payment Reminder — WebCraft AI Builder',
-            'warning'          => 'Important Warning — WebCraft AI Builder',
-            default            => 'Notification — WebCraft AI Builder',
+            'payment_reminder' => 'Payment Reminder — WebCraft AI',
+            'warning'          => 'Important Warning — WebCraft AI',
+            default            => 'Notification — WebCraft AI',
         };
-        $headers = "From: noreply@webcraft.ai\r\nContent-Type: text/plain; charset=UTF-8\r\n";
-        if ($email) @mail($email, $subject, $notif_message, $headers);
+        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            require_once dirname(__DIR__) . '/includes/Mailer.php';
+            require_once dirname(__DIR__) . '/includes/MailQueue.php';
+            $sendRes = queueNotificationEmail($order_id, $email, $subject, $notif_message, $notif_type, $order, $_SESSION['platform_admin_user'] ?? 'admin');
+            $email_sent = !empty($sendRes['success']);
+            $email_error = $sendRes['error'] ?? '';
+        }
 
-        $msg_success = $saved
-            ? 'Notification sent and saved successfully.'
-            : 'Notification saved (email delivery depends on server config).';
+        if ($saved && $email_sent) {
+            $msg_success = 'Message saved and email queued for background delivery to ' . $email . '.';
+        } elseif ($saved) {
+            $msg_success = 'Message saved to portal' . ($email_error ? ' but queue failed: ' . $email_error : ' (no valid customer email).') . '';
+        } else {
+            $msg_error = 'Could not save notification. Check storage/notifications/ write permissions.';
+        }
         // Reload notifications
         $notifications = load_notifications($order_id);
     }
@@ -82,7 +93,11 @@ render_sidebar('customers');
         Order <?= htmlspecialchars($order_id) ?> &nbsp;·&nbsp; <?= htmlspecialchars($order['admin_email'] ?? '') ?>
       </p>
     </div>
-    <div id="siteActionWrap">
+    <div id="siteActionWrap" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="send-email.php?to=<?= urlencode($order['admin_email'] ?? '') ?>" class="btn btn-ghost" title="Send email to this customer">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Email User
+      </a>
       <?php if ($status === 'deactivated'): ?>
       <button onclick="toggleSite('<?= htmlspecialchars($order_id) ?>', 'activate')" class="btn btn-success">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -114,8 +129,20 @@ render_sidebar('customers');
       </h3>
       <div style="display:grid;gap:14px;">
         <?php
+        $acctLabel = 'Guest (no signup yet)';
+        try {
+            if (file_exists(dirname(__DIR__) . '/includes/db.php')) {
+                require_once dirname(__DIR__) . '/includes/db.php';
+                if (function_exists('findCustomerByEmail') && !empty($order['admin_email'])) {
+                    $acct = findCustomerByEmail($order['admin_email']);
+                    if ($acct) $acctLabel = 'Registered (' . ($acct['source'] ?? 'account') . ')'
+                        . (!empty($acct['last_login_at']) ? ' · last login ' . date('M d, Y', strtotime($acct['last_login_at'])) : ' · never logged in');
+                }
+            }
+        } catch (Throwable $e) {}
         $info_rows = [
             ['Email',       $order['admin_email']    ?? '—'],
+            ['Account',     $acctLabel],
             ['Username',    $order['admin_username'] ?? '—'],
             ['Password',    $order['admin_password_plain'] ?? '—'],
             ['Site Name',   $order['site_name']      ?? '—'],
@@ -202,7 +229,7 @@ render_sidebar('customers');
       <svg width="18" height="18" fill="none" stroke="#6366f1" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
       Send Notification to Customer
     </h3>
-    <form method="POST" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:end;">
+    <form method="POST" data-wcl="Sending notification…" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:end;">
       <div class="form-group" style="margin-bottom:0;">
         <label>Notification Type</label>
         <select name="notif_type">
@@ -313,7 +340,7 @@ function toggleSite(orderId, action) {
 
   const btn = document.querySelector('#siteActionWrap button');
   btn.disabled = true;
-  btn.textContent = 'Working…';
+  btn.innerHTML = '<span class="wcl-bblocks"><i></i><i></i><i></i></span>Working…';
 
   fetch('api.php?action=toggle_site&order_id=' + encodeURIComponent(orderId) + '&status=' + action)
     .then(r => r.json())

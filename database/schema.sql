@@ -132,3 +132,19 @@ CREATE TABLE IF NOT EXISTS `feature_additions` (
   `created_at`       DATETIME     NOT NULL,
   INDEX `idx_feat_order` (`order_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── Customer Accounts (Signup / Signin) ──────────────────────
+-- One row per customer email. Orders link via admin_email / client_email.
+-- Auto-provisioned on first publish if missing.
+CREATE TABLE IF NOT EXISTS `customers` (
+  `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `name`          VARCHAR(255) DEFAULT '',
+  `email`         VARCHAR(255) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `phone`         VARCHAR(50)  DEFAULT '',
+  `avatar`        VARCHAR(500) DEFAULT '',
+  `last_login_at` DATETIME     DEFAULT NULL,
+  `created_at`    DATETIME     NOT NULL,
+  `updated_at`    DATETIME     ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_cust_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -1,0 +1,22 @@
+[
+    {
+        "type": "payment_reminder",
+        "subject": "\ud83d\udcb3 Your Monthly Website Hosting Renewal is Due",
+        "message": "Hello!\r\n\r\nThis is a friendly reminder that your monthly subscription renewal is approaching. Please ensure your payment method is up to date to maintain continuous live website hosting and admin panel access.\r\n\r\nThank you for choosing WebCraft AI!",
+        "sent_at": "2026-09-29 14:27:15",
+        "sent_by": "superadmin (superadmin)"
+    },
+    {
+        "type": "payment_reminder",
+        "subject": "\ud83d\udcb3 Your Monthly Website Hosting Renewal is Due",
+        "message": "Hello!\r\n\r\nThis is a friendly reminder that your monthly subscription renewal is approaching. Please ensure your payment method is up to date to maintain continuous live website hosting and admin panel access.\r\n\r\nThank you for choosing WebCraft AI!",
+        "sent_at": "2026-09-29 14:28:23",
+        "sent_by": "superadmin (superadmin)"
+    },
+    {
+        "type": "info",
+        "message": "[Email queued] \ud83d\udcb3 Your Monthly Website Hosting Renewal is Due\n\npoi udampa kuraiaya da kunda",
+        "sent_by": "superadmin (superadmin)",
+        "sent_at": "2026-09-29 14:52:02"
+    }
+]

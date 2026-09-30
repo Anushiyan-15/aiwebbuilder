@@ -49,8 +49,8 @@ webbbuilder/
 │   └── submissions/                  # Contact & intake questionnaire submissions
 │
 ├── index.php                         # Public Landing Page & Features Showcase
-├── builder.php                       # AI Multi-Concept Generator + Live Split Editor + PayPal Modal
-├── studio.php                        # Canva-Style Drag & Drop Visual Editor (GrapesJS)
+├── builder.php                       # AI-FlowCraft Multi-Concept Generator + Live Split Editor + PayPal Modal
+├── studio.php                        # Visual Drag & Drop Editor (user-friendly customize: drag-drop, photo uploads, shapes, map)
 ├── client-intake.php                 # Comprehensive Client Requirements / Quote Questionnaire
 ├── contact.php                       # Contact Page
 └── config.php                        # Root configuration bootstrap loader
@@ -60,7 +60,7 @@ webbbuilder/
 
 ## 💳 PayPal Payment & Publishing Flow
 
-1. **User designs a website** in `builder.php` or `studio.php` and clicks **"Next → Save & Publish"**.
+1. **User designs a website** in `builder.php` (AI-FlowCraft generation + AI Co-Pilot prompt editing) or customizes visually in `studio.php` (drag-drop, photos, shapes, map), then clicks **"Next → Save & Publish"**.
 2. **Subscription Plan Selection**:
    - **Starter**: \$9.00/mo
    - **Pro**: \$19.00/mo (Recommended)

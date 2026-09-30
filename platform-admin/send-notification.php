@@ -68,29 +68,17 @@ if ($customer_email) {
     ];
     $subject = $subject_map[$notif_type] ?? 'Notification — WebCraft AI Builder';
 
-    $site_name = $order['site_name'] ?? 'your website';
-    $body      = "Hello,\n\n" . $notif_message . "\n\n";
-    $body     .= "---\nSite: " . $site_name . "\n";
-    $body     .= "Order: " . $order_id . "\n";
-    $body     .= "Live URL: " . ($order['live_url'] ?? 'N/A') . "\n\n";
-    $body     .= "If you have any questions, reply to this email or contact support@webcraft.ai\n\n";
-    $body     .= "— WebCraft AI Builder Team";
-
-    $headers  = implode("\r\n", [
-        'From: WebCraft AI Builder <noreply@webcraft.ai>',
-        'Reply-To: support@webcraft.ai',
-        'X-Mailer: WebCraft-Platform-Admin/1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'MIME-Version: 1.0',
-    ]);
-
-    $email_sent = @mail($customer_email, $subject, $body, $headers);
+    require_once dirname(__DIR__) . '/includes/Mailer.php';
+    require_once dirname(__DIR__) . '/includes/MailQueue.php';
+    // Background queue (instant) — delivery + portal DB record happen on flush
+    $sendResult = queueNotificationEmail($order_id, $customer_email, $subject, $notif_message, $notif_type, $order, 'platform_admin');
+    $email_sent = !empty($sendResult['success']);
 }
 
 // Set flash and redirect
 if ($saved) {
     $_SESSION['flash_type'] = 'success';
-    $_SESSION['flash_msg']  = 'Notification saved' . ($email_sent ? ' and email sent' : ' (email delivery depends on server config)') . '.';
+    $_SESSION['flash_msg']  = 'Notification saved' . ($email_sent ? ' and email queued for background delivery' : ' (invalid customer email — portal note only)') . '.';
 } else {
     $_SESSION['flash_type'] = 'warning';
     $_SESSION['flash_msg']  = 'Could not save notification to disk. Check storage/notifications/ write permissions.';

@@ -115,3 +115,20 @@ CREATE TABLE IF NOT EXISTS feature_additions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_features_order ON feature_additions(order_id);
+
+-- ─── 7. Customer Accounts (Signup / Signin) ────────────────────
+-- One row per customer email. Orders link via admin_email / client_email.
+-- Password is bcrypt hash. Auto-provisioned on first publish if missing.
+CREATE TABLE IF NOT EXISTS customers (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) DEFAULT '',
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    phone VARCHAR(50) DEFAULT '',
+    avatar TEXT DEFAULT '',
+    last_login_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);

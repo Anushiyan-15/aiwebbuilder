@@ -55,7 +55,18 @@ if ($action === 'toggle_site') {
             'sent_by' => 'system',
         ]);
 
-        api_respond(true, 'Site deactivated successfully. Suspension page is now live.', [
+        // Email the customer via background queue (never blocks toggle)
+        $emailMsg = 'Your website "' . ($order['site_name'] ?? '') . '" has been temporarily deactivated (subscription overdue). Renew to restore access.';
+        $emailSent = false;
+        $emailTo = filter_var($order['admin_email'] ?? '', FILTER_VALIDATE_EMAIL);
+        if ($emailTo) {
+            require_once dirname(__DIR__) . '/includes/Mailer.php';
+            require_once dirname(__DIR__) . '/includes/MailQueue.php';
+            $sr = queueNotificationEmail($order_id, $emailTo, 'Website Deactivated — WebCraft AI', $emailMsg, 'warning', $order, 'system');
+            $emailSent = !empty($sr['success']);
+        }
+
+        api_respond(true, 'Site deactivated successfully. Suspension page is now live.' . ($emailSent ? ' Customer email queued.' : ''), [
             'order_id'    => $order_id,
             'site_active' => false,
         ]);
@@ -74,7 +85,18 @@ if ($action === 'toggle_site') {
             'sent_by' => 'system',
         ]);
 
-        api_respond(true, 'Site activated successfully. Original website is restored.', [
+        // Email the customer via background queue (never blocks toggle)
+        $emailMsg = 'Good news! Your website "' . ($order['site_name'] ?? '') . '" has been reactivated and is live again.';
+        $emailSent = false;
+        $emailTo = filter_var($order['admin_email'] ?? '', FILTER_VALIDATE_EMAIL);
+        if ($emailTo) {
+            require_once dirname(__DIR__) . '/includes/Mailer.php';
+            require_once dirname(__DIR__) . '/includes/MailQueue.php';
+            $sr = queueNotificationEmail($order_id, $emailTo, 'Website Reactivated — WebCraft AI', $emailMsg, 'info', $order, 'system');
+            $emailSent = !empty($sr['success']);
+        }
+
+        api_respond(true, 'Site activated successfully. Original website is restored.' . ($emailSent ? ' Customer email queued.' : ''), [
             'order_id'    => $order_id,
             'site_active' => true,
         ]);
@@ -146,21 +168,19 @@ if ($action === 'send_reminder') {
     ];
     save_notification($order_id, $notif);
 
-    // Try email
+    // Send email via background queue (never blocks the response)
     $email_sent = false;
     $email_addr = filter_var($order['admin_email'] ?? '', FILTER_VALIDATE_EMAIL);
     if ($email_addr) {
-        $subject = 'Payment Reminder — WebCraft AI Builder';
-        $headers = implode("\r\n", [
-            'From: WebCraft AI Builder <noreply@webcraft.ai>',
-            'Reply-To: support@webcraft.ai',
-            'Content-Type: text/plain; charset=UTF-8',
-        ]);
-        $email_sent = @mail($email_addr, $subject, $message, $headers);
+        $subject = 'Payment Reminder — WebCraft AI';
+        require_once dirname(__DIR__) . '/includes/Mailer.php';
+        require_once dirname(__DIR__) . '/includes/MailQueue.php';
+        $sendRes = queueNotificationEmail($order_id, $email_addr, $subject, $message, 'payment_reminder', $order, 'platform_admin');
+        $email_sent = !empty($sendRes['success']);
     }
 
     api_respond(true,
-        'Payment reminder sent' . ($email_sent ? ' and email delivered' : ' (saved; email depends on server config)') . '.',
+        'Payment reminder saved' . ($email_sent ? ' and email queued for background delivery' : ' (portal note only)') . '.',
         [
             'order_id'   => $order_id,
             'email_sent' => $email_sent,
@@ -177,6 +197,8 @@ if ($action === 'bulk_send_reminders') {
     $all     = load_all_orders();
     $sent    = 0;
     $errors  = [];
+    require_once dirname(__DIR__) . '/includes/Mailer.php';
+    require_once dirname(__DIR__) . '/includes/MailQueue.php';
 
     foreach ($all as $o) {
         $s = subscription_status($o);
@@ -197,15 +219,14 @@ if ($action === 'bulk_send_reminders') {
 
         $email_addr = filter_var($o['admin_email'] ?? '', FILTER_VALIDATE_EMAIL);
         if ($email_addr) {
-            $headers = "From: noreply@webcraft.ai\r\nContent-Type: text/plain; charset=UTF-8\r\n";
-            @mail($email_addr, 'Payment Reminder — WebCraft AI Builder', $message, $headers);
+            queueNotificationEmail($oid, $email_addr, 'Payment Reminder — WebCraft AI', $message, 'payment_reminder', $o, 'bulk_system');
         }
 
         if ($saved) $sent++;
         else $errors[] = $oid;
     }
 
-    api_respond(true, "Bulk reminders sent to {$sent} overdue customer(s).", [
+    api_respond(true, "Bulk reminders saved; {$sent} email(s) queued for background delivery.", [
         'sent'   => $sent,
         'errors' => $errors,
     ]);

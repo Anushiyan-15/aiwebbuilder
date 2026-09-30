@@ -47,6 +47,9 @@ if ($action === 'send' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $sentCount = 0;
+    $queuedCount = 0;
+    require_once dirname(__DIR__) . '/includes/Mailer.php';
+    require_once dirname(__DIR__) . '/includes/MailQueue.php';
     foreach ($targetOrders as $toId) {
         $notifData = [
             'type'    => $type,
@@ -55,17 +58,18 @@ if ($action === 'send' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
         if (save_notification($toId, $notifData)) {
             $sentCount++;
-            // Try sending email if recipient has email
+            // Queue email (background) instead of slow sync send
             $ordObj = load_order($toId);
-            $cEmail = $ordObj['admin_email'] ?: ($ordObj['client_email'] ?? '');
+            $cEmail = $ordObj ? ($ordObj['admin_email'] ?: ($ordObj['client_email'] ?? '')) : '';
             if ($cEmail && filter_var($cEmail, FILTER_VALIDATE_EMAIL)) {
-                @mail($cEmail, $subject, $message, "From: no-reply@webcraft.ai");
+                $qr = queueNotificationEmail($toId, $cEmail, $subject, $message, $type, $ordObj, 'broadcast');
+                if (!empty($qr['success'])) $queuedCount++;
             }
         }
     }
 
-    log_admin_action('notification_sent', ($targetType === 'single' ? $singleOid : 'bulk'), "Sent '{$subject}' to {$sentCount} recipient(s) [Target: {$targetType}]");
-    header("Location: notifications.php?msg=Dispatched+{$sentCount}+notification(s)+successfully&type=success");
+    log_admin_action('notification_sent', ($targetType === 'single' ? $singleOid : 'bulk'), "Saved '{$subject}' to {$sentCount} recipient(s), {$queuedCount} email(s) queued [Target: {$targetType}]");
+    header("Location: notifications.php?msg=Saved+{$sentCount}+notification(s),+{$queuedCount}+email(s)+queued&type=success");
     exit;
 }
 
@@ -90,6 +94,37 @@ render_sidebar('notifications');
     </div>
   <?php endif; ?>
 
+  <?php
+  require_once dirname(__DIR__) . '/includes/MailQueue.php';
+  $mqPending = mailQueuePending();
+  ?>
+  <!-- Mail Queue Status -->
+  <div class="card" style="margin-bottom:20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+    <div style="font-size:1.6rem;">📬</div>
+    <div style="flex:1;min-width:200px;">
+      <div style="font-weight:800;color:#fff;">Background Mail Queue — <span id="mq-count"><?= (int)$mqPending ?></span> pending</div>
+      <div style="font-size:.8rem;color:var(--muted);" id="mq-note">Emails send in the background so pages stay fast. OTP codes always send instantly.</div>
+    </div>
+    <button class="btn btn-primary btn-sm" id="mq-flush-btn" onclick="flushMailQueueNow()">Send Queued Now →</button>
+  </div>
+  <script>
+  function flushMailQueueNow() {
+    const btn = document.getElementById('mq-flush-btn');
+    const note = document.getElementById('mq-note');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    if (window.Loader3D) Loader3D.show('Sending queued emails…', 'Delivering in background', 'mail');
+    fetch('api/flush-mail.php?max=20')
+      .then(r => r.json())
+      .then(d => {
+        if (window.Loader3D) Loader3D.hide();
+        document.getElementById('mq-count').textContent = d.pending ?? 0;
+        note.textContent = 'Sent ' + (d.sent ?? 0) + ' just now' + ((d.failed ?? 0) ? ', ' + d.failed + ' failed (will retry)' : '') + '. ' + (d.pending ?? 0) + ' still pending.';
+        btn.disabled = false; btn.textContent = 'Send Queued Now →';
+      })
+      .catch(() => { if (window.Loader3D) Loader3D.hide(); btn.disabled = false; btn.textContent = 'Send Queued Now →'; note.textContent = 'Flush request failed — queue keeps retrying automatically.'; });
+  }
+  </script>
+
   <div class="grid-2" style="margin-bottom:28px;">
     
     <!-- Dispatch Form -->
@@ -99,7 +134,7 @@ render_sidebar('notifications');
         <span style="font-size:0.75rem;color:#818cf8;font-weight:600;">In-App + Email</span>
       </div>
 
-      <form method="POST" action="notifications.php">
+      <form method="POST" action="notifications.php" data-wcl="Sending notifications…">
         <input type="hidden" name="action" value="send">
 
         <!-- Quick Template Selector -->

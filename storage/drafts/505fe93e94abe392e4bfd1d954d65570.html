@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zenith Studio - Crafting next-generation digital experiences that inspire and scale.</title>
+
+<style>
+html { scroll-behavior: smooth; }
+        body { margin: 0; font-family: Arial, sans-serif; line-height: 1.6; }
+        header { position: sticky; top: 0; backdrop-filter: blur(10px); padding: 1rem; z-index: 1000; }
+        nav ul { display: flex; list-style: none; justify-content: space-around; }
+        nav a { text-decoration: none; color: #fff; transition: color 0.3s; }
+        nav a:hover { color: #6366f1; }
+        .hero { background: linear-gradient(135deg, #6366f1, #2563eb); color: #fff; text-align: center; padding: 100px 20px; }
+        .hero h1 { font-size: clamp(3rem, 8vw, 6rem); }
+        .cta { background: #fff; color: #6366f1; padding: 1rem 2rem; border-radius: 28px; cursor: pointer; transition: transform 0.3s; }
+        .cta:hover { transform: scale(1.05); }
+        .services, .about, .metrics, .contact { max-width: 1200px; margin: auto; padding: 40px 20px; }
+        .services { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .service-card { border-radius: 28px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); padding: 20px; }
+        .about { background-color: #334155; color: #fff; padding: 40px; text-align: center; }
+        .metrics { display: flex; justify-content: space-between; }
+        .metric-card { background: linear-gradient(135deg, #6366f1, #059669); border-radius: 28px; padding: 20px; color: #fff; flex: 1; margin: 10px; text-align: center; }
+        .contact { background: rgba(255, 255, 255, 0.8); border-radius: 28px; padding: 40px; backdrop-filter: blur(10px); }
+        footer { text-align: center; padding: 20px; background: #334155; color: #fff; }
+        .back-to-top { position: fixed; bottom: 20px; right: 20px; background: #6366f1; color: #fff; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .revealed { opacity: 1; transform: translateY(0); }
+        .metric-card { opacity: 0; transform: translateY(20px); transition: opacity 0.5s, transform 0.5s; }
+
+/* Studio Overrides */
+* { box-sizing: border-box; } body {margin: 0;}#i5op2{background:linear-gradient(135deg, #6366f1, #2563eb);-webkit-background-clip:text;color:transparent;}
+
+/* Mobile Overrides */
+@media (max-width: 767px) {
+  [data-mobile-id][data-mobile-padding] { padding: var(--mb-p, inherit); }
+  [data-mobile-bg] { background: attr(data-mobile-bg type(<color>), inherit); }
+  [data-mobile-color] { color: attr(data-mobile-color type(<color>), inherit); }
+  [data-mobile-font-size] { font-size: attr(data-mobile-font-size type(<length>), inherit); }
+  [data-mobile-text-align] { text-align: attr(data-mobile-text-align type(<custom-ident>), inherit); }
+  [data-mobile-display] { display: attr(data-mobile-display type(<custom-ident>), inherit); }
+  [data-mobile-width] { width: attr(data-mobile-width type(<length>), auto); }
+  [data-mobile-height] { height: attr(data-mobile-height type(<length>), auto); }
+  [data-mobile-min-height] { min-height: attr(data-mobile-min-height type(<length>), auto); }
+  [data-mobile-max-width] { max-width: attr(data-mobile-max-width type(<length>), none); }
+  [data-mobile-margin] { margin: attr(data-mobile-margin type(<length>), inherit); }
+  [data-mobile-border-radius] { border-radius: attr(data-mobile-border-radius type(<length>), inherit); }
+  [data-mobile-hide="true"] { display: none !important; }
+}
+</style>
+</head>
+<body>
+<body><header id="section-1" data-section-name="Section 1"><nav><ul><li><a href="#hero">Home</a></li><li><a href="#metrics">Metrics</a></li><li><a href="#services">Services</a></li><li><a href="#about">About</a></li><li><a href="#contact">Contact</a></li></ul></nav></header><section id="hero" class="hero"><h1 id="ihb4w">Zenith Studios</h1><p>Crafting <span id="i5op2">next-generation</span> digital experiences that inspire and scale.</p><div class="cta">Get Started</div></section><section id="metrics" class="metrics"><div class="metric-card revealed">Metric 1</div><div class="metric-card revealed">Metric 2</div><div class="metric-card revealed">Metric 3</div></section><section id="services" class="services"><div class="service-card">UI/UX Design</div><div class="service-card">Full-Stack Web Development</div><div class="service-card">Brand Identity</div><div class="service-card">Growth Optimization</div></section><section id="about" class="about"><h2>About Us</h2><p>We are a creative and digital agency based in San Francisco, CA.</p></section><section id="contact" class="contact"><h2>Contact Us</h2><form id="contact-form" method="POST"><input type="text" name="name" placeholder="Your Name" required/><input type="email" name="email" placeholder="Your Email" required/><input type="text" name="phone" placeholder="Your Phone (optional)"/><textarea name="message" placeholder="Your Message" required></textarea><button type="submit">Send Message</button></form></section><footer id="section-7" data-section-name="Section 7"><p>Contact: hello@zenithstudio.com | Phone: +1 (555) 890-1234 | Location: 450 Innovation Parkway, San Francisco, CA</p></footer><div class="back-to-top">↑</div></body>
+
+<script>
+        const metrics = document.querySelectorAll('.metric-card');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealed');
+                }
+            });
+        });
+        metrics.forEach(metric => observer.observe(metric));
+    </script>
+<script id="wc-animation-runtime">
+(function(){
+  var KEYFRAMES = {
+    fadeIn:[{opacity:0},{opacity:1}],
+    slideUp:[{opacity:0,transform:'translateY(50px)'},{opacity:1,transform:'translateY(0)'}],
+    slideDown:[{opacity:0,transform:'translateY(-50px)'},{opacity:1,transform:'translateY(0)'}],
+    slideLeft:[{opacity:0,transform:'translateX(50px)'},{opacity:1,transform:'translateX(0)'}],
+    slideRight:[{opacity:0,transform:'translateX(-50px)'},{opacity:1,transform:'translateX(0)'}],
+    zoomIn:[{opacity:0,transform:'scale(0.7)'},{opacity:1,transform:'scale(1)'}],
+    zoomOut:[{opacity:0,transform:'scale(1.3)'},{opacity:1,transform:'scale(1)'}],
+    bounce:[{transform:'translateY(0)'},{transform:'translateY(-30px)'},{transform:'translateY(0)'},{transform:'translateY(-15px)'},{transform:'translateY(0)'}],
+    rotate:[{opacity:0,transform:'rotate(-180deg) scale(0.7)'},{opacity:1,transform:'rotate(0deg) scale(1)'}],
+    flip:[{opacity:0,transform:'perspective(400px) rotateY(90deg)'},{opacity:1,transform:'perspective(400px) rotateY(0deg)'}],
+    pulse:[{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}],
+    shake:[{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],
+    blur:[{opacity:0,filter:'blur(12px)'},{opacity:1,filter:'blur(0)'}],
+    lightSpeed:[{opacity:0,transform:'translateX(80px) skewX(-25deg)'},{opacity:1,transform:'translateX(0) skewX(0)'}]
+  };
+  function preApply(el, kf){ if(!kf||!kf[0]) return; var f=kf[0]; if('opacity' in f) el.style.opacity=f.opacity; if('transform' in f) el.style.transform=f.transform; if('filter' in f) el.style.filter=f.filter; }
+  function play(el){
+    var type=el.getAttribute('data-anim'), kf=KEYFRAMES[type]; if(!kf) return;
+    var dur=parseInt(el.getAttribute('data-anim-duration'))||700, delay=parseInt(el.getAttribute('data-anim-delay'))||0;
+    var easing=el.getAttribute('data-anim-easing')||'cubic-bezier(0.22,1,0.36,1)';
+    var rep=el.getAttribute('data-anim-repeat')||'1', iter=rep==='infinite'?Infinity:(parseInt(rep)||1);
+    try { if(el._wcAnim&&el._wcAnim.cancel) el._wcAnim.cancel(); el._wcAnim=el.animate(kf,{duration:dur,delay:delay,easing:easing,fill:'both',iterations:iter}); } catch(e){}
+  }
+  function init(){
+    var els=document.querySelectorAll('[data-anim]'); if(!els.length) return;
+    var io=('IntersectionObserver' in window) ? new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting){ play(e.target); io.unobserve(e.target); } }); },{threshold:0.15}) : null;
+    Array.prototype.forEach.call(els,function(el){
+      var trig=el.getAttribute('data-anim-trigger')||'scroll', kf=KEYFRAMES[el.getAttribute('data-anim')];
+      if(trig==='scroll'||trig==='load') preApply(el,kf);
+      if(trig==='scroll'){ if(io) io.observe(el); else play(el); }
+      else if(trig==='load'){ requestAnimationFrame(function(){ play(el); }); }
+      else if(trig==='hover'){ el.addEventListener('mouseenter',function(){ play(el); }); }
+      else if(trig==='click'){ el.addEventListener('click',function(ev){ ev.preventDefault(); play(el); }); }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+</body>
+</html>

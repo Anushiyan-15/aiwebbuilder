@@ -9,6 +9,7 @@ require_once __DIR__ . '/helpers.php';
 
 // ── Load & filter ─────────────────────────────
 $all_orders  = load_all_orders();
+$all_customers = load_all_customers();
 $filter      = $_GET['filter'] ?? 'all';
 $search      = trim($_GET['q'] ?? '');
 
@@ -68,6 +69,56 @@ render_sidebar('customers');
     <?= htmlspecialchars($flash_msg) ?>
   </div>
   <?php endif; ?>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div>
+        <h2 style="font-size:1.05rem;color:#fff;">Registered Accounts (<?= count($all_customers) ?>)</h2>
+        <p style="color:var(--muted);font-size:.82rem;">Signup users + guest publishers. Source: db = Supabase/MySQL, local = file fallback, guest = published without signup.</p>
+      </div>
+    </div>
+
+    <?php if (empty($all_customers)): ?>
+    <div style="text-align:center;padding:30px;color:var(--muted);font-size:.875rem;">No customer accounts yet.</div>
+    <?php else: ?>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Source</th>
+            <th>Projects</th>
+            <th>Signed Up</th>
+            <th>Last Login</th>
+            <th style="text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($all_customers as $c): ?>
+          <tr>
+            <td>
+              <div style="font-weight:600;color:#fff;"><?= htmlspecialchars($c['email'] ?? '—') ?></div>
+              <div style="font-size:.76rem;color:var(--muted);"><?= htmlspecialchars($c['name'] ?? '') ?><?= !empty($c['phone']) ? ' · ' . htmlspecialchars($c['phone']) : '' ?></div>
+            </td>
+            <td style="font-size:.78rem;color:var(--muted);"><?= htmlspecialchars($c['source'] ?? '—') ?></td>
+            <td style="font-weight:700;color:#818cf8;"><?= (int)($c['projects'] ?? 0) ?></td>
+            <td style="color:var(--muted);font-size:.82rem;"><?= !empty($c['created_at']) ? htmlspecialchars(date('M d, Y', strtotime($c['created_at']))) : '—' ?></td>
+            <td style="color:var(--muted);font-size:.82rem;"><?= !empty($c['last_login_at']) ? htmlspecialchars(date('M d, Y H:i', strtotime($c['last_login_at']))) : '—' ?></td>
+            <td>
+              <div style="display:flex;gap:6px;justify-content:flex-end;">
+                <a href="send-email.php?to=<?= urlencode($c['email'] ?? '') ?>" class="btn btn-ghost btn-sm" title="Send email to this user">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  Email
+                </a>
+              </div>
+            </td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php endif; ?>
+  </div>
 
   <div class="card">
 
@@ -199,7 +250,7 @@ render_sidebar('customers');
     </div>
 
     <div style="margin-top:12px;color:var(--muted);font-size:.8rem;text-align:right;">
-      Showing <?= count($filtered) ?> of <?= $total ?> customer<?= $total !== 1 ? 's' : '' ?>
+      Showing <?= count($filtered) ?> of <?= count($all_orders) ?> customer<?= count($all_orders) !== 1 ? 's' : '' ?>
     </div>
     <?php endif; ?>
 
@@ -234,7 +285,7 @@ function showToast(msg, type) {
 
 function sendReminder(orderId, btn) {
   btn.disabled    = true;
-  btn.textContent = 'Sending…';
+  btn.innerHTML = '<span class="wcl-bblocks"><i></i><i></i><i></i></span>Sending…';
   fetch('api.php?action=send_reminder&order_id=' + encodeURIComponent(orderId))
     .then(r => r.json())
     .then(d => {
@@ -249,7 +300,7 @@ function toggleSite(orderId, action, btn) {
   const label = action === 'activate' ? 'activate' : 'deactivate';
   if (!confirm('Are you sure you want to ' + label + ' this site?')) return;
   btn.disabled    = true;
-  btn.textContent = 'Working…';
+  btn.innerHTML = '<span class="wcl-bblocks"><i></i><i></i><i></i></span>Working…';
   fetch('api.php?action=toggle_site&order_id=' + encodeURIComponent(orderId) + '&status=' + action)
     .then(r => r.json())
     .then(d => {

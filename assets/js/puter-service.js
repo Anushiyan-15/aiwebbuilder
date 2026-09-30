@@ -8,11 +8,11 @@ window.PuterService = (function () {
   const KEY_MODEL = 'webcraft_puter_model';
 
   const MODELS = {
-    'deepseek/deepseek-chat': { label: 'DeepSeek V3 (Free)', free: true  },
-    'gpt-4o-mini':            { label: 'GPT-4o Mini',        free: true  },
-    'gpt-4o':                 { label: 'GPT-4o',             free: false },
-    'claude-3-5-sonnet':      { label: 'Claude 3.5 Sonnet',  free: false },
-    'gemini-2.0-flash':       { label: 'Gemini 2.0 Flash',   free: true  }
+    'gpt-4o-mini':            { label: 'GPT-4o Mini (⚡ Ultra-Fast & Free)', free: true  },
+    'deepseek/deepseek-chat': { label: 'DeepSeek V3 (Free)',              free: true  },
+    'gemini-2.0-flash':       { label: 'Gemini 2.0 Flash (Free)',         free: true  },
+    'claude-3-5-sonnet':      { label: 'Claude 3.5 Sonnet (Paid Credits)', free: false },
+    'gpt-4o':                 { label: 'GPT-4o (Paid Credits)',           free: false }
   };
 
   /* ═══════════ TANGLISH SYSTEM ADDENDUM ═══════════ */
@@ -298,7 +298,7 @@ or a full-page replacement). If it's a question, answer conversationally.
   /* ═══════════ PUBLIC API ═══════════ */
   const service = {
     MODELS,
-    selectedModel: localStorage.getItem(KEY_MODEL) || 'deepseek/deepseek-chat',
+    selectedModel: localStorage.getItem(KEY_MODEL) || 'gpt-4o-mini',
     isSignedIn,
     getUser,
     signIn,

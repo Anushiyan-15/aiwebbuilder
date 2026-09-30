@@ -432,6 +432,48 @@ function get_domain_ssl_records(): array {
 }
 
 // ──────────────────────────────────────────────
+// CUSTOMER ACCOUNTS (registered signups + guests)
+// ──────────────────────────────────────────────
+
+/**
+ * All registered customer accounts with project counts.
+ * Uses includes/db.php loadAllCustomers() (Supabase + local fallback).
+ */
+function load_all_customers(): array {
+    if (file_exists(dirname(__DIR__) . '/includes/db.php')) {
+        require_once dirname(__DIR__) . '/includes/db.php';
+        if (function_exists('loadAllCustomers')) {
+            try {
+                return loadAllCustomers();
+            } catch (Throwable $e) {}
+        }
+    }
+    // Fallback: distinct emails from local order files
+    $seen = [];
+    foreach (load_all_orders() as $o) {
+        $em = strtolower(trim($o['admin_email'] ?? ($o['client_email'] ?? '')));
+        if (!$em || isset($seen[$em])) continue;
+        $seen[$em] = [
+            'id' => 'guest-' . substr(md5($em), 0, 8),
+            'name' => $o['admin_username'] ?? '',
+            'email' => $em,
+            'phone' => '',
+            'projects' => 0,
+            'last_login_at' => null,
+            'created_at' => $o['created_at'] ?? null,
+            'source' => 'guest',
+        ];
+    }
+    foreach (load_all_orders() as $o) {
+        $em = strtolower(trim($o['admin_email'] ?? ($o['client_email'] ?? '')));
+        if ($em && isset($seen[$em])) $seen[$em]['projects']++;
+    }
+    $list = array_values($seen);
+    usort($list, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+    return $list;
+}
+
+// ──────────────────────────────────────────────
 // AI USAGE & TOKEN TRACKER
 // ──────────────────────────────────────────────
 
@@ -617,6 +659,8 @@ function render_sidebar(string $active = 'dashboard'): void {
         'Support & CRM' => [
             'tickets'       => ['href' => 'tickets.php',       'perm' => 'tickets',            'icon' => 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',                   'label' => 'Support Tickets'],
             'notifications' => ['href' => 'notifications.php', 'perm' => 'notifications_view', 'icon' => 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',             'label' => 'Notification Hub'],
+            'send_email'    => ['href' => 'send-email.php',    'perm' => 'notifications_send',  'icon' => 'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6', 'label' => 'Send Email to User'],
+            'customers'     => ['href' => 'customers.php',     'perm' => 'notifications_view',  'icon' => 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75', 'label' => 'Customers & Accounts'],
         ],
         'Security & Team' => [
             'audit' => ['href' => 'audit-logs.php', 'perm' => 'audit_logs', 'icon' => 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8', 'label' => 'Audit Trail'],
@@ -732,6 +776,21 @@ label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);text-tra
 @media(max-width:1200px){.grid-4{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:768px){.grid-4,.grid-3,.grid-2{grid-template-columns:1fr;}}
 .code-badge{font-family:"Fira Code",monospace;font-size:.78rem;background:#0d1117;padding:2px 6px;border-radius:5px;border:1px solid #1e293b;color:#a5b4fc;}
+.alert{transition:opacity .5s ease;}
+@keyframes paBootAutoHide{to{opacity:0;visibility:hidden;pointer-events:none;}}
 </style>';
+    echo '<link rel="stylesheet" href="../assets/css/loader-3d.css">';
+    echo '<script src="../assets/js/loader-3d.js"></script>';
     echo '</head><body><div class="layout">';
+    // Page-load overlay (every admin page) + auto-fading flashes + form loaders
+    echo '<div id="pa-boot" style="position:fixed;inset:0;z-index:99997;background:#0a0d14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;animation:paBootAutoHide .5s ease 6s forwards;">'
+       . '<div class="wcl-mini-house" style="margin:0;"><i class="walls"></i><i class="roof"></i><i class="door"></i></div>'
+       . '<div style="color:#fff;font-weight:800;font-size:.95rem;">Loading<span class="wcl-sub" style="display:inline;"></span></div>'
+       . '</div>';
+    echo '<script>'
+       . 'window.addEventListener("load",function(){var b=document.getElementById("pa-boot");if(b)b.style.display="none";});'
+       . 'setTimeout(function(){var b=document.getElementById("pa-boot");if(b)b.style.display="none";},5000);'
+       . 'setTimeout(function(){document.querySelectorAll(".alert").forEach(function(a){a.style.opacity="0";setTimeout(function(){a.style.display="none";},500);});},5000);'
+       . 'document.addEventListener("submit",function(e){var f=e.target;if(f&&f.dataset&&f.dataset.wcl&&window.Loader3D){Loader3D.show(f.dataset.wcl,"Please wait",f.dataset.wclType||"mail");}},true);'
+       . '</script>';
 }

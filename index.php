@@ -232,7 +232,7 @@ require_once __DIR__ . '/includes/nav.php';
           Describe your dream website. Our AI generates production-ready code in seconds — then customize it live, right in your browser.
         </p>
         <div class="hero-ctas">
-          <a href="<?= SITE_URL ?>/builder.php" class="btn btn-primary btn-lg">
+          <a href="<?= ($customerUser ? SITE_URL . '/builder.php' : SITE_URL . '/customer-portal.php?view=signup') ?>" class="btn btn-primary btn-lg">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             Start Building Free
           </a>
@@ -240,6 +240,17 @@ require_once __DIR__ . '/includes/nav.php';
             📋 Get a Custom Quote
           </a>
         </div>
+        <?php if (!empty($customerUser)): ?>
+        <div class="hero-ctas" style="margin-top:.9rem">
+          <a href="<?= SITE_URL ?>/builder.php" class="btn btn-ghost btn-lg">✦ Open AI Builder</a>
+          <a href="<?= SITE_URL ?>/customer-portal.php" class="btn btn-ghost btn-lg">📁 My Projects</a>
+        </div>
+        <?php else: ?>
+        <div class="hero-ctas" style="margin-top:.9rem">
+          <a href="<?= SITE_URL ?>/customer-portal.php" class="btn btn-ghost btn-lg">Sign In</a>
+          <a href="<?= SITE_URL ?>/customer-portal.php?view=signup" class="btn btn-ghost btn-lg">Create Free Account</a>
+        </div>
+        <?php endif; ?>
         <p style="margin-top:1rem;font-size:.8rem;color:var(--n400)">
           ✓ No coding needed &nbsp;·&nbsp; ✓ Free API &nbsp;·&nbsp; ✓ Export your code
         </p>
@@ -378,7 +389,7 @@ require_once __DIR__ . '/includes/nav.php';
       <?php endforeach; ?>
     </div>
     <div class="text-center" style="margin-top:2.5rem">
-      <a href="<?= SITE_URL ?>/builder.php" class="btn btn-primary btn-lg">
+      <a href="<?= ($customerUser ? SITE_URL . '/builder.php' : SITE_URL . '/customer-portal.php?view=signup') ?>" class="btn btn-primary btn-lg">
         ✦ Generate Your Website Now
       </a>
     </div>
@@ -422,7 +433,7 @@ require_once __DIR__ . '/includes/nav.php';
     <div class="cta-section">
       <h2>Ready to build your website?</h2>
       <p>Free, fast, and no coding required. Get started in 30 seconds.</p>
-      <a href="<?= SITE_URL ?>/builder.php" class="btn btn-white">
+      <a href="<?= ($customerUser ? SITE_URL . '/builder.php' : SITE_URL . '/customer-portal.php?view=signup') ?>" class="btn btn-white">
         ✦ Launch AI Builder — It's Free
       </a>
     </div>
