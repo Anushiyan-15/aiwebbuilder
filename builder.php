@@ -3600,7 +3600,18 @@ function __hideSpin(id, timerSlot) {
   const s = document.getElementById(id);
   if (s) s.style.display = 'none';
 }
-function updateLiveIframe(html) { const f = document.getElementById('live-iframe'); if (!f) return; __armSpin('live-frame-spin', 'live'); f.srcdoc = sanitizeHtmlOutput(html); }
+/* Workspace-only anchor reliability: guarantees header section links
+   smooth-scroll inside the live iframe even when the generated page
+   ships broken/missing nav JS. Capture-phase, #links only. */
+function withWorkspaceNavFix(html) {
+  if (!html || html.indexOf('wc-nav-fix') !== -1) return html;
+  const fix = '<script data-wc-nav-fix>(function(){document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest(\'a[href^="#"]\'):null;if(!a)return;var href=a.getAttribute("href")||"";if(href.length<2)return;var t=document.getElementById(href.slice(1));if(!t)return;e.preventDefault();try{t.scrollIntoView({behavior:"smooth",block:"start"});}catch(_){t.scrollIntoView();}var d=document.getElementById("mobile-drawer");if(d)d.classList.remove("open");},true);})();<\/script>';
+  const s = String(html);
+  const idx = s.toLowerCase().lastIndexOf('</body>');
+  if (idx !== -1) return s.slice(0, idx) + fix + s.slice(idx);
+  return s + fix;
+}
+function updateLiveIframe(html) { const f = document.getElementById('live-iframe'); if (!f) return; __armSpin('live-frame-spin', 'live'); f.srcdoc = sanitizeHtmlOutput(withWorkspaceNavFix(html)); }
 function refreshLivePreview() {
   const c = generatedDesigns[activeDesignIndex];
   if (!c) return;

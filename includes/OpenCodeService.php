@@ -465,11 +465,27 @@ function opencode_has_content(string $html): bool {
 function opencode_stitch_chunk(string $full, string $chunk): string {
     $chunk = trim($chunk);
     if ($chunk === '') return $full;
-    // Model restarted the whole document instead of continuing → use the newer copy
-    if (preg_match('/<!DOCTYPE|<html[\s>]/i', substr($chunk, 0, 300))) {
+    // Model restarted instead of continuing (full doc / body / header upfront)
+    // → use the newer copy instead of duplicating the page behind it.
+    if (preg_match('/<!DOCTYPE|<html[\s>]|<head[\s>]|<body[\s>]|<header[\s>]|<nav[\s>]|<main[\s>]/i', substr($chunk, 0, 300))) {
         return $chunk;
     }
     return rtrim($full) . "\n" . ltrim($chunk);
+}
+
+// ── Structural duplicate guard: double <body>/</html> or repeated ──
+// element ids (stitch seams). Duplicated ids make #anchor nav links
+// die (browser jumps to the first/hidden copy) and repeat sections.
+// NOTE: multiple <header>/<nav> tags alone are legal (top-bar + main
+// nav + footer nav), so only ids + body/html are checked here.
+function opencode_has_duplicate_structure(string $html): bool {
+    if (preg_match_all('/<body[\s>]/i', $html) > 1) return true;
+    if (preg_match_all('/<\/html>/i', $html) > 1) return true;
+    if (preg_match_all('/\sid="([^"]+)"/i', $html, $m)) {
+        $ids = array_map('strtolower', $m[1]);
+        if (count($ids) !== count(array_unique($ids))) return true;
+    }
+    return false;
 }
 
 // ── High-level: analyze requirements → brief (non-fatal) ──────
@@ -569,8 +585,13 @@ function opencode_generate_variation(array $data, string $variationId, string $m
         }
         $full = $fresh ? $piece : opencode_stitch_chunk($full, $piece);
         if (opencode_is_complete_html($full)) {
-            if (opencode_has_content($full)) return [true, $full, $usedModel, [], $usageTotal];
-            $errors[] = ($usedModel ?: 'ai') . ': BLANK page (no visible text) — strict rebuild…';
+            if (!opencode_has_content($full)) {
+                $errors[] = ($usedModel ?: 'ai') . ': BLANK page (no visible text) — strict rebuild…';
+            } elseif (opencode_has_duplicate_structure($full)) {
+                $errors[] = ($usedModel ?: 'ai') . ': DUPLICATE structure (double body / repeated ids — nav anchors would die) — strict rebuild…';
+            } else {
+                return [true, $full, $usedModel, [], $usageTotal];
+            }
             $full = '';
             $strictNote = "\n\nSTRICT REMINDER: your previous output was an EMPTY shell. This time FILL every section with REAL visible text — headlines, paragraphs, service names, testimonials, contact details. A page with no readable words is a FAILURE.";
             continue; // → fresh strict rebuild
@@ -578,9 +599,9 @@ function opencode_generate_variation(array $data, string $variationId, string $m
         $errors[] = ($used ?: 'ai') . ': chunk ' . ($c + 1) . ' appended (' . strlen($full) . ' chars), continuing…';
         sleep(2); // be gentle on free-tier rate limits
     }
-    if (opencode_is_complete_html($full) && opencode_has_content($full)) return [true, $full, $usedModel, [], $usageTotal];
+    if (opencode_is_complete_html($full) && opencode_has_content($full) && !opencode_has_duplicate_structure($full)) return [true, $full, $usedModel, [], $usageTotal];
     if ($full === '') return [false, '', null, $errors, $usageTotal];
-    return [false, '', null, array_merge($errors, ['incomplete/blank after chunks (' . strlen($full) . ' chars): ' . substr($lastRaw, 0, 120)]), $usageTotal];
+    return [false, '', null, array_merge($errors, ['incomplete/blank/duplicate after chunks (' . strlen($full) . ' chars): ' . substr($lastRaw, 0, 120)]), $usageTotal];
 }
 
 // ── High-level: surgical AI edit of a full document ───────────
@@ -606,7 +627,11 @@ function opencode_edit_html(string $currentHtml, string $instruction, string $bi
         $usageTotal = opencode_add_usage($usageTotal, $cu);
         if (!$ok) return [false, '', null, $errs, $usageTotal];
         $html = opencode_clean_html($text);
-        if (opencode_is_complete_html($html)) return [true, $html, $used, [], $usageTotal];
+        if (opencode_is_complete_html($html)) {
+            if (!opencode_has_content($html)) continue;
+            if (opencode_has_duplicate_structure($html)) { $errs[] = 'duplicate structure in edit'; continue; }
+            return [true, $html, $used, [], $usageTotal];
+        }
     }
     return [false, '', null, ['AI edit did not return a complete document'], $usageTotal];
 }

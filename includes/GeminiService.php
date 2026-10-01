@@ -90,9 +90,9 @@ function gemini_generate_one(array $data, string $variationId, string $mode, str
         if (opencode_is_refusal($text)) { $errors[] = $model . ': conversational reply'; continue; }
         $html = opencode_clean_html($text);
         if (opencode_is_complete_html($html)) {
-            if (opencode_has_content($html)) return [true, $html, $model, [], $usageTotal];
-            $errors[] = $model . ': blank page';
-            continue;
+            if (!opencode_has_content($html)) { $errors[] = $model . ': blank page'; continue; }
+            if (opencode_has_duplicate_structure($html)) { $errors[] = $model . ': duplicate structure (double body / repeated ids)'; continue; }
+            return [true, $html, $model, [], $usageTotal];
         }
         $errors[] = $model . ': incomplete HTML (' . strlen($html) . ' chars)';
     }
@@ -120,7 +120,11 @@ function gemini_edit_html(string $currentHtml, string $instruction, string $bizN
         $usageTotal = opencode_add_usage($usageTotal, $u);
         if (!$ok) { $errors[] = $err; continue; }
         $html = opencode_clean_html($text);
-        if (opencode_is_complete_html($html)) return [true, $html, $model, [], $usageTotal];
+        if (opencode_is_complete_html($html)) {
+            if (!opencode_has_content($html)) { $errors[] = $model . ': blank edit'; continue; }
+            if (opencode_has_duplicate_structure($html)) { $errors[] = $model . ': duplicate structure in edit'; continue; }
+            return [true, $html, $model, [], $usageTotal];
+        }
         $errors[] = $model . ': incomplete edit (' . strlen($html) . ' chars)';
     }
     return [false, '', null, $errors, $usageTotal];
