@@ -2776,7 +2776,7 @@ function display3Designs(concepts, bizName) {
     const card = document.createElement('div');
     card.className = 'design-card';
     const hasSubdesigns = c.subdesigns && c.subdesigns.length > 0;
-    const isAI = c.meta && c.meta.engine === 'opencode';
+    const isAI = c.meta && (c.meta.engine === 'opencode' || c.meta.engine === 'gemini');
     const aiModelShort = isAI ? String(c.meta.model || 'OpenCode AI').split('/').pop() : '';
     const engineBadge = isAI
       ? `<div style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.68rem;font-weight:800;letter-spacing:0.04em;color:#6ee7b7;background:rgba(6,78,59,0.35);border:1px solid rgba(16,185,129,0.5);padding:0.22rem 0.6rem;border-radius:999px;margin-bottom:0.6rem;">✦ AI-GENERATED · ${escapeHtml(aiModelShort)}</div>`
@@ -2792,7 +2792,7 @@ function display3Designs(concepts, bizName) {
         ${hasSubdesigns ? `<div style="font-size:0.72rem;color:#818cf8;font-weight:700;margin-bottom:0.6rem;letter-spacing:0.05em;">✦ 3 LAYOUT VARIANTS INSIDE</div>` : ''}
         <div class="design-actions">
           <button class="btn-preview-modal" onclick="openFullscreenModal(${i})">👁️ Full Preview</button>
-          <button class="btn-choose-design" onclick="showSubDesigns(${i})" style="background:linear-gradient(135deg,#6366f1,#a855f7);">Choose Layout →</button>
+          <button class="btn-choose-design" onclick="selectDesignAndEdit(${i})">Select &amp; Edit →</button>
         </div>
       </div>`;
     grid.appendChild(card);
@@ -3385,7 +3385,7 @@ function renderSubDesignGrid(conceptIndex, engineNote) {
     const card = document.createElement('div');
     card.className = 'design-card';
     const variantLabel = ['A','B','C'][si] || (si+1);
-    const sdIsAI = sd.meta && sd.meta.engine === 'opencode';
+    const sdIsAI = sd.meta && (sd.meta.engine === 'opencode' || sd.meta.engine === 'gemini');
     const sdBadge = sdIsAI
       ? `<div style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.68rem;font-weight:800;color:#6ee7b7;background:rgba(6,78,59,0.35);border:1px solid rgba(16,185,129,0.5);padding:0.22rem 0.6rem;border-radius:999px;margin-bottom:0.6rem;">AI · ${escapeHtml(String((sd.meta && sd.meta.model) || 'AI').split('/').pop())}</div>`
       : `<div style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.68rem;font-weight:800;color:#fcd34d;background:rgba(120,53,15,0.35);border:1px solid rgba(245,158,11,0.5);padding:0.22rem 0.6rem;border-radius:999px;margin-bottom:0.6rem;">TEMPLATE</div>`;

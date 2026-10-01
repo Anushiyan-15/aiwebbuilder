@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once dirname(__DIR__) . '/includes/OpenCodeService.php';
+require_once dirname(__DIR__) . '/includes/GeminiService.php';
 
 // Free-lane AI generations are slow (chunked, up to ~5 min for 3 chunks).
 // Lift PHP's execution cap so Apache doesn't kill the request mid-stream.
@@ -83,6 +84,64 @@ if ($action === 'analyze') {
         'errors' => $ok ? [] : array_slice($errors, 0, 6),
         'fallback' => $ok ? null : 'template-brief',
     ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// ── FAST LANE (Gemini flash-lite: full page ~28s, Apache-safe) ──
+if ($action === 'fast_one') {
+    $data = is_array($req['data'] ?? null) ? $req['data'] : [];
+    $variation = preg_replace('/[^a-z]/', '', strtolower((string)($req['variation'] ?? 'classic')));
+    if (!in_array($variation, ['classic', 'bold', 'editorial'], true)) $variation = 'classic';
+    $mode = in_array(($req['mode'] ?? 'static'), ['static', 'admin', 'database'], true) ? $req['mode'] : 'static';
+    $slot = isset($req['slot']) ? max(-1, min(2, (int)$req['slot'])) : -1;
+    $brief = trim((string)($req['brief'] ?? ''));
+    if ($brief === '') {
+        [$bok, $brief, $bused] = opencode_analyze_requirements($data, $model);
+    }
+    [$ok, $html, $used, $errors, $usage] = gemini_generate_one($data, $variation, $mode, $brief, $slot);
+    if ($ok) {
+        echo json_encode([
+            'success' => true, 'engine' => 'gemini', 'model' => $used,
+            'variation' => $variation, 'slot' => $slot, 'html' => $html, 'brief' => $brief,
+            'usage' => $usage,
+        ], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo json_encode([
+            'success' => false, 'engine' => 'gemini-failed',
+            'variation' => $variation, 'brief' => $brief,
+            'error' => 'Gemini fast lane failed.',
+            'errors' => array_slice($errors, 0, 6),
+            'fallback' => 'opencode-then-templates',
+        ], JSON_UNESCAPED_UNICODE);
+    }
+    exit;
+}
+
+if ($action === 'fast_edit') {
+    $html = (string)($req['current_html'] ?? '');
+    $instruction = trim((string)($req['instruction'] ?? ''));
+    $biz = trim((string)($req['biz_name'] ?? 'Website')) ?: 'Website';
+    if ($html === '' || $instruction === '') {
+        echo json_encode(['success' => false, 'error' => 'Missing current_html or instruction']);
+        exit;
+    }
+    [$ok, $out, $used, $errors, $usage] = gemini_edit_html($html, $instruction, $biz);
+    if ($ok) {
+        echo json_encode([
+            'success' => true, 'engine' => 'gemini', 'model' => $used,
+            'html' => $out, 'changed' => (trim($out) !== trim($html)),
+            'usage' => $usage,
+            'response_msg' => 'Gemini applied your change' . ($used ? " ({$used})" : '') . '.',
+        ], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo json_encode([
+            'success' => false, 'engine' => 'gemini-failed',
+            'error' => 'Gemini fast edit failed.',
+            'errors' => array_slice($errors, 0, 6),
+            'fallback' => 'opencode-then-refine',
+            'html' => $html,
+        ], JSON_UNESCAPED_UNICODE);
+    }
     exit;
 }
 

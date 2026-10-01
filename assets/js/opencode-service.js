@@ -125,6 +125,17 @@ window.OpenCodeAI = (function () {
     return `AUDIENCE: ${d.biz_audience || 'Modern clients'}\nSECTIONS: ${(d.sections || []).join(', ') || 'hero, services, about, metrics, contact, footer'}\nPALETTE: ${d.color_palette || 'purple'}\nTYPE: Plus Jakarta Sans + Inter\nDIFFERENTIATORS: glass nav; clay CTAs; scroll-reveal`;
   }
 
+  /* One fast-lane call (Gemini flash-lite: full page ~28s). */
+  async function generateFast(data, variation, mode, brief, slot) {
+    const j = await post('/api/opencode.php', {
+      action: 'fast_one', data, variation, mode, brief,
+      slot: (typeof slot === 'number' ? slot : -1)
+    }, 35000);
+    if (j && j.success && j.html && j.html.length > 500) return j;
+    throw new Error(((j && (j.errors || [])[0]) || (j && j.error) || 'fast lane failed') + ' [' + variation + ']');
+  }
+
+  /* OpenCode chunked lane (slow but sure) — fills slots the fast lane missed. */
   async function generateOne(data, variation, mode, brief, slot) {
     const j = await post('/api/opencode.php', {
       action: 'generate_one', data, variation, mode, brief, model: getModel(),
@@ -134,19 +145,27 @@ window.OpenCodeAI = (function () {
     throw new Error(((j && (j.errors || [])[0]) || (j && j.error) || 'OpenCode generate failed') + ' [' + variation + ']');
   }
 
-  /* ── MAIN: 3 premium variations via OpenCode AI (PARALLEL — fast) ──
-     All 3 variations fire at once; results are re-ordered to
-     classic/bold/editorial. Throws when the AI lane is down so the
-     caller can use templates. */
+  function shapeDesign(v, j, data, mode, brief, engine) {
+    return {
+      id: v, name: VAR_META[v].name, badge: VAR_META[v].badge + ' · ' + (j.model || 'AI'),
+      description: VAR_META[v].description, html: j.html,
+      meta: { bizName: data.biz_name, mode, engine, model: j.model, brief, generatedAt: new Date().toISOString() }
+    };
+  }
+
+  /* ── MAIN: 3 premium variations — FAST lane first (~30s), then ──
+     OpenCode chunks for any missing slots, then server templates.
+     Results are re-ordered to classic/bold/editorial. */
   async function generateConcepts(data, mode, options) {
     options = options || {};
     const onProgress = options.onProgress;
     if (options.model) setModel(options.model);
     const brief = await analyzeRequirements(data, onProgress);
     const t0 = Date.now();
+    const secs = () => Math.round((Date.now() - t0) / 1000) + 's';
     if (onProgress) onProgress({
       stage: 'generating', pct: 38,
-      message: 'OpenCode AI crafting 3 variations in parallel…',
+      message: 'Fast AI crafting 3 variations…',
       completedCount: 0
     });
 
@@ -154,40 +173,48 @@ window.OpenCodeAI = (function () {
     const errors = [];
     let done = 0, tok = 0;
     const tokStr = () => `· ~${(tok / 1000).toFixed(1)}k tokens`;
-    // Staggered starts (0s / 5s / 10s) — avoids free-tier 429 bursts
-    // that waste tokens and force template fallback.
+    const bump = (msg) => {
+      done++;
+      if (onProgress) onProgress({
+        stage: 'generating', pct: 38 + Math.round((done / VARIATIONS.length) * 57),
+        message: msg + ` (${secs()}) ${tokStr()}…`,
+        completedCount: done
+      });
+    };
+
+    // LANE 1 (fast, ~30s): all 3 in parallel, tiny stagger
     await Promise.all(VARIATIONS.map((v, i) =>
-      new Promise(r => setTimeout(r, i * 5000))
-      .then(() => generateOne(data, v, mode, brief)).then(
+      new Promise(r => setTimeout(r, i * 1000))
+      .then(() => generateFast(data, v, mode, brief)).then(
         (j) => {
           tok += (j.usage?.prompt || 0) + (j.usage?.completion || 0);
-          slots[i] = {
-            id: v, name: VAR_META[v].name, badge: VAR_META[v].badge + ' · ' + (j.model || 'AI'),
-            description: VAR_META[v].description, html: j.html,
-            meta: { bizName: data.biz_name, mode, engine: 'opencode', model: j.model, brief, generatedAt: new Date().toISOString() }
-          };
+          slots[i] = shapeDesign(v, j, data, mode, brief, 'gemini');
         },
-        (e) => {
-          console.warn('[OpenCodeAI] variation failed:', v, e?.message);
-          errors.push(v + ': ' + (e?.message || e));
-        }
-      ).then(() => {
-        done++;
-        if (onProgress) onProgress({
-          stage: 'generating', pct: 38 + Math.round((done / VARIATIONS.length) * 57),
-          message: done === VARIATIONS.length
-            ? 'AI variations done — verifying… ' + tokStr()
-            : `✓ ${done}/3 AI variations ready (${Math.round((Date.now() - t0) / 1000)}s) ${tokStr()}…`,
-          completedCount: done
-        });
-      })
+        (e) => { errors.push(v + ': ' + (e?.message || e)); }
+      ).then(() => { if (slots[i]) bump(`✓ ${done + 1}/3 fast variations ready`); })
     ));
+
+    // LANE 2 (slow but sure): OpenCode chunks for missing slots only
+    const missing = VARIATIONS.map((v, i) => (slots[i] ? -1 : i)).filter(i => i >= 0);
+    if (missing.length && missing.length < 3) {
+      if (onProgress) onProgress({ stage: 'generating', pct: 90, completedCount: done, message: `Fast lane: ${3 - missing.length}/3 — filling ${missing.length} via OpenCode… ${tokStr()}` });
+    }
+    await Promise.all(missing.map((i) => {
+      const v = VARIATIONS[i];
+      return generateOne(data, v, mode, brief).then(
+        (j) => {
+          tok += (j.usage?.prompt || 0) + (j.usage?.completion || 0);
+          slots[i] = shapeDesign(v, j, data, mode, brief, 'opencode');
+        },
+        (e) => { errors.push(v + ': ' + (e?.message || e)); }
+      ).then(() => { if (slots[i]) bump(`✓ variation ready`); });
+    }));
 
     const designs = slots.filter(Boolean);
     if (!designs.length) {
-      throw new Error('OpenCode AI lane down (' + errors.slice(0, 2).join(' | ') + '). Use server templates.');
+      throw new Error('AI lanes down (' + errors.slice(0, 2).join(' | ') + '). Use server templates.');
     }
-    if (onProgress) onProgress({ stage: 'done', pct: 100, completedCount: designs.length, message: `✓ ${designs.length}/3 AI variations ready in ${Math.round((Date.now() - t0) / 1000)}s ${tokStr()}` });
+    if (onProgress) onProgress({ stage: 'done', pct: 100, completedCount: designs.length, message: `✓ ${designs.length}/3 AI variations ready in ${secs()} ${tokStr()}` });
     return { designs, brief, aiCount: designs.length, errors, tokens: tok };
   }
 
@@ -205,15 +232,15 @@ window.OpenCodeAI = (function () {
     if (options.model) setModel(options.model);
     const brief = options.brief || await analyzeRequirements(data, onProgress);
     const t0 = Date.now();
-    if (onProgress) onProgress({ stage: 'generating', pct: 40, completedCount: 0, message: `OpenCode AI crafting 3 ${variation} layouts in parallel…` });
+    if (onProgress) onProgress({ stage: 'generating', pct: 40, completedCount: 0, message: `Fast AI crafting 3 ${variation} layouts…` });
     const slots = [null, null, null];
     const errors = [];
     let done = 0, tok = 0;
     const tokStr = () => `· ~${(tok / 1000).toFixed(1)}k tokens`;
     // Staggered starts — avoids free-tier 429 bursts.
     await Promise.all([0, 1, 2].map((s) =>
-      new Promise(r => setTimeout(r, s * 5000))
-      .then(() => generateOne(data, variation, mode, brief, s)).then(
+      new Promise(r => setTimeout(r, s * 1000))
+      .then(() => generateFast(data, variation, mode, brief, s)).then(
         (j) => {
           tok += (j.usage?.prompt || 0) + (j.usage?.completion || 0);
           slots[s] = {
@@ -222,7 +249,7 @@ window.OpenCodeAI = (function () {
             badge: 'AI Layout ' + SLOT_META[s].suffix,
             description: `AI-generated ${SLOT_META[s].label} in ${variation} style.`,
             html: j.html,
-            meta: { bizName: data.biz_name, mode, engine: 'opencode', model: j.model, brief, generatedAt: new Date().toISOString() }
+            meta: { bizName: data.biz_name, mode, engine: 'gemini', model: j.model, brief, generatedAt: new Date().toISOString() }
           };
         },
         (e) => { errors.push('slot' + s + ': ' + (e?.message || e)); }
@@ -284,10 +311,21 @@ window.OpenCodeAI = (function () {
     if (typeof updateModelLabel === 'function') { try { updateModelLabel(); } catch (e) {} }
   }
 
-  /* ── AI CHAT EDIT (OpenCode first, caller falls back) ── */
+  /* ── AI CHAT EDIT (fast Gemini first, then OpenCode chunks) ── */
   async function chatAndEdit({ userPrompt, currentHtml = '', bizName = 'Website' }) {
     const instruction = enrichTanglish(userPrompt);
     if (!instruction.trim()) return { conversation: 'Type or say something first.', isEdit: false, updatedHtml: '' };
+    try {
+      const fj = await post('/api/opencode.php', {
+        action: 'fast_edit', current_html: currentHtml, instruction, biz_name: bizName
+      }, 35000);
+      if (fj && fj.success && fj.html) {
+        return {
+          conversation: fj.response_msg || '✨ Applied your change.',
+          isEdit: true, updatedHtml: fj.html, engine: 'gemini', model: fj.model || 'gemini-flash'
+        };
+      }
+    } catch (fe) { console.warn('[OpenCodeAI] fast edit failed, trying OpenCode:', fe?.message); }
     const j = await post('/api/opencode.php', {
       action: 'edit', current_html: currentHtml, instruction, biz_name: bizName, model: getModel()
     });
