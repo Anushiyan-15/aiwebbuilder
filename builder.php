@@ -1146,6 +1146,25 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
         </div>
         <div class="w-group"><label class="w-label" for="biz_address">Headquarters / Location</label><input class="w-input" type="text" id="biz_address" value="450 Innovation Parkway, San Francisco, CA"></div>
 
+        <div class="w-group">
+          <label class="w-label" for="biz_logo">🏷️ Brand Logo URL <span style="font-weight:400;color:#94a3b8;">(optional — empty = text brand name)</span></label>
+          <input class="w-input" type="url" id="biz_logo" placeholder="https://example.com/logo.png">
+          <div class="w-hint">Customer logo iruntha link kodunga — navbar + footer la <strong style="color:#a5b4fc">img</strong> aaga varum. Vendam-na empty-a vidunga.</div>
+        </div>
+
+        <div class="w-group">
+          <label class="w-label">📣 Social Media Links <span style="font-weight:400;color:#94a3b8;">(optional — kodutha link mattum footer la varum)</span></label>
+          <div class="w-row">
+            <div class="w-group"><label class="w-label" for="biz_instagram" style="font-size:.72rem;">Instagram URL</label><input class="w-input" type="url" id="biz_instagram" placeholder="https://instagram.com/yourpage"></div>
+            <div class="w-group"><label class="w-label" for="biz_facebook" style="font-size:.72rem;">Facebook URL</label><input class="w-input" type="url" id="biz_facebook" placeholder="https://facebook.com/yourpage"></div>
+          </div>
+          <div class="w-row">
+            <div class="w-group"><label class="w-label" for="biz_x" style="font-size:.72rem;">X (Twitter) URL</label><input class="w-input" type="url" id="biz_x" placeholder="https://x.com/yourhandle"></div>
+            <div class="w-group"><label class="w-label" for="biz_youtube" style="font-size:.72rem;">YouTube URL</label><input class="w-input" type="url" id="biz_youtube" placeholder="https://youtube.com/@yourchannel"></div>
+          </div>
+          <div class="w-hint">Venum-na mattum fill pannunga — empty fields footer la kaattaathu, fake icon varathu.</div>
+        </div>
+
         <div class="gen-block">
           <h3>Ready to Generate</h3>
           <p>We'll create <strong style="color:#a5b4fc">3 distinct style variations</strong> based on your design direction.<br>Each variation uses your exact content — only the layout differs.</p>
@@ -1459,6 +1478,9 @@ Be specific about fields you need!"></textarea>
           <span style="font-size:0.75rem; color:#10b981; font-weight:700;">✓ Fully Customizable</span>
         </label>
         <p style="font-size:0.76rem; color:#94a3b8; margin-bottom:0.75rem;">Set the username and password you want to use for logging into your admin panel:</p>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+          <button type="button" class="admin-preset-btn" onclick="fillWizardDemoCreds()">🎭 Use Demo Credentials</button>
+        </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
           <div>
             <label class="w-label" style="font-size:0.75rem;" for="admin_custom_user">Admin Username</label>
@@ -1932,6 +1954,11 @@ function collectWizardSnapshot() {
     biz_phone:        document.getElementById('biz_phone')?.value.trim() || '',
     biz_email:        document.getElementById('biz_email')?.value.trim() || '',
     biz_address:      document.getElementById('biz_address')?.value.trim() || '',
+    biz_logo:         document.getElementById('biz_logo')?.value.trim() || '',
+    biz_instagram:    document.getElementById('biz_instagram')?.value.trim() || '',
+    biz_facebook:     document.getElementById('biz_facebook')?.value.trim() || '',
+    biz_x:            document.getElementById('biz_x')?.value.trim() || '',
+    biz_youtube:      document.getElementById('biz_youtube')?.value.trim() || '',
     admin_requirements: document.getElementById('admin_requirements')?.value.trim() || '',
     sections
   };
@@ -2072,6 +2099,11 @@ function tryRestoreSession() {
     set('biz_phone', w.biz_phone);
     set('biz_email', w.biz_email);
     set('biz_address', w.biz_address);
+    set('biz_logo', w.biz_logo);
+    set('biz_instagram', w.biz_instagram);
+    set('biz_facebook', w.biz_facebook);
+    set('biz_x', w.biz_x);
+    set('biz_youtube', w.biz_youtube);
     set('admin_requirements', w.admin_requirements);
 
     if (w.design_style) {
@@ -2353,9 +2385,32 @@ function updateAdminReqSection() {
   if (!s) return;
   const needsAdmin = selectedGenMode !== 'static';
   s.classList.toggle('active', needsAdmin);
+  if (needsAdmin) suggestWizardCreds();
+}
+/* Pre-suggest admin credentials once (used for the admin page;
+   publish reuses these — no re-entry needed there). */
+function suggestWizardCreds() {
+  const u = document.getElementById('admin_custom_user');
+  const p = document.getElementById('admin_custom_pass');
+  if (u && !u.value.trim()) {
+    const biz = (document.getElementById('biz_name')?.value || 'site').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 12) || 'site';
+    u.value = (biz + '_admin').slice(0, 20);
+  }
+  if (p && !p.value) {
+    const words = ['Tiger', 'Ocean', 'Eagle', 'Maple', 'Comet', 'Lotus'];
+    p.value = words[Math.floor(Math.random() * words.length)] + (1000 + Math.floor(Math.random() * 9000)) + '@';
+  }
+}
+function fillWizardDemoCreds() {
+  const u = document.getElementById('admin_custom_user');
+  const p = document.getElementById('admin_custom_pass');
+  if (u) u.value = 'demoadmin';
+  if (p) p.value = 'Demo@1234';
+  showToast('Demo credentials filled — change them if you like.');
 }
 function labelFor(mode) { return { static: 'Static', admin: 'Admin Panel + PHP', database: 'Admin + PHP + MySQL' }[mode] || mode; }
 function confirmGenerate() {
+  let adminUser = '', adminPass = '';
   if (selectedGenMode !== 'static') {
     const req = document.getElementById('admin_requirements')?.value.trim() || '';
     if (req.length < 20) {
@@ -2363,7 +2418,22 @@ function confirmGenerate() {
       document.getElementById('admin_requirements')?.focus();
       return;
     }
+    // Admin login credentials — asked ONCE here, reused for the admin page
+    // (publish step reuses these automatically, no re-entry needed).
+    adminUser = (document.getElementById('admin_custom_user')?.value || '').trim().toLowerCase();
+    adminPass = document.getElementById('admin_custom_pass')?.value || '';
+    if (!/^[a-z][a-z0-9_]{3,19}$/.test(adminUser)) {
+      showToast('⚠️ Admin username: 4–20 chars, start with a letter');
+      document.getElementById('admin_custom_user')?.focus();
+      return;
+    }
+    if (adminPass.length < 8) {
+      showToast('⚠️ Admin password must be 8+ characters');
+      document.getElementById('admin_custom_pass')?.focus();
+      return;
+    }
   }
+  window.__pendingAdminCreds = { user: adminUser, pass: adminPass };
   saveSessionNow();
   closeGenerateModal();
   generateWithMode(selectedGenMode);

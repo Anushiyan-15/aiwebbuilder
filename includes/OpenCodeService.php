@@ -302,6 +302,7 @@ HARD RULES: NEVER chat, ask, or explain. ONLY output: one complete HTML document
 ECONOMY (strict — you have a tight output budget): shared CSS classes + :root variables only; one font family; no comments; no repeated blocks; concise copy; tiny JS. Still complete: every required section + working interactive JS.
 DESIGN (must feel premium): sticky glass navbar (blur, shrinks on scroll) + hamburger under 860px; hero with gradient-mesh/glow, clamp() display type with gradient accent word, 2 CTAs, trust badges; glass cards; clay-style CTAs; scroll-reveal (IntersectionObserver, staggered); animated counters; marquee ribbon; hover lift/glow; back-to-top; responsive clamp() type, max-width 1200px. Real Unsplash photos (https://images.unsplash.com/photo-XXXX?auto=format&fit=crop&w=1200&q=70) with alt text in hero/about. Zero dead buttons — every link scrolls somewhere real or toggles something.
 CONTACT: exactly one <form id="contact-form" method="POST"> (name required, email required, phone optional, message required, submit). If a location is given: map iframe (https://www.google.com/maps?q=ENCODED_ADDRESS&output=embed, rounded frame) + Get Directions link (https://www.google.com/maps/dir/?api=1&destination=ENCODED_ADDRESS). Shop section + cart ONLY when PRODUCTS list is non-empty.
+FOOTER: brand + quick links + contact always. Social icons ONLY for Social URLs actually given (real href, target=_blank, aria-label); none given = no social row, never # links. Logo URL given = <img> in nav + footer, else text brand.
 JS (one small <script>): smooth anchor scroll, mobile drawer toggle, navbar shrink on scroll, IntersectionObserver reveal, animated counters, FAQ toggle fn, back-to-top show/click, contact submit → success toast.
 Tanglish/Tamil/English understood; code stays English.
 SYS;
@@ -338,6 +339,7 @@ You are a RAW HTML CODE GENERATOR — nothing else (AI-FlowCraft Skills 3-21: ar
 - Fully responsive (clamp type, hamburger under 860px, 44px+ tap targets). Zero emojis in UI chrome (inline SVG). Real photos via https://images.unsplash.com/photo-XXXX?auto=format&fit=crop&w=1200&q=70 with alt text.
 - Real 3D depth (parallax layers, card tilt), motion everywhere (preloader, counters, marquee, magnetic buttons, testimonial slider, FAQ accordion, mobile drawer, form validation states). Zero dead controls — every button does something real.
 - Contact form: exactly one <form id="contact-form" method="POST"> with name/email/phone/message + submit. Map block when a location is given (iframe https://www.google.com/maps?q=ENCODED&output=embed + Get Directions link). Shop section + working cart ONLY when PRODUCTS list is non-empty.
+- Footer: brand + quick links + contact always. Social icons ONLY for Social URLs actually given (real href, target=_blank); none given = omit social row entirely, never "#" links. Logo URL given = <img> in navbar + footer, else styled text brand name.
 
 ## LANGUAGE SUPPORT
 You understand Tanglish (Tamil in English letters), English, and Tamil script. Business content stays in the customer's language; code stays in English.
@@ -389,6 +391,13 @@ function opencode_requirements_block(array $d): string {
         . "Contact Email      : " . ($g('biz_email') ?: '(unspecified)') . "\n"
         . "Contact Phone      : " . ($g('biz_phone') ?: '(unspecified)') . "\n"
         . "Location           : " . ($g('biz_address') ?: '(unspecified)') . "\n"
+        . "Brand Logo URL     : " . ($g('biz_logo') ?: '(none — use text brand name in navbar + footer)') . "\n"
+        . "Social Instagram   : " . ($g('biz_instagram') ?: '(none)') . "\n"
+        . "Social Facebook    : " . ($g('biz_facebook') ?: '(none)') . "\n"
+        . "Social X           : " . ($g('biz_x') ?: '(none)') . "\n"
+        . "Social YouTube     : " . ($g('biz_youtube') ?: '(none)') . "\n"
+        . "SOCIAL RULE        : OPTIONAL — render footer social icons ONLY for URLs given above (real <a href> links, target=_blank). Empty = no icon, never fake/placeholder social links.\n"
+        . "LOGO RULE          : OPTIONAL — if Brand Logo URL given, show <img src> in navbar + footer; else styled text brand name.\n"
         . "Required Sections  : " . $sections . "\n"
         . "=== END CLIENT REQUIREMENTS ===";
 }

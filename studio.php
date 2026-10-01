@@ -1697,7 +1697,7 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
             👋 <strong>Welcome to WebCraft AI!</strong><br>
             • Click any element on canvas to <strong>edit it with AI</strong>.<br>
             • Or chat freely, ask for advice, or add new sections!<br>
-            <span style="color:#94a3b8;font-size:0.75rem;">🔒 Powered by Puter.js — free credits, no API key required.</span>
+            <span style="color:#94a3b8;font-size:0.75rem;">🔒 Free AI models — select above, avanga select panna model-ye page-ai edit pannum.</span>
           </div>
           <div class="msg-meta">AI · just now</div>
         </div>
@@ -7107,17 +7107,28 @@ ${WC_ANIMATION_RUNTIME}
       }
 
       try {
-        // ★ Whole-page edits go OpenCode → Gemini → Puter (editWithFallback).
-        // Selected-element micro-edits stay on Puter.js (needs element HTML).
-        let result;
-        if (!hasSelected && window.OpenCodeAI?.editWithFallback) {
-          result = await window.OpenCodeAI.editWithFallback({
-            userPrompt: q,
-            currentHtml: currentHtml,
-            bizName: projectData?.bizName || 'Website',
-            puterCtx: { summary: buildAiStudioContext() }
-          });
-        } else {
+        // ★ Free-model first: selected model in dropdown (magic-model-select → OpenCodeAI)
+        // edits page as user asked, both whole-page and selected-element modes.
+        // Puter.js is fallback only for selected-element micro-edits.
+        let result = null;
+        if (window.OpenCodeAI?.editWithFallback) {
+          try {
+            let enriched = q;
+            if (hasSelected && selectedPayload) {
+              enriched = `Target selected <${selectedPayload.tag}> element:\n${String(selectedPayload.html || '').slice(0, 4000)}\n\nUser request: ${q}\nReturn COMPLETE updated HTML document.`;
+            }
+            result = await window.OpenCodeAI.editWithFallback({
+              userPrompt: enriched,
+              currentHtml: currentHtml,
+              bizName: projectData?.bizName || 'Website',
+              puterCtx: { summary: buildAiStudioContext() }
+            });
+          } catch (freeErr) {
+            console.warn('[Free AI lane failed, trying Puter]:', freeErr?.message);
+            result = null;
+          }
+        }
+        if (!result && hasSelected) {
           result = await window.PuterService.chatAndEdit({
             userPrompt: q,
             selectedElement: selectedPayload,
@@ -7128,11 +7139,13 @@ ${WC_ANIMATION_RUNTIME}
             }
           });
         }
+        if (!result) throw new Error('All AI lanes failed — try a template action (e.g. "Add a pricing table with 3 plans") or another free model.');
 
         appendMagicChat(formatMarkdown(result.conversation), 'ai');
 
         if (result.isEdit && result.updatedHtml) {
-          if (hasSelected && comp) {
+          const isFullDoc = result.updatedHtml.includes('<html') || result.updatedHtml.includes('<!DOCTYPE');
+          if (hasSelected && comp && !isFullDoc) {
             const parent = comp.parent();
             if (parent) {
               const idx = comp.index();
@@ -7171,11 +7184,12 @@ ${WC_ANIMATION_RUNTIME}
         }
 
       } catch (err) {
-        console.warn('[Puter AI error, checking fallback]:', err);
+        console.warn('[AI error, checking fallback]:', err);
         if (window.PuterService.isQuotaOrCreditError(err)) {
           appendMagicChat('⚠️ Puter AI credit limit reached. Click **Switch Account** or **Create Free Account** in the popup to continue.', 'ai');
         } else {
-          appendMagicChat(`⚠️ Puter AI notice: ${escapeHtml(err.message)}. Trying backend Gemini fallback...`, 'ai');
+          const selModel = (window.OpenCodeAI?.getModel) ? window.OpenCodeAI.getModel() : '';
+          appendMagicChat(`⚠️ AI notice (${escapeHtml(selModel || 'free model')}): ${escapeHtml(err.message)}. Trying backend Gemini fallback...`, 'ai');
           try {
             await executeGeminiBackendFallback(q, snap);
           } catch (backendErr) {
@@ -7191,12 +7205,14 @@ ${WC_ANIMATION_RUNTIME}
     }
 
     async function executeGeminiBackendFallback(q, snap) {
+      const selModel = (window.OpenCodeAI?.getModel) ? window.OpenCodeAI.getModel() : undefined;
       const res = await fetch('<?= SITE_URL ?>/api/generate.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'refine',
           api_key: localStorage.getItem('gemini_api_key') || '',
+          model: selModel,
           current_html: currentHtml,
           instruction: q,
           customer_requirement: q,

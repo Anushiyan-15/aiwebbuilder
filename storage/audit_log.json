@@ -1,5 +1,15 @@
 [
     {
+        "id": "AUD-20261001-150543-cba0",
+        "timestamp": "2026-10-01 15:05:43",
+        "admin_user": "superadmin",
+        "admin_role": "superadmin",
+        "action": "admin_login",
+        "order_id": "\u2014",
+        "detail": "Admin 'superadmin' logged in with role 'superadmin'",
+        "ip": "::1"
+    },
+    {
         "id": "AUD-20260930-131337-e5ca",
         "timestamp": "2026-09-30 13:13:37",
         "admin_user": "support_admin",
