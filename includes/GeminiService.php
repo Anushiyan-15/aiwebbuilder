@@ -74,6 +74,7 @@ function gemini_generate_one(array $data, string $variationId, string $mode, str
         . "## CRITICAL OUTPUT RULES\n- Output ONLY raw HTML. No chat, no questions, no markdown.\n- First line: <!DOCTYPE html> / Last line: </html>\n\n"
         . opencode_requirements_block($data) . "\n\n"
         . "## LAYOUT DIRECTION — \"{$variationId}\"\n" . opencode_layout_brief($variationId, $slot) . "\n\n"
+        . opencode_palette_block((string)($data['color_palette'] ?? 'purple')) . "\n\n"
         . "## OUTPUT BUDGET\n- Complete but efficient: all required sections, working nav/form/menu JS, responsive CSS.\n- Tight CSS (shared classes, no repetition, no filler). If the budget runs out, end cleanly after the last FULL section.\n\n## NOW OUTPUT THE HTML FILE";
     $queue = [];
     if ($preferred) $queue[] = $preferred;

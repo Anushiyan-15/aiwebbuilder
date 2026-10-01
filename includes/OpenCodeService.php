@@ -423,6 +423,34 @@ function opencode_layout_brief(string $variationId, int $slot = -1): string {
     return $briefs[$variationId] ?? $briefs['classic'];
 }
 
+// ── Brand palette resolver: name → exact hexes (HARD constraint) ──
+// Lite models ignore vague color hints, so the prompt carries exact
+// hexes + forbidden colors. Blue must come out BLUE, never brown.
+function opencode_palette_map(string $name): array {
+    $maps = [
+        'purple' => ['primary' => '#6366f1', 'secondary' => '#a855f7', 'accent' => '#38bdf8', 'light' => '#ede9fe', 'label' => 'PURPLE'],
+        'blue'   => ['primary' => '#2563eb', 'secondary' => '#06b6d4', 'accent' => '#38bdf8', 'light' => '#dbeafe', 'label' => 'BLUE'],
+        'green'  => ['primary' => '#059669', 'secondary' => '#10b981', 'accent' => '#84cc16', 'light' => '#d1fae5', 'label' => 'GREEN'],
+        'red'    => ['primary' => '#dc2626', 'secondary' => '#f97316', 'accent' => '#fbbf24', 'light' => '#fee2e2', 'label' => 'RED'],
+        'gold'   => ['primary' => '#d97706', 'secondary' => '#f59e0b', 'accent' => '#ef4444', 'light' => '#fef3c7', 'label' => 'GOLD'],
+        'slate'  => ['primary' => '#1e293b', 'secondary' => '#475569', 'accent' => '#6366f1', 'light' => '#f1f5f9', 'label' => 'SLATE'],
+    ];
+    $key = strtolower(trim($name));
+    return $maps[$key] ?? $maps['purple'];
+}
+
+function opencode_palette_block(string $paletteName): string {
+    $p = opencode_palette_map($paletteName);
+    return "## BRAND COLOR — HARD CONSTRAINT (HIGHEST PRIORITY, overrides everything)\n"
+        . "The customer's brand color is {$p['label']}. Use these EXACT hex codes:\n"
+        . "Primary: {$p['primary']} | Secondary: {$p['secondary']} | Accent: {$p['accent']} | Tint: {$p['light']}\n"
+        . "- Paint ALL buttons, links, headings accents, badges, icons and active states with {$p['primary']}.\n"
+        . "- Page backgrounds: white / #F8FAFC only.\n"
+        . "- FORBIDDEN anywhere on this page: brown (#92400e #78350f #451a03), orange, gold, beige, gray-brown.\n"
+        . "- Using any other primary color = FAILED output. When in doubt, use {$p['primary']}.\n"
+        . "REMEMBER: PRIMARY IS {$p['primary']} ({$p['label']}).";
+}
+
 // ── Blank-page guard: complete HTML shell with no visible text ──
 // (space-bunny sometimes returns an empty shell → must retry/fallback)
 function opencode_has_content(string $html): bool {
@@ -477,6 +505,7 @@ function opencode_generate_variation(array $data, string $variationId, string $m
         . "## CRITICAL OUTPUT RULES\n- Output ONLY raw HTML. No chat, no questions, no markdown.\n- First line: <!DOCTYPE html> / Last line: </html>\n\n"
         . opencode_requirements_block($data) . "\n\n"
         . "## LAYOUT DIRECTION — \"{$variationId}\"\n" . opencode_layout_brief($variationId, $slot) . "\n\n"
+        . opencode_palette_block((string)($data['color_palette'] ?? 'purple')) . "\n\n"
         . "## FREE-LANE OUTPUT BUDGET (follow strictly)\n"
         . "- The page MUST be complete but efficient: all required sections, working nav/form/menu JS, responsive CSS.\n"
         . "- Write tight CSS (shared classes, no repeated 10-line blocks, no filler comments). Target a file that fits comfortably — quality over length.\n"

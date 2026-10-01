@@ -923,6 +923,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
       <span class="stage-dot"></span>
       <span id="gen-overlay-text">AI-FlowCraft initializing neural requirements analysis…</span>
     </div>
+    <div id="gen-brief-line" style="font-size:0.8rem; color:#c7d2fe; font-weight:600; margin-bottom:0.9rem; text-align:center; max-width:520px;"></div>
 
     <!-- Live Percentage Counter -->
     <div class="gen-pct-wrap">
@@ -2502,8 +2503,17 @@ function showGenOverlay(dataOrName) {
 
   if (pBiz) pBiz.textContent = bName + (data.biz_type ? ' (' + data.biz_type + ')' : '');
   if (pAud) pAud.textContent = (data.biz_audience || 'Modern clients').slice(0, 32);
-  if (pStyle) pStyle.textContent = (data.design_style || 'Modern').toUpperCase() + ' · ' + (data.color_palette || 'purple').toUpperCase();
+  // Style pill with a REAL color swatch so the customer SEES their brand color
+  const PAL_HEX = { purple: '#6366f1', blue: '#2563eb', green: '#059669', red: '#dc2626', gold: '#d97706', slate: '#334155' };
+  const palKey = (data.color_palette || 'purple').toLowerCase();
+  if (pStyle) pStyle.innerHTML = (data.design_style || 'Modern').toUpperCase() + ' · <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + (PAL_HEX[palKey] || '#6366f1') + ';box-shadow:0 0 8px ' + (PAL_HEX[palKey] || '#6366f1') + ';margin:0 2px;"></span> ' + palKey.toUpperCase();
   if (pMode) pMode.textContent = (selectedGenMode || 'static').toUpperCase();
+  // Simple one-line analysis summary for the customer (creative + plain)
+  const briefLine = document.getElementById('gen-brief-line');
+  if (briefLine) {
+    const secs = Array.isArray(data.sections) ? data.sections.length : 6;
+    briefLine.innerHTML = 'For <strong>' + escapeHtml((data.biz_audience || 'modern clients').slice(0, 40)) + '</strong> · ' + secs + ' sections · <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + (PAL_HEX[palKey] || '#6366f1') + ';margin:0 2px;"></span> <strong>' + escapeHtml(palKey.toUpperCase()) + ' theme</strong>';
+  }
 
   // Reset state
   _currentPct = 5;
