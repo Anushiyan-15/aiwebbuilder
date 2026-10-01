@@ -35,12 +35,18 @@ class AdminPanelGenerator {
         $orderId    = $order['order_id'] ?? '';
         $entities   = !empty($order['admin_entities']) ? $order['admin_entities'] : self::getDefaultEntities($siteName);
 
-        // 1. Write .auth.json
+        // 1. Write .auth.json (owner account + shareable demo account)
+        $demoPass = 'Demo@1234';
         file_put_contents($adminDir . '/.auth.json', json_encode([
             'username'       => $username,
             'email'          => $email,
             'hash'           => $passHash,
             'password_plain' => $plainPass,
+            'demo'           => [
+                'username'       => 'demo',
+                'hash'           => password_hash($demoPass, PASSWORD_DEFAULT),
+                'password_plain' => $demoPass,
+            ],
             'order_id'       => $orderId,
             'created'        => date('Y-m-d H:i:s'),
         ], JSON_PRETTY_PRINT));
@@ -48,7 +54,7 @@ class AdminPanelGenerator {
         // 2. Write auth.php
         file_put_contents($adminDir . '/auth.php', self::getAuthPhpCode());
 
-        // 3. Write login.php (with Quick-Fill & Autologin)
+        // 3. Write login.php (with Quick-Fill, Demo Access & Autologin)
         file_put_contents($adminDir . '/login.php', self::getLoginPhpCode($siteName, $username, $plainPass));
 
         // 4. Write logout.php
@@ -68,6 +74,9 @@ class AdminPanelGenerator {
 
         // 9. Write settings.php (with Change Password feature)
         file_put_contents($adminDir . '/settings.php', self::getSettingsPhpCode($siteName));
+
+        // 9b. Write messages.php (Customer Inbox — reads data_inquiries.json)
+        file_put_contents($adminDir . '/messages.php', self::getMessagesPhpCode($siteName));
 
         // 9b. Write features.php (AI Feature & Requirement Builder)
         file_put_contents($adminDir . '/features.php', self::getFeaturesPhpCode($siteName, $orderId));
@@ -174,6 +183,11 @@ function requireAdmin(): void {
     }
 }
 
+/** True when logged in via the shareable demo account. */
+function isDemo(): bool {
+    return !empty($_SESSION['admin_auth']) && !empty($_SESSION['demo_mode']);
+}
+
 function getAuthData(): array {
     $file = __DIR__ . '/.auth.json';
     if (!file_exists($file)) return [];
@@ -206,6 +220,9 @@ require_once __DIR__ . '/auth.php';
 \$storedUser = \$authData['username'] ?? '$safeUser';
 \$storedPassPlain = \$authData['password_plain'] ?? '$safePass';
 \$storedHash = \$authData['hash'] ?? '';
+\$demoUser = \$authData['demo']['username'] ?? 'demo';
+\$demoHash = \$authData['demo']['hash'] ?? '';
+\$demoPassPlain = \$authData['demo']['password_plain'] ?? '';
 
 // Check Autologin parameter
 if (!empty(\$_GET['autologin']) && \$_GET['autologin'] === '1') {
@@ -237,10 +254,27 @@ if (\$_SERVER['REQUEST_METHOD'] === 'POST') {
         \$passMatches = true;
     }
 
+    // Shareable demo account (demo / Demo@1234) — full preview access
+    \$isDemoLogin = false;
+    if (!\$passMatches && \$demoUser && strtolower(\$u) === strtolower(\$demoUser)) {
+        if ((\$demoHash && password_verify(\$p, \$demoHash)) || (\$demoPassPlain && \$p === \$demoPassPlain)) {
+            \$passMatches = true;
+            \$isDemoLogin = true;
+        }
+    }
+
     if (\$userMatches && \$passMatches) {
         \$_SESSION['admin_auth'] = true;
         \$_SESSION['admin_username'] = \$storedUser;
         \$_SESSION['admin_email'] = \$authData['email'] ?? '';
+        \$_SESSION['demo_mode'] = false;
+        header('Location: index.php');
+        exit;
+    } elseif (\$isDemoLogin) {
+        \$_SESSION['admin_auth'] = true;
+        \$_SESSION['admin_username'] = \$demoUser . ' (demo)';
+        \$_SESSION['admin_email'] = \$authData['email'] ?? '';
+        \$_SESSION['demo_mode'] = true;
         header('Location: index.php');
         exit;
     } else {
@@ -305,6 +339,9 @@ h1{font-size:1.45rem;font-weight:800;color:#fff;text-align:center;margin-bottom:
     <button type="button" class="btn-quick" onclick="quickFill()">
       <span>🔑</span> One-Click Auto-Fill &amp; Sign In
     </button>
+    <button type="button" class="btn-quick" onclick="demoFill()" style="margin-top:.55rem;border-color:#10b981;color:#6ee7b7;">
+      <span>🎭</span> Try Demo Access (demo / Demo@1234)
+    </button>
   </div>
 
   <a href="../index.html" class="site-link">&larr; Return to Live Website</a>
@@ -314,6 +351,11 @@ h1{font-size:1.45rem;font-weight:800;color:#fff;text-align:center;margin-bottom:
 function quickFill() {
   document.getElementById('username').value = <?= json_encode(\$storedUser) ?>;
   document.getElementById('password').value = <?= json_encode(\$storedPassPlain) ?>;
+  document.getElementById('loginForm').submit();
+}
+function demoFill() {
+  document.getElementById('username').value = <?= json_encode(\$demoUser) ?>;
+  document.getElementById('password').value = <?= json_encode(\$demoPassPlain) ?>;
   document.getElementById('loginForm').submit();
 }
 </script>
@@ -359,6 +401,16 @@ function renderAdminHeader(string \$activeTab = 'dashboard', string \$pageTitle 
     \$auth = getAuthData();
     \$siteName = '$safeSite';
     \$user = htmlspecialchars(\$_SESSION['admin_username'] ?? \$auth['username'] ?? 'Admin');
+    // Unread inbox count (contact form writes admin/data_inquiries.json)
+    \$unreadInbox = 0;
+    \$inboxFile = __DIR__ . '/data_inquiries.json';
+    if (file_exists(\$inboxFile)) {
+        \$rows = json_decode(@file_get_contents(\$inboxFile), true);
+        if (is_array(\$rows)) foreach (\$rows as \$r) {
+            if (empty(\$r['read'])) \$unreadInbox++;
+        }
+    }
+    \$inboxBadge = \$unreadInbox > 0 ? ' <span class="badge badge-green" style="margin-left:auto">' . \$unreadInbox . '</span>' : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -425,6 +477,7 @@ tr:hover td{background:#0b0f17}
 
   <nav style="flex:1">
     <a href="index.php" class="nav-item <?= \$activeTab === 'dashboard' ? 'active' : '' ?>">📊 Dashboard</a>
+    <a href="messages.php" class="nav-item <?= \$activeTab === 'messages' ? 'active' : '' ?>">✉️ Inbox<?= \$inboxBadge ?></a>
     <a href="content.php" class="nav-item <?= \$activeTab === 'content' ? 'active' : '' ?>">📝 Edit Content</a>
     <a href="manage.php" class="nav-item <?= \$activeTab === 'manage' ? 'active' : '' ?>">📋 Manage Data</a>
     <a href="features.php" class="nav-item <?= \$activeTab === 'features' ? 'active' : '' ?>" style="color:#c7d2fe;background:rgba(99,102,241,0.12);border:1px dashed rgba(99,102,241,0.4)">🤖 Add Functions (AI)</a>
@@ -475,7 +528,19 @@ renderAdminHeader('dashboard', 'Dashboard');
 
 \$contentData = file_exists(__DIR__ . '/content.json') ? json_decode(file_get_contents(__DIR__ . '/content.json'), true) : [];
 \$authData = getAuthData();
+// Inbox stats (contact-form inquiries land in data_inquiries.json)
+\$inboxRows = file_exists(__DIR__ . '/data_inquiries.json') ? (json_decode(@file_get_contents(__DIR__ . '/data_inquiries.json'), true) ?: []) : [];
+if (!is_array(\$inboxRows)) \$inboxRows = [];
+\$unreadCount = 0;
+foreach (\$inboxRows as \$ir) { if (empty(\$ir['read'])) \$unreadCount++; }
+\$latestInquiry = \$inboxRows[0] ?? null;
 ?>
+<?php if (!empty(\$_SESSION['demo_mode'])): ?>
+<div class="card" style="border-color:#10b981;background:rgba(16,185,129,.07);margin-bottom:1.5rem">
+  <strong style="color:#6ee7b7">🎭 Demo Mode</strong>
+  <span style="color:#94a3b8;font-size:.85rem"> — you are previewing with the shareable demo account. Changes you make are real; sign in with the owner account for full control.</span>
+</div>
+<?php endif; ?>
 <div class="top-actions">
   <div>
     <h1 class="page-title">Welcome, <?= htmlspecialchars(\$_SESSION['admin_username'] ?? 'Admin') ?> 👋</h1>
@@ -502,6 +567,11 @@ renderAdminHeader('dashboard', 'Dashboard');
     <div class="stat-lbl">Content Sections</div>
     <div class="stat-val">6</div>
     <div style="font-size:.75rem;color:#64748b">Hero, Services, Contact &amp; More</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-lbl">New Inquiries</div>
+    <div class="stat-val" style="color:<?= \$unreadCount > 0 ? '#f59e0b' : '#10b981' ?>"><?= (int)\$unreadCount ?></div>
+    <div style="font-size:.75rem;color:#64748b"><a href="messages.php" style="color:#818cf8;text-decoration:none">Open Inbox &rarr;</a></div>
   </div>
   <div class="stat-box">
     <div class="stat-lbl">Account</div>
@@ -911,6 +981,24 @@ $errorMsg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if ($action === 'backup') {
+        // One-click backup: content + all entity data as a JSON download
+        $bundle = [
+            'site'        => $authData['username'] ?? 'website',
+            'exported_at' => date('Y-m-d H:i:s'),
+            'content'     => file_exists(__DIR__ . '/content.json') ? json_decode(@file_get_contents(__DIR__ . '/content.json'), true) : [],
+            'data'        => [],
+        ];
+        foreach (glob(__DIR__ . '/data_*.json') ?: [] as $f) {
+            $bundle['data'][basename($f)] = json_decode(@file_get_contents($f), true);
+        }
+        $fn = 'backup-' . date('Ymd-His') . '.json';
+        header('Content-Type: application/json');
+        header('Content-Disposition: attachment; filename="' . $fn . '"');
+        echo json_encode($bundle, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     if ($action === 'change_password') {
         $currPass = trim($_POST['current_password'] ?? '');
         $newPass  = trim($_POST['new_password'] ?? '');
@@ -1049,6 +1137,125 @@ renderAdminHeader('settings', 'Settings & Password');
     </form>
   </div>
 </div>
+
+<!-- BACKUP CARD -->
+<div class="card">
+  <h2 style="font-size:1.15rem;font-weight:800;color:#fff;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem">
+    <span>💾</span> Backup Your Data
+  </h2>
+  <p style="color:#94a3b8;font-size:.85rem;line-height:1.55;margin-bottom:1.25rem">
+    Download everything (website content + all records: services, inquiries, appointments…) as one JSON file. Keep it safe — restore anytime by re-uploading.
+  </p>
+  <form method="POST">
+    <input type="hidden" name="action" value="backup">
+    <button type="submit" class="btn btn-success" style="width:100%">
+      ⬇️ Download Full Backup
+    </button>
+  </form>
+</div>
+
+<?php renderAdminFooter(); ?>
+PHP;
+    }
+
+    /**
+     * Code for messages.php (Customer Inbox — contact-form inquiries)
+     */
+    private static function getMessagesPhpCode(string $siteName): string {
+        return <<<'PHP'
+<?php
+require_once __DIR__ . '/layout.php';
+
+$inboxFile = __DIR__ . '/data_inquiries.json';
+$inbox = file_exists($inboxFile) ? (json_decode(@file_get_contents($inboxFile), true) ?: []) : [];
+if (!is_array($inbox)) $inbox = [];
+
+$notice = '';
+// Actions: mark read / delete
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $act = $_POST['op'] ?? '';
+    $id  = (string)($_POST['id'] ?? '');
+    if ($act === 'read' || $act === 'unread' || $act === 'delete') {
+        foreach ($inbox as $k => $row) {
+            if ((string)($row['id'] ?? '') === $id) {
+                if ($act === 'delete') unset($inbox[$k]);
+                else $inbox[$k]['read'] = ($act === 'read');
+                break;
+            }
+        }
+        $inbox = array_values($inbox);
+        @file_put_contents($inboxFile, json_encode($inbox, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $notice = $act === 'delete' ? 'Message deleted.' : 'Message updated.';
+    } elseif ($act === 'mark_all_read') {
+        foreach ($inbox as $k => $row) $inbox[$k]['read'] = true;
+        @file_put_contents($inboxFile, json_encode($inbox, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $notice = 'All messages marked as read.';
+    }
+}
+
+$unread = 0;
+foreach ($inbox as $r) { if (empty($r['read'])) $unread++; }
+renderAdminHeader('messages', 'Customer Inbox');
+?>
+<div class="top-actions">
+  <div>
+    <h1 class="page-title">✉️ Customer Inbox <?= $unread > 0 ? '<span class="badge badge-green">' . $unread . ' new</span>' : '' ?></h1>
+    <p style="color:#64748b;font-size:.88rem;margin-top:.3rem">Every contact-form message from your live website lands here. Reply straight from your email.</p>
+  </div>
+  <?php if (!empty($inbox)): ?>
+  <form method="POST"><input type="hidden" name="op" value="mark_all_read">
+    <button type="submit" class="btn btn-ghost">✓ Mark all read</button>
+  </form>
+  <?php endif; ?>
+</div>
+
+<?php if ($notice): ?>
+  <div style="background:rgba(16,185,129,.15);border:1px solid #10b981;color:#34d399;padding:.9rem 1.2rem;border-radius:12px;font-weight:700;margin-bottom:1.5rem">✅ <?= htmlspecialchars($notice) ?></div>
+<?php endif; ?>
+
+<?php if (empty($inbox)): ?>
+  <div class="card" style="text-align:center;padding:3rem 1.5rem">
+    <div style="font-size:2.5rem;margin-bottom:.75rem">📭</div>
+    <h3 style="color:#fff;font-weight:800;margin-bottom:.4rem">No messages yet</h3>
+    <p style="color:#94a3b8;font-size:.88rem">When visitors submit your website contact form, their messages appear here instantly.</p>
+  </div>
+<?php else: ?>
+  <?php foreach ($inbox as $row):
+    $rid = htmlspecialchars((string)($row['id'] ?? ''));
+    $rname = htmlspecialchars($row['name'] ?? 'Visitor');
+    $remail = htmlspecialchars($row['email'] ?? '');
+    $rphone = htmlspecialchars($row['phone'] ?? '—');
+    $rmsg = nl2br(htmlspecialchars($row['message'] ?? ''));
+    $rdate = htmlspecialchars($row['date'] ?? '');
+    $isNew = empty($row['read']);
+  ?>
+  <div class="card" style="<?= $isNew ? 'border-color:#f59e0b;background:rgba(245,158,11,.05)' : '' ?>">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem">
+      <div style="display:flex;align-items:center;gap:.7rem">
+        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff"><?= htmlspecialchars(mb_strtoupper(mb_substr($rname, 0, 1))) ?></div>
+        <div>
+          <strong style="color:#fff"><?= $rname ?></strong>
+          <?= $isNew ? ' <span class="badge" style="background:#f59e0b;color:#000">NEW</span>' : '' ?>
+          <div style="font-size:.78rem;color:#64748b"><?= $remail ?> · <?= $rphone ?> · <?= $rdate ?></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+        <a class="btn btn-success" style="padding:.45rem .9rem;font-size:.78rem" href="mailto:<?= $remail ?>?subject=<?= rawurlencode('Re: Your enquiry') ?>">↩ Reply</a>
+        <form method="POST" style="display:inline">
+          <input type="hidden" name="id" value="<?= $rid ?>">
+          <?php if ($isNew): ?>
+            <button type="submit" name="op" value="read" class="btn btn-ghost" style="padding:.45rem .9rem;font-size:.78rem">✓ Read</button>
+          <?php else: ?>
+            <button type="submit" name="op" value="unread" class="btn btn-ghost" style="padding:.45rem .9rem;font-size:.78rem">Unread</button>
+          <?php endif; ?>
+          <button type="submit" name="op" value="delete" class="btn btn-danger" style="padding:.45rem .9rem;font-size:.78rem" onclick="return confirm('Delete this message?')">Delete</button>
+        </form>
+      </div>
+    </div>
+    <div style="background:#0b0f17;border:1px solid #1e293b;border-radius:10px;padding:1rem;font-size:.88rem;color:#cbd5e1;line-height:1.6;white-space:pre-wrap;"><?= $rmsg ?></div>
+  </div>
+  <?php endforeach; ?>
+<?php endif; ?>
 
 <?php renderAdminFooter(); ?>
 PHP;

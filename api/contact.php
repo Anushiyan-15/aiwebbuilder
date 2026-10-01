@@ -15,6 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once dirname(__DIR__) . '/config/app.php';
 require_once dirname(__DIR__) . '/includes/db.php';
+require_once dirname(__DIR__) . '/includes/Mailer.php';
+require_once dirname(__DIR__) . '/includes/MailQueue.php';
 
 $raw  = file_get_contents('php://input');
 $req  = json_decode($raw, true) ?: $_POST;
@@ -74,13 +76,35 @@ if ($pdo) {
     }
 }
 
-// 3. Email notification (optional)
-if (defined('CONTACT_EMAIL') && !empty(CONTACT_EMAIL)) {
-    @mail(CONTACT_EMAIL, "New Contact Form: $subject", "From: $name ($email)\n\n$message", "From: no-reply@" . parse_url(SITE_URL, PHP_URL_HOST));
+// 3. Email via PHPMailer queue (owner notification + visitor auto-reply)
+// Raw mail() is unreliable on shared hosting — the queue delivers over
+// SMTP with retries, so the business can actually contact the visitor.
+$mailStatus = ['owner' => false, 'autoreply' => false];
+try {
+    $siteLabel = defined('SITE_NAME') ? SITE_NAME : 'Website';
+    $payload = Mailer::buildContactPayload($siteLabel, $name, $email, '', $subject, $message);
+    $ownerTo = (defined('CONTACT_EMAIL') && filter_var(CONTACT_EMAIL, FILTER_VALIDATE_EMAIL)) ? CONTACT_EMAIL : '';
+    if ($ownerTo) {
+        $r = queueMail([
+            'to' => $ownerTo, 'subject' => $payload['owner']['subject'],
+            'html' => $payload['owner']['html'], 'text' => $payload['owner']['text'],
+            'kind' => 'contact',
+        ]);
+        $mailStatus['owner'] = !empty($r['success']);
+    }
+    $r2 = queueMail([
+        'to' => $email, 'subject' => $payload['autoreply']['subject'],
+        'html' => $payload['autoreply']['html'], 'text' => $payload['autoreply']['text'],
+        'kind' => 'contact_autoreply',
+    ]);
+    $mailStatus['autoreply'] = !empty($r2['success']);
+} catch (Throwable $e) {
+    error_log('contact queueMail failed: ' . $e->getMessage());
 }
 
 echo json_encode([
     'success' => true,
     'message' => 'Thank you! Your message has been sent successfully.',
-    'id'      => $submissionId
+    'id'      => $submissionId,
+    'mailed'  => $mailStatus,
 ]);

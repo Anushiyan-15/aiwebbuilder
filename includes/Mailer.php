@@ -144,6 +144,10 @@ class Mailer {
             <td style=\"padding:6px 0;color:#64748b;\">Admin Password:</td>
             <td style=\"padding:6px 0;color:#facc15;font-weight:700;\">{$adminPass}</td>
           </tr>
+          <tr>
+            <td style=\"padding:6px 0;color:#64748b;\">Demo Login:</td>
+            <td style=\"padding:6px 0;color:#6ee7b7;font-weight:700;\">demo / Demo@1234 <span style=\"color:#64748b;font-weight:400;\">(shareable preview)</span></td>
+          </tr>
           " : "") . "
           <tr>
             <td style=\"padding:6px 0;color:#64748b;\">Subscription:</td>
@@ -461,6 +465,67 @@ class Mailer {
 </html>";
 
         return self::send($to, $title . ' — ' . $code, $html, "Your verification code is: {$code}. It expires in 10 minutes.");
+    }
+
+    /**
+     * Contact-form payloads (platform + published sites).
+     * Owner notification (so the business can contact the visitor) +
+     * visitor auto-reply (confirmation). Sent via queueMail (PHPMailer SMTP).
+     * Returns [owner => [...], autoreply => [...]].
+     */
+    public static function buildContactPayload(string $siteName, string $name, string $email, string $phone, string $subject, string $message): array {
+        $safeSite = htmlspecialchars($siteName ?: 'Website');
+        $safeName = htmlspecialchars($name);
+        $safeEmail = htmlspecialchars($email);
+        $safePhone = htmlspecialchars($phone ?: '—');
+        $safeSubject = htmlspecialchars($subject ?: 'Website Inquiry');
+        $safeMsg = nl2br(htmlspecialchars($message));
+        $time = date('M j, Y g:i A');
+
+        $ownerHtml = "
+<!DOCTYPE html>
+<html><head><meta charset=\"UTF-8\"></head>
+<body style=\"margin:0;padding:0;background:#f3f4f6;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#111827;\">
+  <div style=\"max-width:600px;margin:24px auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;\">
+    <div style=\"background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:22px 26px;\">
+      <h2 style=\"margin:0;font-size:18px;color:#fff;\">New website enquiry — {$safeSite}</h2>
+      <p style=\"margin:6px 0 0;font-size:12px;color:#e0e7ff;\">{$time}</p>
+    </div>
+    <div style=\"padding:24px 26px;\">
+      <p style=\"margin:0 0 6px;font-size:14px;\"><strong>Name:</strong> {$safeName}</p>
+      <p style=\"margin:0 0 6px;font-size:14px;\"><strong>Email:</strong> <a href=\"mailto:{$safeEmail}\">{$safeEmail}</a></p>
+      <p style=\"margin:0 0 14px;font-size:14px;\"><strong>Phone:</strong> {$safePhone}</p>
+      <p style=\"margin:0 0 6px;font-size:14px;\"><strong>Subject:</strong> {$safeSubject}</p>
+      <div style=\"background:#f3f4f6;border-radius:10px;padding:14px;font-size:14px;white-space:pre-wrap;\">{$safeMsg}</div>
+      <p style=\"margin:14px 0 0;\"><a href=\"mailto:{$safeEmail}?subject=Re: {$safeSubject}\" style=\"display:inline-block;padding:10px 18px;background:#10b981;color:#fff;text-decoration:none;font-weight:700;font-size:13px;border-radius:8px;\">Reply to {$safeName} →</a></p>
+    </div>
+  </div>
+</body>
+</html>";
+        $ownerText = "New enquiry from {$siteName}\nTime: {$time}\nName: {$name}\nEmail: {$email}\nPhone: {$phone}\nSubject: {$subject}\n\n{$message}";
+
+        $replyHtml = "
+<!DOCTYPE html>
+<html><head><meta charset=\"UTF-8\"></head>
+<body style=\"margin:0;padding:0;background:#090d16;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#e2e8f0;\">
+  <div style=\"max-width:520px;margin:30px auto;background:#0f172a;border:1px solid #1e293b;border-radius:16px;overflow:hidden;\">
+    <div style=\"background:linear-gradient(135deg,#059669,#10b981);padding:26px;text-align:center;\">
+      <div style=\"font-size:34px;\">✅</div>
+      <h1 style=\"margin:6px 0 0;font-size:18px;color:#fff;\">Message received!</h1>
+    </div>
+    <div style=\"padding:24px;\">
+      <p style=\"color:#cbd5e1;font-size:13px;margin:0 0 10px;\">Hi {$safeName}, thanks for contacting <strong>{$safeSite}</strong>. We received your message and will reply to {$safeEmail} shortly.</p>
+      <div style=\"background:#060a14;border:1px solid #1e293b;border-radius:10px;padding:14px;font-size:12px;color:#94a3b8;\">Subject: {$safeSubject}<br>Sent: {$time}</div>
+    </div>
+    <div style=\"background:#060a14;padding:12px;text-align:center;font-size:11px;color:#475569;\">&copy; " . date('Y') . " {$safeSite}</div>
+  </div>
+</body>
+</html>";
+        $replyText = "Hi {$name}, thanks for contacting {$siteName}. We received your message and will reply shortly.";
+        return [
+            'owner' => ['subject' => "New enquiry: {$subject} — {$name} ({$siteName})", 'html' => $ownerHtml, 'text' => $ownerText],
+            'autoreply' => ['subject' => "We received your message — {$siteName}", 'html' => $replyHtml, 'text' => $replyText],
+        ];
     }
 
     /**

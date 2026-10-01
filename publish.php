@@ -139,6 +139,21 @@ if (count(\$hits) >= 20) {
 \$hits[] = ['ip' => \$ip, 't' => \$now];
 @file_put_contents(\$hitsFile, json_encode(\$hits));
 
+// Save to owner admin inbox (Admin → Inbox page lists these)
+\$inboxDir = __DIR__ . '/admin';
+if (is_dir(\$inboxDir)) {
+    \$inboxFile = \$inboxDir . '/data_inquiries.json';
+    \$inbox = file_exists(\$inboxFile) ? (json_decode(@file_get_contents(\$inboxFile), true) ?: []) : [];
+    if (!is_array(\$inbox)) \$inbox = [];
+    array_unshift(\$inbox, [
+        'id' => (string)(time() . rand(100, 999)),
+        'name' => \$name, 'email' => \$email, 'phone' => \$phone,
+        'message' => \$message, 'date' => date('Y-m-d H:i'), 'read' => false,
+    ]);
+    \$inbox = array_slice(\$inbox, 0, 500);
+    @file_put_contents(\$inboxFile, json_encode(\$inbox, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
 require dirname(dirname(__DIR__)) . '/includes/MailQueue.php';
 
 \$subject = 'New website enquiry — {$siteSafe}';
@@ -987,6 +1002,11 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:radial-grad
           </div>
         </div>
 
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1.1rem;">
+          <button type="button" class="btn btn-ghost" onclick="fillDemoCreds()" style="font-size:.82rem;">🎭 Use Demo Credentials</button>
+          <button type="button" class="btn btn-ghost" onclick="suggestPassword()" style="font-size:.82rem;">🎲 Suggest Strong Password</button>
+        </div>
+
         <div class="field">
           <label class="lbl" for="adm-email">Recovery Email</label>
           <input class="inp" type="email" id="adm-email" placeholder="you@example.com">
@@ -1528,6 +1548,36 @@ function setMsg(id, txt, cls) {
   if (!el) return;
   el.textContent = txt;
   el.className = 'msg ' + (cls || '');
+}
+
+/* Demo credentials quick-fill + strong password suggester (Step 3.5) */
+function fillDemoCreds() {
+  const u = document.getElementById('adm-user');
+  const p = document.getElementById('adm-pass');
+  const p2 = document.getElementById('adm-pass2');
+  if (u) { u.value = 'demoadmin'; u.dispatchEvent(new Event('input')); }
+  if (p) { p.value = 'Demo@1234'; p.dispatchEvent(new Event('input')); }
+  if (p2) { p2.value = 'Demo@1234'; p2.dispatchEvent(new Event('input')); }
+  state.adminUsername = 'demoadmin';
+  state.adminPassword = 'Demo@1234';
+  const bar = document.getElementById('pw-bar');
+  if (bar) bar.className = 'pw-strength-fill s' + scorePassword('Demo@1234');
+  setMsg('adm-user-msg', 'Demo username filled — change it to your own if you like.', 'ok');
+}
+function suggestPassword() {
+  const words = ['Tiger', 'Ocean', 'Eagle', 'Maple', 'Comet', 'Lotus'];
+  const w = words[Math.floor(Math.random() * words.length)];
+  const n = Math.floor(1000 + Math.random() * 9000);
+  const sym = ['@', '#', '!'][Math.floor(Math.random() * 3)];
+  const pw = w + n + sym;
+  const p = document.getElementById('adm-pass');
+  const p2 = document.getElementById('adm-pass2');
+  if (p) { p.value = pw; p.dispatchEvent(new Event('input')); }
+  if (p2) { p2.value = pw; p2.dispatchEvent(new Event('input')); }
+  state.adminPassword = pw;
+  const bar = document.getElementById('pw-bar');
+  if (bar) bar.className = 'pw-strength-fill s' + scorePassword(pw);
+  setMsg('adm-pass-msg', 'Strong password suggested — save it somewhere safe.', 'ok');
 }
 
 /* Test owner Gmail SMTP (step-by-step verification before publish) */
