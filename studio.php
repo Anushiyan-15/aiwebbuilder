@@ -21,6 +21,7 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
   <script src="https://cdnjs.cloudflare.com/ajax/libs/grapesjs/0.21.10/grapes.min.js"></script>
   <script src="https://js.puter.com/v2/"></script>
   <script src="<?= SITE_URL ?>/assets/js/puter-service.js"></script>
+  <script src="<?= SITE_URL ?>/assets/js/opencode-service.js"></script>
   <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/loader-3d.css">
   <script src="<?= SITE_URL ?>/assets/js/loader-3d.js"></script>
   <style>
@@ -1662,13 +1663,21 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
       <div style="display:flex; align-items:center; gap:0.4rem;">
         <span style="color:#818cf8; font-weight:700;">Model:</span>
         <select class="puter-model-select" id="magic-model-select" onchange="changePuterModel(this.value)">
-          <option value="deepseek/deepseek-chat" selected>DeepSeek V3 (Free)</option>
-          <option value="gpt-4o-mini">GPT-4o Mini</option>
-          <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          <option value="space-bunny-free" selected>★ Space Bunny (Free · tested)</option>
+          <option value="big-pickle">Big Pickle (Free)</option>
+          <option value="muse-spark-1.3-contributor-free">Muse Spark 1.3 (Free)</option>
+          <option value="muse-spark-1.2-contributor-free">Muse Spark 1.2 (Free)</option>
+          <option value="mimo-v2.5-free">MiMo V2.5 (Free)</option>
+          <option value="mimo-v2.6-flash-free">MiMo V2.6 Flash (Free)</option>
+          <option value="nemotron-3.5-lightning-free">Nemotron 3.5 Lightning (Free)</option>
+          <option value="jev-1.13-free">Jev 1.13 (Free)</option>
+          <option value="longcat-2.5-preview-free">LongCat 2.5 Preview (Free)</option>
         </select>
       </div>
       <a class="puter-acc-link" onclick="togglePuterAccountMenu(event)" id="panel-puter-account-link">Sign In / Switch</a>
+    </div>
+    <div class="puter-model-row">
+      <div id="magic-model-why" style="font-size:0.68rem; color:#6ee7b7; font-weight:600;">★ Recommended: Space Bunny — tap to change</div>
     </div>
 
     <div class="ai-target-banner" id="ai-target-banner">
@@ -6947,11 +6956,12 @@ ${WC_ANIMATION_RUNTIME}
     }
 
     function changePuterModel(model) {
-      if (window.PuterService) {
-        window.PuterService.selectedModel = model;
-        localStorage.setItem('webcraft_puter_model', model);
-        showToast(`AI Model set to ${model}`);
-      }
+      if (window.OpenCodeAI?.setModel) window.OpenCodeAI.setModel(model);
+      // Guarded: PuterService ignores unknown ids (OpenCode-only models
+      // would otherwise break Puter calls with "model not found" errors).
+      if (window.PuterService?.setModel) window.PuterService.setModel(model);
+      try { localStorage.setItem('webcraft_puter_model', model); } catch (e) {}
+      showToast(`AI Model set to ${model}`);
     }
 
     async function togglePuterAccountMenu(e) {
@@ -7097,15 +7107,27 @@ ${WC_ANIMATION_RUNTIME}
       }
 
       try {
-        const result = await window.PuterService.chatAndEdit({
-          userPrompt: q,
-          selectedElement: selectedPayload,
-          currentHtml: currentHtml,
-          context: {
+        // ★ Whole-page edits go OpenCode → Gemini → Puter (editWithFallback).
+        // Selected-element micro-edits stay on Puter.js (needs element HTML).
+        let result;
+        if (!hasSelected && window.OpenCodeAI?.editWithFallback) {
+          result = await window.OpenCodeAI.editWithFallback({
+            userPrompt: q,
+            currentHtml: currentHtml,
             bizName: projectData?.bizName || 'Website',
-            summary: buildAiStudioContext()
-          }
-        });
+            puterCtx: { summary: buildAiStudioContext() }
+          });
+        } else {
+          result = await window.PuterService.chatAndEdit({
+            userPrompt: q,
+            selectedElement: selectedPayload,
+            currentHtml: currentHtml,
+            context: {
+              bizName: projectData?.bizName || 'Website',
+              summary: buildAiStudioContext()
+            }
+          });
+        }
 
         appendMagicChat(formatMarkdown(result.conversation), 'ai');
 

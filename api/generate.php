@@ -2296,8 +2296,36 @@ if ($action === 'refine') {
     }
 
     $geminiError = null;
+    $opencodeError = null;
 
-    // ── 1. Try Gemini first ──
+    // ── 0. Try OpenCode Zen first (all free models + FlowCraft edit skills) ──
+    try {
+        if (!function_exists('opencode_edit_html')) {
+            $svc = dirname(__DIR__) . '/includes/OpenCodeService.php';
+            if (file_exists($svc)) require_once $svc;
+        }
+        if (function_exists('opencode_edit_html')) {
+            $ocModel = isset($req['model']) && is_string($req['model']) ? trim($req['model']) : null;
+            [$ocOk, $ocHtml, $ocUsed, $ocErrors] = opencode_edit_html($currentHTML, $instruction, 'Website', $ocModel ?: null);
+            if ($ocOk && trim($ocHtml) !== trim($currentHTML)) {
+                echo json_encode([
+                    'success' => true,
+                    'html' => $ocHtml,
+                    'source' => 'opencode',
+                    'model' => $ocUsed,
+                    'response_msg' => "✨ OpenCode AI applied your refinement: \"{$instruction}\"."
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            $opencodeError = implode(' | ', array_slice((array)$ocErrors, 0, 2));
+            if ($opencodeError !== '') error_log('[generate.php refine] OpenCode failed: ' . substr($opencodeError, 0, 300));
+        }
+    } catch (Throwable $e) {
+        $opencodeError = $e->getMessage();
+        error_log('[generate.php refine] OpenCode exception: ' . $opencodeError);
+    }
+
+    // ── 1. Try Gemini next ──
     if (!empty($apiKey) && strlen($apiKey) > 10) {
         $prompt = "You are Google Gemini, an elite full-stack web developer and UI/UX designer. "
                 . "The user wants to refine their single-file HTML website with the following instruction.\n\n"
@@ -2607,8 +2635,11 @@ if ($action === 'refine') {
     // ═══ CRITICAL FIX: If nothing changed, tell the truth ═══
     if (!$changed) {
         $hint = '';
+        if ($opencodeError) {
+            $hint .= "OpenCode AI: {$opencodeError}. ";
+        }
         if ($geminiError) {
-            $hint = "Gemini failed: {$geminiError}. ";
+            $hint .= "Gemini failed: {$geminiError}. ";
         }
         echo json_encode([
             'success' => false,

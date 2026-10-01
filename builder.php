@@ -267,11 +267,14 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
   display: none;
   position: fixed; inset: 0; z-index: 99999;
   background: radial-gradient(circle at 50% 40%, #0d1226 0%, #03060f 70%, #010206 100%);
-  align-items: center; justify-content: center;
+  align-items: center; justify-content: safe center;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto; overflow-x: hidden;
+  padding: 60px 12px 28px; box-sizing: border-box;
   perspective: 1200px;
+  -webkit-overflow-scrolling: touch;
 }
+#gen-overlay .gen-stage-wrap, #gen-overlay .gen-overlay-content { flex-shrink: 0; }
 #gen-overlay.active { display: flex; animation: overlayIn 0.5s cubic-bezier(0.22,1,0.36,1); }
 @keyframes overlayIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
 
@@ -483,26 +486,44 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 }
 @keyframes progressShimmer { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
 
-/* Parallel 3-Variation Badges */
-.gen-var-status {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.65rem;
-  width: min(520px, 90vw); margin-bottom: 1.25rem;
-}
-@media (max-width: 580px) { .gen-var-status { grid-template-columns: 1fr; } }
-.gen-vcard {
-  background: rgba(15,23,42,0.65); border: 1px solid rgba(99,102,241,0.25);
-  border-radius: 10px; padding: 0.5rem 0.65rem; text-align: left;
-  display: flex; flex-direction: column; gap: 0.15rem;
-  transition: all 0.3s ease;
-}
-.gen-vcard.ready {
-  border-color: rgba(16,185,129,0.7); background: rgba(6,78,59,0.25);
-  box-shadow: 0 0 15px rgba(16,185,129,0.25);
-}
-.gen-vcard-name { font-size: 0.72rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.gen-vcard-state { font-size: 0.65rem; color: #94a3b8; font-weight: 600; display: flex; align-items: center; gap: 0.3rem; }
-.gen-vcard.ready .gen-vcard-state { color: #34d399; font-weight: 800; }
-.gen-vcard.ready .gen-vcard-state::before { content: '✓ '; }
+/* Creative self-assembling wireframe (lights up as variations finish) */
+.gen-wire { position: relative; width: min(420px, 88vw); margin-bottom: 0.55rem; background: rgba(10,15,28,0.72); border: 1px solid rgba(99,102,241,0.35); border-radius: 14px; padding: 0.6rem 0.7rem 0.7rem; overflow: hidden; box-shadow: 0 10px 34px rgba(0,0,0,0.5); }
+.gw-bar { display: flex; align-items: center; gap: 5px; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(148,163,184,0.18); margin-bottom: 0.55rem; }
+.gw-bar i { width: 9px; height: 9px; border-radius: 50%; }
+.gw-bar i:nth-child(1) { background: #f87171; } .gw-bar i:nth-child(2) { background: #fbbf24; } .gw-bar i:nth-child(3) { background: #34d399; }
+.gw-url { margin-left: 0.4rem; flex: 1; font-family: 'Fira Code', 'Courier New', monospace; font-size: 0.62rem; color: #67e8f9; background: rgba(8,145,178,0.12); border: 1px solid rgba(103,232,249,0.25); border-radius: 6px; padding: 0.12rem 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gw-nav { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.55rem; }
+.gw-logo { width: 26px; height: 14px; border-radius: 4px; background: rgba(129,140,248,0.25); }
+.gw-links { display: flex; gap: 5px; flex: 1; }
+.gw-links i { width: 26px; height: 8px; border-radius: 4px; background: rgba(148,163,184,0.25); }
+.gw-cta { width: 44px; height: 14px; border-radius: 7px; background: rgba(16,185,129,0.25); }
+.gw-hero { border-radius: 10px; padding: 0.65rem; margin-bottom: 0.55rem; background: rgba(99,102,241,0.06); border: 1px dashed rgba(129,140,248,0.3); }
+.gw-h1 { display: block; height: 12px; width: 72%; border-radius: 6px; background: rgba(226,232,240,0.28); margin-bottom: 0.4rem; }
+.gw-sub { display: block; height: 8px; width: 52%; border-radius: 4px; background: rgba(148,163,184,0.3); margin-bottom: 0.5rem; }
+.gw-btns { display: flex; gap: 0.4rem; }
+.gw-btns i { width: 52px; height: 14px; border-radius: 7px; background: rgba(99,102,241,0.3); }
+.gw-btns i:last-child { background: rgba(148,163,184,0.25); }
+.gw-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem; margin-bottom: 0.55rem; }
+.gw-card { border-radius: 8px; padding: 0.45rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.2); }
+.gw-card i { display: block; height: 7px; border-radius: 4px; background: rgba(148,163,184,0.28); margin-bottom: 5px; }
+.gw-card i:first-child { height: 22px; background: rgba(56,189,248,0.2); }
+.gw-foot { display: flex; gap: 0.4rem; }
+.gw-foot i { height: 8px; border-radius: 4px; background: rgba(148,163,184,0.22); flex: 1; }
+.gen-wire .lit { animation: gwPop 0.5s cubic-bezier(0.22,1,0.36,1); }
+.gw-nav.lit .gw-logo, .gw-nav.lit .gw-cta { background: linear-gradient(135deg,#6366f1,#a855f7); box-shadow: 0 0 12px rgba(99,102,241,0.7); }
+.gw-nav.lit .gw-links i { background: rgba(199,210,254,0.6); }
+.gw-hero.lit { background: rgba(99,102,241,0.14); border-style: solid; border-color: rgba(129,140,248,0.6); box-shadow: 0 0 18px rgba(99,102,241,0.35); }
+.gw-hero.lit .gw-h1 { background: linear-gradient(90deg,#fff,#c7d2fe); }
+.gw-hero.lit .gw-sub { background: rgba(199,210,254,0.55); }
+.gw-hero.lit .gw-btns i:first-child { background: linear-gradient(135deg,#10b981,#059669); box-shadow: 0 0 12px rgba(16,185,129,0.6); }
+.gw-cards.lit .gw-card { border-color: rgba(56,189,248,0.55); background: rgba(56,189,248,0.07); box-shadow: 0 0 14px rgba(56,189,248,0.25); }
+.gw-cards.lit .gw-card i:first-child { background: linear-gradient(135deg, rgba(56,189,248,0.7), rgba(168,85,247,0.7)); }
+.gw-foot.lit i { background: rgba(110,231,183,0.5); }
+@keyframes gwPop { 0% { transform: scale(0.96); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
+.gw-scan { position: absolute; left: 0; right: 0; top: -30%; height: 26%; background: linear-gradient(180deg, transparent, rgba(129,140,248,0.18), transparent); animation: gwScan 2.6s ease-in-out infinite; pointer-events: none; }
+@keyframes gwScan { 0% { top: -30%; } 100% { top: 110%; } }
+.gen-wire-cap { font-family: 'Fira Code', 'Courier New', monospace; font-size: 0.7rem; color: #67e8f9; font-weight: 600; margin-bottom: 1.1rem; min-height: 1.1em; }
+@media (prefers-reduced-motion: reduce) { .gw-scan { animation: none; } }
 
 /* Live Telemetry Terminal Line */
 .gen-terminal-box {
@@ -532,7 +553,77 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 }
 
 
-/* ══ DESIGNS SCREEN ══ */
+/* Creative codefield: rising mini browser-windows + code glyphs */
+.gen-codefield { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
+.gcf-chip {
+  position: absolute; bottom: -160px; left: var(--x, 50%);
+  padding: 10px 12px 12px; border-radius: 12px;
+  background: rgba(15,23,42,0.55); border: 1px solid rgba(129,140,248,0.35);
+  backdrop-filter: blur(6px); box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+  animation: codeRise var(--t, 15s) linear infinite; animation-delay: var(--d, 0s); opacity: 0;
+}
+.gcf-chip::before {
+  content: ''; display: block; width: 36px; height: 8px; border-radius: 99px;
+  background: linear-gradient(90deg, #f87171 0 8px, #fbbf24 8px 16px, #34d399 16px 24px, transparent 24px);
+  opacity: 0.9; margin-bottom: 2px;
+}
+.gcf-chip i {
+  display: block; height: 8px; border-radius: 4px; margin-top: 7px; position: relative; overflow: hidden;
+  background: linear-gradient(90deg, rgba(129,140,248,0.75), rgba(56,189,248,0.35));
+}
+.gcf-chip i:nth-child(2) { width: 88%; }
+.gcf-chip i:nth-child(3) { width: 64%; }
+.gcf-chip i:nth-child(4) { width: 76%; }
+.gcf-chip i::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+  transform: translateX(-100%); animation: chipShimmer 2.8s ease-in-out infinite;
+}
+@keyframes chipShimmer { 60% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.gcf-glyph {
+  position: absolute; bottom: -80px; left: var(--x, 50%);
+  font-family: 'Fira Code', 'Courier New', monospace; font-weight: 800; font-size: 1.7rem;
+  color: rgba(129,140,248,0.5); text-shadow: 0 0 18px rgba(99,102,241,0.65);
+  animation: codeRise var(--t, 14s) linear infinite; animation-delay: var(--d, 0s); opacity: 0;
+  white-space: nowrap;
+}
+@keyframes codeRise {
+  0%   { transform: translateY(0) rotate(-6deg) scale(0.9); opacity: 0; }
+  8%   { opacity: 0.9; }
+  85%  { opacity: 0.65; }
+  100% { transform: translateY(-115vh) rotate(5deg) scale(1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gcf-chip, .gcf-glyph, .gcf-chip i::after { animation: none; }
+  .gcf-chip, .gcf-glyph { display: none; }
+}
+
+/* GEN OVERLAY FIT - short and small screens get a compact layout */
+@media (max-height: 840px) {
+  #gen-overlay { padding-top: 54px; }
+  .gen-stage-wrap { margin: 0.2rem 0 0; }
+  #gen-overlay .wcl-hb { transform: scale(0.66); transform-origin: top center; margin-bottom: -78px; }
+  .gen-overlay-title { font-size: 1.25rem; }
+  .gen-pct-wrap { font-size: 1.4rem; margin-bottom: 0.4rem; }
+  .gen-overlay-track { margin-bottom: 0.8rem; }
+  .gen-wire { transform: scale(0.85); transform-origin: top center; margin-bottom: 0.2rem; }
+  .gen-wire-cap { margin-bottom: 0.6rem; }
+  .gen-terminal-box, .gen-overlay-tip { display: none; }
+  .gen-steps { margin-bottom: 0.7rem; }
+  .gen-overlay-stage { margin-bottom: 0.6rem; }
+}
+@media (max-height: 640px) {
+  .gen-stage-wrap { display: none; }
+}
+@media (max-width: 640px) {
+  .gen-hud-bar { padding: 0 0.8rem; }
+  .gen-hud-badge { display: none; }
+  .gen-hud-mono { font-size: 0.62rem; }
+  .gen-overlay-content { width: 94vw; }
+}
+
+
+/* DESIGNS SCREEN */
 #designs-screen { display: none; min-height: calc(100vh - 64px); padding: 3rem 1.5rem 5rem; background: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0a0d14 60%); }
 .designs-header { text-align: center; max-width: 780px; margin: 0 auto 3rem; }
 .designs-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc; padding: 0.35rem 0.9rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; margin-bottom: 1rem; }
@@ -783,6 +874,19 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
   <div class="gen-shard s3"></div>
   <div class="gen-shard s4"></div>
 
+  <!-- Creative background: floating code-windows + glyphs rising (pure CSS) -->
+  <div class="gen-codefield" aria-hidden="true">
+    <div class="gcf-chip" style="--x:4%; --d:0s; --t:16s; width:120px;"><i></i><i></i><i></i></div>
+    <div class="gcf-glyph" style="--x:14%; --d:2s; --t:13s;">&lt;/&gt;</div>
+    <div class="gcf-chip" style="--x:24%; --d:5s; --t:18s; width:96px;"><i></i><i></i></div>
+    <div class="gcf-glyph" style="--x:38%; --d:1s; --t:15s;">{ }</div>
+    <div class="gcf-chip" style="--x:52%; --d:3s; --t:17s; width:140px;"><i></i><i></i><i></i><i></i></div>
+    <div class="gcf-glyph" style="--x:64%; --d:6s; --t:12s;">#</div>
+    <div class="gcf-chip" style="--x:74%; --d:2.5s; --t:16s; width:108px;"><i></i><i></i><i></i></div>
+    <div class="gcf-glyph" style="--x:86%; --d:4s; --t:14s;">CSS</div>
+    <div class="gcf-chip" style="--x:93%; --d:7s; --t:19s; width:88px;"><i></i><i></i></div>
+  </div>
+
   <!-- Little builder builds your home (pure CSS story loop) -->
   <div class="gen-stage-wrap">
     <div class="wcl-hb" style="position:relative;z-index:2;">
@@ -839,21 +943,16 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
       <div class="gen-step" data-s="4"><span class="gs-dot"></span>Skills 22-26: QA &amp; Launch</div>
     </div>
 
-    <!-- Parallel 3-Variation Badges -->
-    <div class="gen-var-status" id="gen-var-status">
-      <div class="gen-vcard" id="gvcard-0">
-        <span class="gvcard-name">1. Minimal Modern</span>
-        <span class="gvcard-state" id="gvcard-state-0">⚡ Analyzing…</span>
-      </div>
-      <div class="gen-vcard" id="gvcard-1">
-        <span class="gvcard-name">2. Bold Dynamic</span>
-        <span class="gvcard-state" id="gvcard-state-1">⚡ Analyzing…</span>
-      </div>
-      <div class="gen-vcard" id="gvcard-2">
-        <span class="gvcard-name">3. Luxury Dark</span>
-        <span class="gvcard-state" id="gvcard-state-2">⚡ Analyzing…</span>
-      </div>
+    <!-- Creative: self-assembling website wireframe (lights up per variation) -->
+    <div class="gen-wire" id="gen-wire" aria-hidden="true">
+      <div class="gw-bar"><i></i><i></i><i></i><span class="gw-url" id="gw-url">your-site.ai</span></div>
+      <div class="gw-nav"><span class="gw-logo"></span><span class="gw-links"><i></i><i></i><i></i></span><span class="gw-cta"></span></div>
+      <div class="gw-hero"><span class="gw-h1"></span><span class="gw-sub"></span><span class="gw-btns"><i></i><i></i></span></div>
+      <div class="gw-cards"><span class="gw-card"><i></i><i></i><i></i></span><span class="gw-card"><i></i><i></i><i></i></span><span class="gw-card"><i></i><i></i><i></i></span></div>
+      <div class="gw-foot"><i></i><i></i></div>
+      <div class="gw-scan"></div>
     </div>
+    <div class="gen-wire-cap" id="gen-wire-cap">Assembling sections…</div>
 
     <!-- Live Telemetry Terminal Line -->
     <div class="gen-terminal-box">
@@ -1031,8 +1130,8 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
           <div class="account-info">
             <div class="account-avatar" id="account-avatar" style="background: linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:800;">✦</div>
             <div>
-              <div class="account-name" id="account-name" style="color:#fff; font-weight:700;">AI-FlowCraft Engine Ready</div>
-              <div class="account-status" id="account-status" style="color:#34d399;">🟢 Autonomous Neural Synthesis Active · 3 Bespoke Variations</div>
+              <div class="account-name" id="account-name" style="color:#fff; font-weight:700;">AI Model Ready</div>
+              <div class="account-status" id="account-status" style="color:#34d399;">Free AI Models · No sign-in needed</div>
             </div>
           </div>
           <div class="account-actions" id="account-actions">
@@ -1047,8 +1146,23 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
         <div class="w-group"><label class="w-label" for="biz_address">Headquarters / Location</label><input class="w-input" type="text" id="biz_address" value="450 Innovation Parkway, San Francisco, CA"></div>
 
         <div class="gen-block">
-          <h3>✦ Ready to Generate</h3>
+          <h3>Ready to Generate</h3>
           <p>We'll create <strong style="color:#a5b4fc">3 distinct style variations</strong> based on your design direction.<br>Each variation uses your exact content — only the layout differs.</p>
+          <div class="w-group" style="max-width:420px; margin:0 auto 1.1rem; text-align:left;">
+            <label class="w-label" for="wiz-model-select">AI Model <span id="wiz-model-why" style="font-size:0.7rem; color:#6ee7b7; font-weight:600;"></span></label>
+            <select class="w-select" id="wiz-model-select" onchange="changeAiModel(this.value)">
+              <option value="space-bunny-free" selected>★ Space Bunny (Free · tested)</option>
+              <option value="big-pickle">Big Pickle (Free)</option>
+              <option value="muse-spark-1.3-contributor-free">Muse Spark 1.3 (Free)</option>
+              <option value="muse-spark-1.2-contributor-free">Muse Spark 1.2 (Free)</option>
+              <option value="mimo-v2.5-free">MiMo V2.5 (Free)</option>
+              <option value="mimo-v2.6-flash-free">MiMo V2.6 Flash (Free)</option>
+              <option value="nemotron-3.5-lightning-free">Nemotron 3.5 Lightning (Free)</option>
+              <option value="jev-1.13-free">Jev 1.13 (Free)</option>
+              <option value="longcat-2.5-preview-free">LongCat 2.5 Preview (Free)</option>
+            </select>
+            <div class="w-hint">Free AI models only — recommended marked ★. Others auto-fallback if busy.</div>
+          </div>
           <button class="wbtn wbtn-generate" id="wiz-generate-btn" onclick="openGenerateModal()" disabled>
             <span>✦</span><span>Generate 3 Style Variations</span>
           </button>
@@ -1165,7 +1279,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
       <div class="magic-avatar">✦</div>
       <div class="magic-brand-text">
         <div class="magic-brand-name">WebCraft AI Co-Pilot</div>
-        <div class="magic-brand-sub"><span class="dot"></span> Online · <span id="ai-model-label">DeepSeek V3</span></div>
+        <div class="magic-brand-sub"><span class="dot"></span> Online · <span id="ai-model-label">Space Bunny</span></div>
       </div>
     </div>
     <div class="magic-header-actions">
@@ -1178,12 +1292,20 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
     <div style="display:flex; align-items:center; gap:0.4rem;">
       <span style="color:#818cf8; font-weight:700;">Model:</span>
       <select class="puter-model-select" id="ai-model-select" onchange="changeAiModel(this.value)">
-        <option value="gpt-4o-mini" selected>GPT-4o Mini (⚡ Ultra-Fast &amp; Free)</option>
-        <option value="deepseek/deepseek-chat">DeepSeek V3 (Free)</option>
-        <option value="gemini-2.0-flash">Gemini 2.0 Flash (Free)</option>
-        <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (Requires Paid Credits)</option>
+        <option value="space-bunny-free" selected>★ Space Bunny (Free · tested)</option>
+        <option value="big-pickle">Big Pickle (Free)</option>
+        <option value="muse-spark-1.3-contributor-free">Muse Spark 1.3 (Free)</option>
+        <option value="muse-spark-1.2-contributor-free">Muse Spark 1.2 (Free)</option>
+        <option value="mimo-v2.5-free">MiMo V2.5 (Free)</option>
+        <option value="mimo-v2.6-flash-free">MiMo V2.6 Flash (Free)</option>
+        <option value="nemotron-3.5-lightning-free">Nemotron 3.5 Lightning (Free)</option>
+        <option value="jev-1.13-free">Jev 1.13 (Free)</option>
+        <option value="longcat-2.5-preview-free">LongCat 2.5 Preview (Free)</option>
       </select>
     </div>
+  </div>
+  <div class="puter-model-row">
+    <div id="ai-model-why" style="font-size:0.68rem; color:#6ee7b7; font-weight:600;">★ Recommended: Space Bunny — tap to change</div>
   </div>
 
   <div class="puter-model-row">
@@ -1514,9 +1636,8 @@ Be specific about fields you need!"></textarea>
 
 <div class="toast" id="toast"><span id="toast-text"></span></div>
 
-<script src="https://js.puter.com/v2/"></script>
-<script src="<?= SITE_URL ?>/assets/js/puter-service.js"></script>
 <script src="<?= SITE_URL ?>/assets/js/ai-flowcraft.js"></script>
+<script src="<?= SITE_URL ?>/assets/js/opencode-service.js"></script>
 <!-- Loader3D JS comes from includes/nav.php (guarded against double-include) -->
 <script>
 window.__CUSTOMER__ = <?= json_encode($customerUser ?: null) ?>;
@@ -1533,7 +1654,6 @@ let modalViewingIndex = 0;
 let modalViewMode = 'site';
 let selectedGenMode = 'static';
 let generatedConcepts = [];
-let currentAuthUser = null;
 const HISTORY_LIMIT = 5;
 // Per-customer scope: one email sees ONLY its own generated projects.
 // `webcraft_saved_project` (no suffix) is the Studio bridge — it is written
@@ -1700,7 +1820,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   }, 750);
 
   await refreshAccountUI();
-  window.addEventListener('puter-auth-changed', () => refreshAccountUI());
   if (window.__LOAD_ERROR__) setTimeout(() => showToast(window.__LOAD_ERROR__), 600);
 
   // ★ If an existing project was requested via ?order_id or ?slug, boot directly into workspace
@@ -1759,7 +1878,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   const sel = document.getElementById('ai-model-select');
-  if (sel && window.PuterService?.selectedModel) sel.value = window.PuterService.selectedModel;
+  if (sel && window.OpenCodeAI?.selectedModel) sel.value = window.OpenCodeAI.selectedModel;
+  const wsel = document.getElementById('wiz-model-select');
+  if (wsel && window.OpenCodeAI?.selectedModel) wsel.value = window.OpenCodeAI.selectedModel;
   updateModelLabel();
 
   wireAutoSave();
@@ -2117,7 +2238,7 @@ function updateWizDisplay() {
   document.getElementById('wiz-step-counter').textContent = `Step ${currentWizStep} of 4`;
   document.getElementById('wiz-next').style.display = (currentWizStep === 4) ? 'none' : 'inline-flex';
   const cb = document.getElementById('wiz-clear');
-  if (cb) cb.style.display = (currentAuthUser && currentWizStep === 4) ? 'inline-flex' : 'none';
+  if (cb) cb.style.display = (currentWizStep === 4) ? 'inline-flex' : 'none';
   updateGenerateButton();
 }
 function updateGenerateButton() {
@@ -2138,36 +2259,35 @@ async function refreshAccountUI() {
   const st = document.getElementById('account-status');
   const ac = document.getElementById('account-actions');
   const cb = document.getElementById('wiz-clear');
-  let state = { isSignedIn: false, user: null };
-  try { if (window.AIFlowCraft) state = await window.AIFlowCraft.getAuthState(); } catch (e) {}
-  currentAuthUser = state.user;
-  if (state.isSignedIn && state.user) {
-    if (av) av.textContent = (state.user.username || 'U')[0].toUpperCase();
-    if (nm) nm.textContent = '@' + (state.user.username || 'User');
-    if (st) { st.textContent = '🟢 Connected to Puter (AI Edit Active)'; st.className = 'account-status'; }
-    if (ac) ac.innerHTML = `<button class="account-btn" onclick="handlePuterSwitchAccount()">↻ Switch Account</button><button class="account-btn danger" onclick="handlePuterSignOut()">Sign Out</button>`;
-    if (cb) cb.style.display = (currentWizStep === 4) ? 'inline-flex' : 'none';
-  } else {
-    if (av) av.textContent = '✦';
-    if (nm) nm.textContent = 'AI-FlowCraft Engine';
-    if (st) { st.textContent = '🟢 Autonomous Neural Generation Ready'; st.className = 'account-status'; }
-    if (ac) ac.innerHTML = `<span style="font-size:0.75rem; color:#c7d2fe; background:rgba(99,102,241,0.2); padding:0.35rem 0.8rem; border-radius:999px; border:1px solid rgba(99,102,241,0.35); font-weight:700;">⚡ Ready to Generate</span>`;
-    if (cb) cb.style.display = 'none';
-  }
+  let model = 'space-bunny-free';
+  try { if (window.OpenCodeAI?.getModel) model = window.OpenCodeAI.getModel(); } catch (e) {}
+  if (av) av.textContent = '✦';
+  if (nm) nm.textContent = '★ ' + aiModelShortName(model);
+  if (st) { st.textContent = 'Free AI Model Active · No sign-in needed'; st.className = 'account-status'; }
+  if (ac) ac.innerHTML = `<button class="account-btn" onclick="focusModelPicker()">Change AI Model</button>`;
+  if (cb) cb.style.display = (currentWizStep === 4) ? 'inline-flex' : 'none';
   updateGenerateButton();
 }
-async function handlePuterSignIn() { if (!window.AIFlowCraft) return; try { showToast('Opening Puter sign-in…'); await window.AIFlowCraft.signIn(); await refreshAccountUI(); showToast('✓ Signed in!'); } catch (e) { showToast('Sign-in cancelled'); } }
-async function handlePuterCreateAccount() { if (!window.AIFlowCraft) return; try { await window.AIFlowCraft.signIn(); await refreshAccountUI(); showToast('✓ Account ready!'); } catch (e) { showToast('Sign-up cancelled'); } }
-async function handlePuterSwitchAccount() { if (!window.AIFlowCraft) return; try { await window.AIFlowCraft.switchAccount(); await refreshAccountUI(); showToast('✓ Switched!'); } catch (e) { showToast('Switch cancelled'); } }
-async function handlePuterSignOut() { if (!window.AIFlowCraft) return; window.AIFlowCraft.signOut(); window.AIFlowCraft.clearLocalState(); currentAuthUser = null; await refreshAccountUI(); showToast('Signed out.'); }
-
+function aiModelShortName(id) {
+  const m = {
+    'space-bunny-free': 'Space Bunny', 'big-pickle': 'Big Pickle',
+    'muse-spark-1.3-contributor-free': 'Muse Spark 1.3', 'muse-spark-1.2-contributor-free': 'Muse Spark 1.2',
+    'mimo-v2.5-free': 'MiMo V2.5', 'mimo-v2.6-flash-free': 'MiMo V2.6 Flash',
+    'nemotron-3.5-lightning-free': 'Nemotron 3.5', 'jev-1.13-free': 'Jev 1.13',
+    'longcat-2.5-preview-free': 'LongCat 2.5'
+  };
+  return m[id] || String(id || 'AI Model').split('/').pop();
+}
+function focusModelPicker() {
+  const s = document.getElementById('wiz-model-select');
+  if (s) { s.scrollIntoView({ behavior: 'smooth', block: 'center' }); s.focus(); setTimeout(() => showToast('Pick your free AI model'), 350); }
+}
 async function clearAndSwitchAccount() {
-  if (!confirm('⚠️ Clear session, sign out, and start fresh?\n\nThis wipes drafts too.')) return;
+  if (!confirm('Clear session and start fresh?\n\nThis wipes drafts too.')) return;
   try { window.AIFlowCraft?.clearLocalState?.(); window.AIFlowCraft?.clearGeneratedProjects?.(); } catch (e) {}
-  try { await window.AIFlowCraft?.signOut?.(); } catch (e) {}
   try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
   try { localStorage.removeItem('webcraft_saved_project::guest'); } catch (e) {}
-  generatedConcepts = []; generatedDesigns = []; currentAuthUser = null;
+  generatedConcepts = []; generatedDesigns = [];
   currentWizStep = 1; activeDesignIndex = 0; currentHtml = ''; selectedGenMode = 'static';
   document.getElementById('designs-grid').innerHTML = '';
   document.getElementById('gen-progress').classList.remove('active');
@@ -2179,8 +2299,7 @@ async function clearAndSwitchAccount() {
   dismissResumeBanner();
   updateWizDisplay();
   await refreshAccountUI();
-  showToast('🧹 Cleared. Please sign in.');
-  setTimeout(() => handlePuterSignIn(), 400);
+  showToast('Fresh start ready.');
 }
 
 /* ══════════════════════════════════════════════════
@@ -2211,9 +2330,11 @@ function openGenerateModal() {
     setTimeout(() => { window.location.href = SITE_URL + '/customer-portal.php?view=signup'; }, 900);
     return;
   }
-  if (!currentAuthUser) { showToast('⚠️ Sign in first'); return; }
   const acc = document.getElementById('gen-modal-account');
-  if (acc) acc.textContent = '· Signed in as @' + (currentAuthUser.username || 'you');
+  try {
+    const m = window.OpenCodeAI?.getModel?.() || 'space-bunny-free';
+    if (acc) acc.textContent = '· AI: ' + aiModelShortName(m);
+  } catch (e) {}
   document.querySelectorAll('#generate-modal .gen-mode-card').forEach(c => c.classList.toggle('selected', c.dataset.mode === selectedGenMode));
   document.getElementById('gen-modal-mode-label').textContent = labelFor(selectedGenMode);
   updateAdminReqSection();
@@ -2274,10 +2395,6 @@ async function confirmSoloGenerate() {
   showGenOverlay(data);
   try {
     document.querySelector('.gen-overlay-title').textContent = '⚡ Solo Quick Sites';
-    const soloNames = ['1. Solo Light', '2. Solo Bold', '3. Solo Dark'];
-    document.querySelectorAll('#gen-var-status .gvcard-name').forEach((el, i) => {
-      if (soloNames[i]) el.textContent = soloNames[i];
-    });
     const tt = document.getElementById('gen-overlay-text');
     if (tt) tt.textContent = 'Solo engine crafting 3 one-page professional sites…';
   } catch (e) {}
@@ -2292,7 +2409,7 @@ async function confirmSoloGenerate() {
 
   try {
     const res = await window.AIFlowCraft.generateSolo(data, {
-      model: window.PuterService?.selectedModel || 'deepseek/deepseek-chat'
+      model: (window.OpenCodeAI?.getModel?.() || 'space-bunny-free')
     });
     clearInterval(soloTick);
     const list = (res.designs || []).map(c => ({
@@ -2394,13 +2511,10 @@ function showGenOverlay(dataOrName) {
   if (pctNum) pctNum.textContent = '5';
   if (text) text.textContent = 'AI-FlowCraft initializing neural requirements analysis…';
 
-  // Reset variation cards
-  [0, 1, 2].forEach(i => {
-    const card = document.getElementById(`gvcard-${i}`);
-    const state = document.getElementById(`gvcard-state-${i}`);
-    if (card) card.classList.remove('ready');
-    if (state) state.textContent = '⚡ Analyzing…';
-  });
+  // Reset wireframe (self-assembling preview)
+  paintWire(0);
+  const gwUrl = document.getElementById('gw-url');
+  if (gwUrl) gwUrl.textContent = (bName || 'your-site').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.ai';
   // Reset step checklist
   document.querySelectorAll('#gen-steps .gen-step').forEach((el, i) => {
     el.classList.toggle('active', i === 0);
@@ -2451,6 +2565,23 @@ function showGenOverlay(dataOrName) {
   document.body.style.overflow = 'hidden';
 }
 
+/* Paint the self-assembling wireframe: n = variations live (0-3) */
+function paintWire(n) {
+  const wire = document.getElementById('gen-wire');
+  if (wire) {
+    const nav = wire.querySelector('.gw-nav');
+    const hero = wire.querySelector('.gw-hero');
+    const cards = wire.querySelector('.gw-cards');
+    const foot = wire.querySelector('.gw-foot');
+    if (nav) nav.classList.toggle('lit', n >= 1);
+    if (hero) hero.classList.toggle('lit', n >= 1);
+    if (cards) cards.classList.toggle('lit', n >= 2);
+    if (foot) foot.classList.toggle('lit', n >= 3);
+  }
+  const cap = document.getElementById('gen-wire-cap');
+  if (cap) cap.textContent = n >= 3 ? '✓ Website assembled!' : (n > 0 ? `Assembling sections… ${Math.min(n, 3)}/3 live` : 'Assembling sections…');
+}
+
 function updateGenOverlay(stage, message, pct, meta) {
   const fill = document.getElementById('gen-overlay-fill');
   const text = document.getElementById('gen-overlay-text');
@@ -2473,12 +2604,11 @@ function updateGenOverlay(stage, message, pct, meta) {
     });
   }
 
-  // Update variation status card if variationIndex is provided
-  if (meta && typeof meta.variationIndex === 'number') {
-    const card = document.getElementById(`gvcard-${meta.variationIndex}`);
-    const state = document.getElementById(`gvcard-state-${meta.variationIndex}`);
-    if (card) card.classList.add('ready');
-    if (state) state.textContent = '✓ Ready';
+  // Light up wireframe sections as variations go live
+  if (meta && (typeof meta.completedCount === 'number' || typeof meta.variationIndex === 'number')) {
+    let n = meta.completedCount || 0;
+    if (!n && typeof meta.variationIndex === 'number') n = meta.variationIndex + 1;
+    paintWire(Math.min(n, 3));
   }
 }
 
@@ -2491,12 +2621,7 @@ function hideGenOverlay(success) {
   const text = document.getElementById('gen-overlay-text');
 
   if (success) {
-    [0, 1, 2].forEach(i => {
-      const card = document.getElementById(`gvcard-${i}`);
-      const state = document.getElementById(`gvcard-state-${i}`);
-      if (card) card.classList.add('ready');
-      if (state) state.textContent = '✓ Ready';
-    });
+    paintWire(3);
     document.querySelectorAll('#gen-steps .gen-step').forEach(el => {
       el.classList.add('done');
       el.classList.remove('active');
@@ -2540,10 +2665,10 @@ async function generateWithMode(mode) {
     if (isShop) showToast('🛒 Shop mode ON — products + working cart will be generated');
   } catch (e) {}
 
-  // ★ 3D "database connect" beat before generation starts (creative, no cubes)
+  // Quick beat before generation starts (kept short for speed)
   try { if (window.Loader3D) Loader3D.show('Connecting to secure database…', 'Verifying session · syncing workspace', 'db'); } catch (e) {}
   try { saveSessionNow(); } catch (e) {}
-  await new Promise(r => setTimeout(r, 1200));
+  await new Promise(r => setTimeout(r, 400));
   try { if (window.Loader3D) Loader3D.hide(); } catch (e) {}
 
   showGenOverlay(data);
@@ -2552,13 +2677,46 @@ async function generateWithMode(mode) {
   document.getElementById('wiz-prev').disabled = true;
 
   try {
-    const concepts = await window.AIFlowCraft.generateConcepts(data, mode, {
-      model: window.PuterService?.selectedModel || 'deepseek/deepseek-chat',
-      onProgress: (p) => {
-        const pct = p.pct || (p.stage === 'connecting' ? 15 : (p.stage === 'done' ? 100 : 50));
-        updateGenOverlay(p.stage, p.message, pct, p);
+    // ★ AI LANE 1: OpenCode Zen (all free models, FlowCraft-fed brief).
+    // Falls back to server templates per-slot / fully when AI is down.
+    const ocModel = (window.OpenCodeAI?.getModel?.() || document.getElementById('ai-model-select')?.value || document.getElementById('wiz-model-select')?.value || 'space-bunny-free');
+    const tplModel = ocModel;
+    const prog = (p) => {
+      const pct = p.pct || (p.stage === 'connecting' ? 15 : (p.stage === 'done' ? 100 : 50));
+      updateGenOverlay(p.stage, p.message, pct, p);
+    };
+    let concepts = null;
+    let engineNote = '';
+    let aiErr = '';
+    let ocTokens = 0;
+    const tokStr = () => ocTokens > 0 ? ` · ~${(ocTokens / 1000).toFixed(1)}k tokens` : '';
+    try {
+      if (window.OpenCodeAI?.generateConcepts) {
+        const oc = await window.OpenCodeAI.generateConcepts(data, mode, { model: ocModel, onProgress: prog });
+        ocTokens = oc.tokens || 0;
+        if (oc.designs.length === 3) {
+          concepts = oc.designs;
+          engineNote = 'OpenCode AI (' + (oc.designs[0]?.meta?.model || ocModel) + ')';
+        } else if (oc.designs.length > 0) {
+          const tpl = await window.AIFlowCraft.generateConcepts(data, mode, { model: tplModel });
+          const byId = {};
+          oc.designs.forEach(d => { byId[d.id] = d; });
+          concepts = tpl.map(t => byId[t.id] || t);
+          engineNote = 'OpenCode AI + templates';
+          showToast('⚠️ Partial AI — templates filled ' + (3 - oc.designs.length) + ' slot(s)');
+        }
       }
-    });
+    } catch (e) {
+      aiErr = String(e?.message || e).slice(0, 90);
+      console.warn('[generate] OpenCode lane failed, using templates:', e?.message);
+    }
+    if (!concepts) {
+      concepts = await window.AIFlowCraft.generateConcepts(data, mode, {
+        model: tplModel,
+        onProgress: prog
+      });
+      engineNote = 'templates';
+    }
 
     // Sanitize each generated design to strip any PHP leaks or markdown after </html>
     // Admin preview ONLY for admin/database modes — static gets NO admin panel at all.
@@ -2571,6 +2729,8 @@ async function generateWithMode(mode) {
 
     generatedDesigns = generatedConcepts.map(c => ({
       name: c.name, description: c.description, badge: c.badge, html: c.html,
+      engine: (c.meta && c.meta.engine) || 'template',
+      model: (c.meta && c.meta.model) || '',
       adminHtml: wantAdmin ? buildInteractiveAdminPreview(data.biz_name) : null,
       phpBackend: c.phpBackend || null,
       sqlSchema: c.sqlSchema || null, history: []
@@ -2582,7 +2742,9 @@ async function generateWithMode(mode) {
     saveSessionNow();
     hideGenOverlay(true);
     display3Designs(generatedConcepts, data.biz_name);
-    showToast('✨ 3 style variations ready!');
+    showToast(engineNote === 'templates' && aiErr
+      ? 'Templates (AI failed: ' + aiErr + ')' + tokStr()
+      : '3 style variations ready! [' + engineNote + ']' + tokStr());
   } catch (err) {
     console.error(err);
     hideGenOverlay(false);
@@ -2614,20 +2776,23 @@ function display3Designs(concepts, bizName) {
     const card = document.createElement('div');
     card.className = 'design-card';
     const hasSubdesigns = c.subdesigns && c.subdesigns.length > 0;
+    const isAI = c.meta && c.meta.engine === 'opencode';
+    const aiModelShort = isAI ? String(c.meta.model || 'OpenCode AI').split('/').pop() : '';
+    const engineBadge = isAI
+      ? `<div style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.68rem;font-weight:800;letter-spacing:0.04em;color:#6ee7b7;background:rgba(6,78,59,0.35);border:1px solid rgba(16,185,129,0.5);padding:0.22rem 0.6rem;border-radius:999px;margin-bottom:0.6rem;">✦ AI-GENERATED · ${escapeHtml(aiModelShort)}</div>`
+      : `<div style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.68rem;font-weight:800;letter-spacing:0.04em;color:#fcd34d;background:rgba(120,53,15,0.35);border:1px solid rgba(245,158,11,0.5);padding:0.22rem 0.6rem;border-radius:999px;margin-bottom:0.6rem;">📄 TEMPLATE · server engine</div>`;
     card.innerHTML = `
       <div class="design-badge-top">${escapeHtml(c.badge || `Variation ${i+1}`)}</div>
       <div class="design-number-badge">${i + 1}</div>
       <div class="design-preview-box"><div class="pv-spin"><div class="wcl-mini-house"><div class="walls"></div><div class="roof"></div><div class="door"></div></div></div><iframe class="design-preview-iframe" id="d${i}-iframe" onload="try{this.previousElementSibling.remove();}catch(e){}"></iframe></div>
       <div class="design-content">
         <h3>${escapeHtml(c.name)}</h3>
+        ${engineBadge}
         <p>${escapeHtml(c.description)}</p>
         ${hasSubdesigns ? `<div style="font-size:0.72rem;color:#818cf8;font-weight:700;margin-bottom:0.6rem;letter-spacing:0.05em;">✦ 3 LAYOUT VARIANTS INSIDE</div>` : ''}
         <div class="design-actions">
           <button class="btn-preview-modal" onclick="openFullscreenModal(${i})">👁️ Full Preview</button>
-          ${hasSubdesigns
-            ? `<button class="btn-choose-design" onclick="showSubDesigns(${i})" style="background:linear-gradient(135deg,#6366f1,#a855f7);">Choose Layout →</button>`
-            : `<button class="btn-choose-design" onclick="selectDesignAndEdit(${i})">Select &amp; Edit →</button>`
-          }
+          <button class="btn-choose-design" onclick="showSubDesigns(${i})" style="background:linear-gradient(135deg,#6366f1,#a855f7);">Choose Layout →</button>
         </div>
       </div>`;
     grid.appendChild(card);
@@ -3111,15 +3276,93 @@ function backToDesigns() {
 /* ══════════════════════════════════════════════════
    SUB-DESIGN PICKER — Show 3 layout variants for a concept
 ═════════════════════════════════════════════════ */
-function showSubDesigns(conceptIndex) {
+function variationOfConcept(c, idx) {
+  if (c && ['classic', 'bold', 'editorial'].includes(c.id)) return c.id;
+  const m = /solo-(light|bold|dark)/.exec((c && c.id) || '');
+  if (m) return m[1] === 'light' ? 'classic' : (m[1] === 'dark' ? 'editorial' : 'bold');
+  return ['classic', 'bold', 'editorial'][(idx || 0) % 3];
+}
+
+async function fetchTemplateSubdesigns(variation, data) {
+  try {
+    const base = (typeof SITE_URL !== 'undefined' && SITE_URL) ? SITE_URL : '';
+    const resp = await fetch((base ? base : '') + '/api/generate.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'flowcraft_subdesigns', concept_id: variation, data: data || {} })
+    });
+    const j = await resp.json();
+    if (j && j.success && Array.isArray(j.subdesigns)) return j.subdesigns;
+  } catch (e) { console.warn('[subdesigns] template fallback failed:', e?.message); }
+  return [];
+}
+
+async function showSubDesigns(conceptIndex) {
   const concept = generatedConcepts[conceptIndex];
   if (!concept) return;
-  const subdesigns = concept.subdesigns;
-  if (!subdesigns || subdesigns.length === 0) {
-    // No subdesigns — go straight to workspace
-    selectDesignAndEdit(conceptIndex);
+  if (concept.subdesigns && concept.subdesigns.length) {
+    renderSubDesignGrid(conceptIndex, '');
     return;
   }
+
+  // No subdesigns (AI / solo concept) - generate 3 AI layouts in THIS style
+  const variation = variationOfConcept(concept, conceptIndex);
+  const data = collectWizardSnapshot();
+  data.biz_name = data.biz_name || (concept.meta && concept.meta.bizName) || 'Website';
+  showGenOverlay(data);
+  try {
+    updateGenOverlay('generating', `Crafting 3 AI layouts in "${variation}" style…`, 28, {});
+    let subs = null;
+    let engineNote = '';
+    let subAiErr = '';
+    let subTokens = 0;
+    const subTokStr = () => subTokens > 0 ? ` · ~${(subTokens / 1000).toFixed(1)}k tokens` : '';
+    try {
+      if (window.OpenCodeAI?.generateSubDesigns) {
+        const r = await window.OpenCodeAI.generateSubDesigns(data, variation, selectedGenMode, conceptIndex + 1, {
+          brief: (concept.meta && concept.meta.brief) || '',
+          onProgress: (p) => updateGenOverlay(p.stage || 'generating', p.message, p.pct || 50, p)
+        });
+        subTokens = r.tokens || 0;
+        if (r.designs.length === 3) {
+          subs = r.designs;
+          engineNote = 'OpenCode AI (' + ((r.designs[0].meta && r.designs[0].meta.model) || 'AI') + ')';
+        } else if (r.designs.length > 0) {
+          const tpl = await fetchTemplateSubdesigns(variation, data);
+          subs = [0, 1, 2].map(i => r.designs[i] || tpl[i]).filter(Boolean);
+          engineNote = 'OpenCode AI + templates';
+          showToast('Partial AI — templates filled ' + (3 - r.designs.length) + ' slot(s)');
+        }
+        if (r.errors && r.errors.length) subAiErr = String(r.errors[0]).slice(0, 90);
+      }
+    } catch (e) {
+      subAiErr = String(e?.message || e).slice(0, 90);
+      console.warn('[subdesigns] AI lane failed, using templates:', e?.message);
+    }
+    if (!subs || !subs.length) {
+      subs = await fetchTemplateSubdesigns(variation, data);
+      engineNote = 'templates';
+    }
+    if (!subs.length) throw new Error('No layouts available');
+    concept.subdesigns = subs;
+    concept._subEngine = engineNote;
+    saveSessionNow();
+    hideGenOverlay(true);
+    renderSubDesignGrid(conceptIndex, engineNote);
+    showToast(engineNote === 'templates' && subAiErr
+      ? 'Templates (AI failed: ' + subAiErr + ')' + subTokStr()
+      : '3 layouts ready! [' + engineNote + ']' + subTokStr());
+  } catch (err) {
+    console.error(err);
+    hideGenOverlay(false);
+    showToast('Failed: ' + err.message);
+  }
+}
+
+function renderSubDesignGrid(conceptIndex, engineNote) {
+  const concept = generatedConcepts[conceptIndex];
+  if (!concept) return;
+  const subdesigns = concept.subdesigns || [];
 
   // Hide other screens, show subdesign screen
   document.getElementById('wizard-screen').style.display = 'none';
@@ -3129,9 +3372,11 @@ function showSubDesigns(conceptIndex) {
 
   // Update header
   const conceptNum = conceptIndex + 1;
-  document.getElementById('subdesign-concept-badge').textContent = `✦ Concept ${conceptNum} · 3 Layout Variants`;
+  document.getElementById('subdesign-concept-badge').textContent = `Concept ${conceptNum} · 3 Layout Variants`;
   document.getElementById('subdesign-title').textContent = `${concept.name} — Choose Your Layout`;
-  document.getElementById('subdesign-sub').textContent = `All 3 layouts use the same ${concept.name} design language. Pick the structure that best fits your brand.`;
+  document.getElementById('subdesign-sub').textContent =
+    `All 3 layouts use the same ${concept.name} design language. Pick the structure that best fits your brand.` +
+    (engineNote ? ` [${engineNote}]` : '');
 
   // Build sub-design cards
   const grid = document.getElementById('subdesign-grid');
@@ -3140,15 +3385,20 @@ function showSubDesigns(conceptIndex) {
     const card = document.createElement('div');
     card.className = 'design-card';
     const variantLabel = ['A','B','C'][si] || (si+1);
+    const sdIsAI = sd.meta && sd.meta.engine === 'opencode';
+    const sdBadge = sdIsAI
+      ? `<div style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.68rem;font-weight:800;color:#6ee7b7;background:rgba(6,78,59,0.35);border:1px solid rgba(16,185,129,0.5);padding:0.22rem 0.6rem;border-radius:999px;margin-bottom:0.6rem;">AI · ${escapeHtml(String((sd.meta && sd.meta.model) || 'AI').split('/').pop())}</div>`
+      : `<div style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.68rem;font-weight:800;color:#fcd34d;background:rgba(120,53,15,0.35);border:1px solid rgba(245,158,11,0.5);padding:0.22rem 0.6rem;border-radius:999px;margin-bottom:0.6rem;">TEMPLATE</div>`;
     card.innerHTML = `
       <div class="design-badge-top" style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-color:rgba(99,102,241,0.5);">${escapeHtml(sd.badge || `Variant ${variantLabel}`)}</div>
       <div class="design-number-badge" style="background:linear-gradient(135deg,#6366f1,#a855f7);">${conceptNum}${variantLabel}</div>
       <div class="design-preview-box"><div class="pv-spin"><div class="wcl-mini-house"><div class="walls"></div><div class="roof"></div><div class="door"></div></div></div><iframe class="design-preview-iframe" id="sd${conceptIndex}-${si}-iframe" onload="try{this.previousElementSibling.remove();}catch(e){}"></iframe></div>
       <div class="design-content">
         <h3>${escapeHtml(sd.name || `Layout ${variantLabel}`)}</h3>
+        ${sdBadge}
         <p>${escapeHtml(sd.description || 'A premium layout variant for your selected concept.')}</p>
         <div class="design-actions">
-          <button class="btn-preview-modal" onclick="openSubdesignFullPreview(${conceptIndex},${si})">👁️ Full Preview</button>
+          <button class="btn-preview-modal" onclick="openSubdesignFullPreview(${conceptIndex},${si})">Full Preview</button>
           <button class="btn-choose-design" onclick="selectSubDesign(${conceptIndex},${si})" style="background:linear-gradient(135deg,#10b981,#059669);border-color:#34d399;">Select &amp; Edit →</button>
         </div>
       </div>`;
@@ -3176,6 +3426,7 @@ function selectSubDesign(conceptIndex, subIndex) {
   if (!generatedDesigns.length) {
     generatedDesigns = generatedConcepts.map(x => ({
       name: x.name, description: x.description, badge: x.badge, html: x.html,
+      engine: (x.meta && x.meta.engine) || 'template', model: (x.meta && x.meta.model) || '',
       adminHtml: x.adminHtml || null, phpBackend: x.phpBackend || null,
       sqlSchema: x.sqlSchema || null, history: []
     }));
@@ -3183,9 +3434,11 @@ function selectSubDesign(conceptIndex, subIndex) {
   // Inject the selected sub-design HTML as the active design for this concept
   generatedDesigns[conceptIndex].html = sd.html;
   generatedDesigns[conceptIndex].name = sd.name || generatedDesigns[conceptIndex].name;
+  generatedDesigns[conceptIndex].engine = (sd.meta && sd.meta.engine) || 'template';
+  generatedDesigns[conceptIndex].model = (sd.meta && sd.meta.model) || '';
   // Now enter the workspace as normal
   selectDesignAndEdit(conceptIndex);
-  showToast(`✦ Layout "${sd.name || 'Variant'}" loaded — ready to edit!`);
+  showToast(`Layout "${sd.name || 'Variant'}" loaded [${generatedDesigns[conceptIndex].engine}] — ready to edit!`);
 }
 
 function openSubdesignFullPreview(conceptIndex, subIndex) {
@@ -3480,11 +3733,17 @@ function quickRefine(t) {
   document.getElementById('refine-query').value = t;
   setTimeout(executeRefine, 150);
 }
-function changeAiModel(m) { if (window.PuterService?.setModel) window.PuterService.setModel(m); updateModelLabel(); showToast(`Model: ${m.split('/').pop()}`); }
+function changeAiModel(m) { if (window.OpenCodeAI?.setModel) window.OpenCodeAI.setModel(m); syncModelSelects(m); updateModelLabel(); showToast(`Model: ${aiModelShortName(m)}`); }
+function syncModelSelects(m) {
+  ['ai-model-select', 'wiz-model-select'].forEach(id => {
+    const s = document.getElementById(id);
+    if (s && [...s.options].some(o => o.value === m)) s.value = m;
+  });
+}
 function updateModelLabel() {
   const s = document.getElementById('ai-model-select');
   const l = document.getElementById('ai-model-label');
-  if (s && l) l.textContent = s.options[s.selectedIndex]?.text || 'GPT-4o Mini';
+  if (s && l) l.textContent = s.options[s.selectedIndex]?.text || 'Space Bunny';
 }
 
 /* ══════════════════════════════════════════════════
@@ -3600,13 +3859,11 @@ async function executeRefine() {
   log.appendChild(typing); log.scrollTop = log.scrollHeight;
 
   try {
-    if (!window.PuterService?.chatAndEdit) throw new Error('PuterService not available');
-    const res = await window.PuterService.chatAndEdit({
-      userPrompt: enriched, selectedElement: null, currentHtml: snapHtml,
-      context: {
-        bizName: document.getElementById('biz_name')?.value || 'Website',
-        summary: `${cName}${isAdmin ? ' (Admin Panel)' : ''}`
-      }
+    // AI EDIT CHAIN: OpenCode Zen free models, then server Gemini/smart-engine
+    const bizName = document.getElementById('biz_name')?.value || 'Website';
+    if (!window.OpenCodeAI?.editWithFallback) throw new Error('AI service not available');
+    const res = await window.OpenCodeAI.editWithFallback({
+      userPrompt: enriched, currentHtml: snapHtml, bizName
     });
     document.getElementById('ai-typing-indicator')?.remove();
     appendGeminiChatMessage(formatMarkdown(res.conversation));
@@ -3623,7 +3880,7 @@ async function executeRefine() {
         c.html = currentHtml;
         updateLiveIframe(currentHtml);
         updateUndoBtn();
-        showToast('✨ Site updated!');
+        showToast('✨ Site updated! [' + (res.engine || 'AI') + ']');
       }
       saveSessionNow();
       const pb = document.getElementById('preview-container');
@@ -3632,11 +3889,7 @@ async function executeRefine() {
   } catch (err) {
     document.getElementById('ai-typing-indicator')?.remove();
     console.warn('[Refine error]:', err);
-    if (window.AIFlowCraft?.isQuotaOrCreditError?.(err)) {
-      appendGeminiChatMessage('⚠️ Puter credit limit. Switch account to continue.');
-    } else {
-      appendGeminiChatMessage(`⚠️ AI request failed: ${escapeHtml(err.message)}`);
-    }
+    appendGeminiChatMessage(`AI request failed: ${escapeHtml(err.message)} — try again or pick another free model.`);
   } finally {
     btn.disabled = false; btn.innerHTML = '➤';
   }
