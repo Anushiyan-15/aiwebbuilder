@@ -107,6 +107,14 @@ window.OpenCodeAI = (function () {
     return out;
   }
 
+  /* ── TASTE LAYER: customer vibe + dials (builder.php owns the UI) ── */
+  function tastePrefs() {
+    try {
+      if (typeof window.collectTastePrefs === 'function') return window.collectTastePrefs() || {};
+    } catch (e) {}
+    return {};
+  }
+
   /* ── Lane primitives ── */
   async function getModels() {
     return post('/api/opencode.php', { action: 'models' });
@@ -115,7 +123,7 @@ window.OpenCodeAI = (function () {
   async function analyzeRequirements(data, onProgress) {
     if (onProgress) onProgress({ stage: 'analyzing', pct: 12, message: 'OpenCode AI analysing requirements…' });
     try {
-      const j = await post('/api/opencode.php', { action: 'analyze', data, model: getModel() }, 12000);
+      const j = await post('/api/opencode.php', { action: 'analyze', data, taste: tastePrefs(), model: getModel() }, 12000);
       if (j && j.brief) {
         if (onProgress) onProgress({ stage: 'analyzing', pct: 30, message: 'Design brief ready' + (j.model ? ' (' + j.model + ')' : '') });
         return j.brief;
@@ -136,13 +144,13 @@ window.OpenCodeAI = (function () {
       { kind: 'fast',  model: 'gemini-3.5-flash',      temp: 0.6 } ]
   ];
 
-  /* One fast-lane call (Gemini single-shot full page ~20s). */
+  /* One fast-lane call (Gemini single-shot full page ~22s solo). */
   async function generateFast(data, variation, mode, brief, slot, model, temp) {
     const j = await post('/api/opencode.php', {
-      action: 'fast_one', data, variation, mode, brief,
+      action: 'fast_one', data, variation, mode, brief, taste: tastePrefs(),
       model: model || undefined, temperature: (typeof temp === 'number' ? temp : undefined),
       slot: (typeof slot === 'number' ? slot : -1)
-    }, 31000);
+    }, 58000);
     if (j && j.success && j.html && j.html.length > 500) return j;
     throw new Error(((j && (j.errors || [])[0]) || (j && j.error) || 'fast lane failed') + ' [' + variation + ']');
   }
@@ -150,7 +158,7 @@ window.OpenCodeAI = (function () {
   /* OpenCode QUICK lane (space-bunny single-shot ~40s — 3rd AI leg). */
   async function generateQuick(data, variation, mode, brief, slot, temp) {
     const j = await post('/api/opencode.php', {
-      action: 'quick_one', data, variation, mode, brief, model: getModel(),
+      action: 'quick_one', data, variation, mode, brief, taste: tastePrefs(), model: getModel(),
       temperature: (typeof temp === 'number' ? temp : undefined),
       slot: (typeof slot === 'number' ? slot : -1)
     }, 100000);
@@ -173,11 +181,34 @@ window.OpenCodeAI = (function () {
     }
     throw lastErr || new Error('slot lanes failed [' + variation + ']');
   }
+  /* ── TASTE POLISH (frontend-driven repair, optional, never fatal) ──
+     Weak pages (audit < 85) get ONE background repair call in their own
+     HTTP budget. Keeps the better-scoring version; failures keep original. */
+  async function polishIfNeeded(j, onPolish) {
+    try {
+      if (!j || !j.taste_audit || typeof j.taste_audit.score !== 'number') return j;
+      if (j.taste_audit.score >= 85) return j;
+      if (onPolish) onPolish();
+      const r = await post('/api/opencode.php', {
+        action: 'taste_repair', html: j.html, issues: j.taste_audit.issues || []
+      }, 58000);
+      if (r && r.success && r.html && r.html.length > 500) {
+        const ra = r.taste_audit || {};
+        if (typeof ra.score !== 'number' || ra.score >= j.taste_audit.score) {
+          j.html = r.html;
+          j.taste_audit = ra;
+          j.model = (j.model || 'AI') + '+polish';
+        }
+      }
+    } catch (e) { /* polish is optional — keep original */ }
+    return j;
+  }
+
   /* OpenCode chunked lane (slow but sure) — final net for missing slots.
      Diversity: each missing slot tries a DIFFERENT free model. */
   async function generateOne(data, variation, mode, brief, slot, modelOverride) {
     const j = await post('/api/opencode.php', {
-      action: 'generate_one', data, variation, mode, brief, model: modelOverride || getModel(),
+      action: 'generate_one', data, variation, mode, brief, taste: tastePrefs(), model: modelOverride || getModel(),
       slot: (typeof slot === 'number' ? slot : -1)
     }, 280000);
     if (j && j.success && j.html && j.html.length > 500) return j;
@@ -188,13 +219,14 @@ window.OpenCodeAI = (function () {
     return {
       id: v, name: VAR_META[v].name, badge: VAR_META[v].badge + ' · ' + (j.model || 'AI'),
       description: VAR_META[v].description, html: j.html,
-      meta: { bizName: data.biz_name, mode, engine, model: j.model, brief, generatedAt: new Date().toISOString() }
+      meta: { bizName: data.biz_name, mode, engine, model: j.model, brief, taste: j.taste || null, tasteAudit: j.taste_audit || null, generatedAt: new Date().toISOString() }
     };
   }
 
-  /* ── MAIN: 3 variations, all gemini-3.5-flash-lite (original flow, ~18s each) ──
-     Diversity via temperature + layout brief + slot direction.
-     Missing slots → instant server templates (caller merges). Bounded ≈ 100s. */
+  /* ── MAIN: 3 variations, sequential Gemini fast lane ──
+     Diversity via temperature + layout brief + slot direction + taste dials.
+     Missing slots → instant server templates (caller merges). Bounded ≈ 175s
+     (gen ~22s/slot solo + optional taste polish on weak pages). */
   async function generateConcepts(data, mode, options) {
     options = options || {};
     const onProgress = options.onProgress;
@@ -221,27 +253,31 @@ window.OpenCodeAI = (function () {
       });
     };
 
-    // LANE 1 (3 different AIs in parallel, 250ms stagger): first success per slot wins.
-    // Bounded 100s — missing slots fall to instant server templates (caller),
-    // no slow chunked lane. Total generation ≈ analyze(≤12s) + 100s max.
+    // SEQUENTIAL slots (2026-10-05 fix): 3 parallel full-page gens trip the
+    // free-tier rate limit and starve each other into timeouts → templates.
+    // Solo each takes ~22s; 3 in a row ≈ 70s, inside the 100s lane budget,
+    // and every request stays under the ~58s fast_one timeout.
     let laneDone = false;
-    const lane1 = Promise.all(VARIATIONS.map((v, i) =>
-      new Promise(r => setTimeout(r, i * 250))
-      .then(() => runSlotLanes(data, v, mode, brief, -1, SLOT_LANES[i])).then(
-        ({ j, engine }) => {
+    const lane1 = (async () => {
+      for (let i = 0; i < VARIATIONS.length; i++) {
+        const v = VARIATIONS[i];
+        try {
+          const { j, engine } = await runSlotLanes(data, v, mode, brief, -1, SLOT_LANES[i]);
+          if (laneDone) return;
+          await polishIfNeeded(j, () => bump(`✦ polishing ${v} (taste ${j.taste_audit.score})…`));
           if (laneDone) return;
           tok += (j.usage?.prompt || 0) + (j.usage?.completion || 0);
           slots[i] = shapeDesign(v, j, data, mode, brief, engine);
-        },
-        (e) => { errors.push(v + ': ' + (e?.message || e)); }
-      ).then(() => { if (!laneDone && slots[i]) bump(`✓ ${done + 1}/3 variations ready (${slots[i].meta.model || 'AI'})`); })
-    ));
+          bump(`✓ ${done + 1}/3 variations ready (${slots[i].meta.model || 'AI'})`);
+        } catch (e) { errors.push(v + ': ' + (e?.message || e)); }
+      }
+    })();
     await Promise.race([
       lane1,
       new Promise(r => setTimeout(() => {
-        if (!laneDone) errors.push('lane timeout 100s — remaining slots use templates');
+        if (!laneDone) errors.push('lane timeout 175s — remaining slots use templates');
         r();
-      }, 100000))
+      }, 175000))
     ]);
     laneDone = true;
 
@@ -272,13 +308,16 @@ window.OpenCodeAI = (function () {
     const errors = [];
     let done = 0, tok = 0;
     const tokStr = () => `· ~${(tok / 1000).toFixed(1)}k tokens`;
-    // 250ms stagger — 429-safe but fast. Each layout a different primary AI.
-    // Bounded 100s — missing layouts fall to template layouts (caller).
+    // SEQUENTIAL layouts (same 2026-10-05 fix as concepts): solo requests
+    // stay under the rate limit and the per-request timeout.
     let subDone = false;
-    const subAll = Promise.all([0, 1, 2].map((s) =>
-      new Promise(r => setTimeout(r, s * 250))
-      .then(() => runSlotLanes(data, variation, mode, brief, s, SLOT_LANES[s])).then(
-        ({ j, engine }) => {
+    const subAll = (async () => {
+      for (let s = 0; s < 3; s++) {
+        try {
+          const { j, engine } = await runSlotLanes(data, variation, mode, brief, s, SLOT_LANES[s]);
+          if (subDone) return;
+          await polishIfNeeded(j, null);
+          if (subDone) return;
           tok += (j.usage?.prompt || 0) + (j.usage?.completion || 0);
           slots[s] = {
             id: variation + '-' + SLOT_META[s].suffix,
@@ -286,22 +325,20 @@ window.OpenCodeAI = (function () {
             badge: 'AI Layout ' + SLOT_META[s].suffix + ' · ' + (j.model || engine),
             description: `AI-generated ${SLOT_META[s].label} in ${variation} style.`,
             html: j.html,
-            meta: { bizName: data.biz_name, mode, engine, model: j.model, brief, generatedAt: new Date().toISOString() }
+            meta: { bizName: data.biz_name, mode, engine, model: j.model, brief, taste: j.taste || null, tasteAudit: j.taste_audit || null, generatedAt: new Date().toISOString() }
           };
-        },
-        (e) => { errors.push('slot' + s + ': ' + (e?.message || e)); }
-      ).then(() => {
+        } catch (e) { errors.push('slot' + s + ': ' + (e?.message || e)); }
         if (subDone) return;
         done++;
         if (onProgress) onProgress({ stage: 'generating', pct: 40 + Math.round((done / 3) * 55), completedCount: done, message: `✓ ${done}/3 AI layouts ready (${Math.round((Date.now() - t0) / 1000)}s) ${tokStr()}…` });
-      })
-    ));
+      }
+    })();
     await Promise.race([
       subAll,
       new Promise(r => setTimeout(() => {
-        if (!subDone) errors.push('layout lane timeout 100s — remaining use templates');
+        if (!subDone) errors.push('layout lane timeout 175s — remaining use templates');
         r();
-      }, 100000))
+      }, 175000))
     ]);
     subDone = true;
     const designs = slots.filter(Boolean);
@@ -363,22 +400,24 @@ window.OpenCodeAI = (function () {
     if (!instruction.trim()) return { conversation: 'Type or say something first.', isEdit: false, updatedHtml: '' };
     try {
       const fj = await post('/api/opencode.php', {
-        action: 'fast_edit', current_html: currentHtml, instruction, biz_name: bizName
+        action: 'fast_edit', current_html: currentHtml, instruction, biz_name: bizName, taste: tastePrefs()
       }, 35000);
       if (fj && fj.success && fj.html) {
         return {
           conversation: fj.response_msg || '✨ Applied your change.',
-          isEdit: true, updatedHtml: fj.html, engine: 'gemini', model: fj.model || 'gemini-flash'
+          isEdit: true, updatedHtml: fj.html, engine: 'gemini', model: fj.model || 'gemini-flash',
+          tasteAudit: fj.taste_audit || null
         };
       }
     } catch (fe) { console.warn('[OpenCodeAI] fast edit failed, trying OpenCode:', fe?.message); }
     const j = await post('/api/opencode.php', {
-      action: 'edit', current_html: currentHtml, instruction, biz_name: bizName, model: getModel()
+      action: 'edit', current_html: currentHtml, instruction, biz_name: bizName, taste: tastePrefs(), model: getModel()
     });
     if (j && j.success && j.html) {
       return {
         conversation: j.response_msg || '✨ OpenCode AI applied your change.',
-        isEdit: true, updatedHtml: j.html, engine: 'opencode', model: j.model || getModel()
+        isEdit: true, updatedHtml: j.html, engine: 'opencode', model: j.model || getModel(),
+        tasteAudit: j.taste_audit || null
       };
     }
     const err = new Error(((j && (j.errors || [])[0]) || (j && j.error) || 'OpenCode edit failed'));
@@ -396,7 +435,7 @@ window.OpenCodeAI = (function () {
     }
     const j = await post('/api/opencode.php', {
       action: 'edit_snippet', selected_html: selectedHtml.slice(0, 8000),
-      instruction, biz_name: bizName, model: getModel()
+      instruction, biz_name: bizName, taste: tastePrefs(), model: getModel()
     }, 95000);
     if (j && j.success && j.html) {
       return {
@@ -422,9 +461,9 @@ window.OpenCodeAI = (function () {
     }
     // Gemini / smart-engine lane (server)
     try {
-      const j = await post('/api/generate.php', { action: 'refine', current_html: currentHtml, instruction: userPrompt });
+      const j = await post('/api/generate.php', { action: 'refine', current_html: currentHtml, instruction: userPrompt, taste: tastePrefs() });
       if (j && j.success && j.html) {
-        return { conversation: j.response_msg || '✨ Applied via server AI.', isEdit: true, updatedHtml: j.html, engine: j.source || 'gemini' };
+        return { conversation: j.response_msg || '✨ Applied via server AI.', isEdit: true, updatedHtml: j.html, engine: j.source || 'gemini', tasteAudit: j.taste_audit || null };
       }
       if (j && j.html && j.success === false) throw new Error(j.error || 'refine failed');
     } catch (e2) {

@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 require_once dirname(__DIR__) . '/config.php';
+require_once __DIR__ . '/TasteSkill.php';
 
 // ── Live model ids from Zen (file-cached 6h, [] on failure) ────
 // NOTE: never calls opencode_free_models() (avoids recursion).
@@ -196,8 +197,12 @@ function opencode_chat_once(string $model, array $messages, float $temperature =
         if ($emsg === '' && isset($j['error']) && is_string($j['error'])) $emsg = $j['error'];
     }
     if ($emsg === '') $emsg = 'HTTP ' . $code . ': ' . substr((string)$res, 0, 200);
-    // Retryable signals: free-tier lock, no funds, rate limits, upstream hiccups
-    $retryable = (bool)preg_match('/FreeTier|funds|quota|rate|limit|429|402|403|overload|timeout|upstream|server_error/i', $emsg . ' ' . $code);
+    // Retryable signals: no funds, rate limits, upstream hiccups.
+    // NOT retryable: FreeTier lock / free-tier 403 ("can only be used from
+    // within OpenCode") — every model shares the same key/session, so trying
+    // the next model just repeats the same 403. Fail fast instead.
+    $freeTierLock = (bool)preg_match('/freetier|free tier/i', $emsg);
+    $retryable = !$freeTierLock && (bool)preg_match('/funds|quota|rate|limit|429|402|overload|timeout|upstream|server_error/i', $emsg . ' ' . $code);
     error_log('[OpenCodeService] model=' . $model . ' code=' . $code . ' err=' . substr($emsg, 0, 200));
     return [false, '', $model . ': ' . $emsg, !$retryable, $usage];
 }
@@ -285,6 +290,8 @@ ADMIN_ENTITIES: <if mode needs admin: entity list with 3-4 fields each, else NON
 RISKS: <one line — what to avoid for this business type>
 
 BOUNDARY GUARDRAILS: stay inside the analyst role — no code, no architecture. Every requirement maps to Acceptance Criteria IDs in format {FEATURE}-AC-{NNN} covering Happy Path, Edge & Error, and Business Rules.
+
+TASTE BRIEF INFERENCE: first infer page kind (landing/portfolio/shop/solo-pro), vibe words, audience, and existing brand assets from the requirements; then emit the one-line design read ("Reading this as: <page kind> for <audience>, with a <vibe> language…") followed by inferred dials DESIGN_VARIANCE / MOTION_INTENSITY / VISUAL_DENSITY (baseline 8/6/4; minimalist 6/4/3; playful 9/8/3; trust-first 3/2/5) inside DIFFERENTIATORS.
 SYS;
 }
 
@@ -305,7 +312,7 @@ CONTACT: exactly one <form id="contact-form" method="POST"> (name required, emai
 FOOTER: brand + quick links + contact always. Social icons ONLY for Social URLs actually given (real href, target=_blank, aria-label); none given = no social row, never # links. Logo URL given = <img> in nav + footer, else text brand.
 JS (one small <script>): smooth anchor scroll, mobile drawer toggle, navbar shrink on scroll, IntersectionObserver reveal, animated counters, FAQ toggle fn, back-to-top show/click, contact submit → success toast.
 Tanglish/Tamil/English understood; code stays English.
-SYS;
+SYS . taste_system_addendum();
 }
 
 function opencode_gen_system_full(): string {
@@ -343,7 +350,7 @@ You are a RAW HTML CODE GENERATOR — nothing else (AI-FlowCraft Skills 3-21: ar
 
 ## LANGUAGE SUPPORT
 You understand Tanglish (Tamil in English letters), English, and Tamil script. Business content stays in the customer's language; code stays in English.
-SYS;
+SYS . taste_system_addendum();
 }
 
 function opencode_edit_system(): string {
@@ -357,7 +364,7 @@ PROTOCOL (follow in order):
 3. New sections must match the document's design system (tokens, radius, shadows, motion).
 4. Output the COMPLETE updated HTML document from <!DOCTYPE html> to </html>. No markdown fences. No commentary. No questions.
 5. Tanglish examples: "hero section color maathu" = change hero color; "button periya aakku" = make button bigger; "footer la WhatsApp add pannu" = add WhatsApp to footer.
-SYS;
+SYS . taste_edit_addendum();
 }
 
 function opencode_requirements_block(array $d): string {
@@ -531,6 +538,7 @@ function opencode_generate_variation(array $data, string $variationId, string $m
         . opencode_requirements_block($data) . "\n\n"
         . "## LAYOUT DIRECTION — \"{$variationId}\"\n" . opencode_layout_brief($variationId, $slot) . "\n\n"
         . opencode_palette_block((string)($data['color_palette'] ?? 'purple')) . "\n\n"
+        . taste_prompt_block($data, $variationId, $slot) . "\n\n"
         . "## FREE-LANE OUTPUT BUDGET (follow strictly)\n"
         . "- The page MUST be complete but efficient: all required sections, working nav/form/menu JS, responsive CSS.\n"
         . "- Write tight CSS (shared classes, no repeated 10-line blocks, no filler comments). Target a file that fits comfortably — quality over length.\n"
@@ -632,6 +640,7 @@ function opencode_generate_quick(array $data, string $variationId, string $mode,
         . opencode_requirements_block($data) . "\n\n"
         . "## LAYOUT DIRECTION — \"{$variationId}\"\n" . opencode_layout_brief($variationId, $slot) . "\n\n"
         . opencode_palette_block((string)($data['color_palette'] ?? 'purple')) . "\n\n"
+        . taste_prompt_block($data, $variationId, $slot) . "\n\n"
         . "## OUTPUT BUDGET\n- Complete but efficient single response: all required sections, working nav/form/menu JS, responsive CSS.\n- Tight CSS (shared classes, no repetition). End cleanly after the last FULL section.\n\n## NOW OUTPUT THE HTML FILE";
     $errors = [];
     $usageTotal = ['prompt' => 0, 'completion' => 0];
@@ -672,6 +681,7 @@ function opencode_edit_html(string $currentHtml, string $instruction, string $bi
     }
     $user = "### FULL DOCUMENT TO ANALYZE (read everything first)\n```html\n" . $ctx . "\n```\n\n"
         . "### USER INSTRUCTION (apply ONLY this)\n" . trim($instruction) . "\n\n"
+        . "### TASTE EDIT RULES\nAudit the document first, change ONLY what was asked, match the existing design system (radius scale, single accent, type pairing), keep contrast AA, no second accent color, no em-dash decoration.\n\n"
         . "### OUTPUT\nReturn the COMPLETE updated HTML document now. Business: {$bizName}.";
     $usageTotal = ['prompt' => 0, 'completion' => 0];
     for ($attempt = 0; $attempt < 2; $attempt++) {
@@ -708,7 +718,8 @@ function opencode_edit_snippet(string $selectedHtml, string $instruction, string
         . 'You receive ONE HTML element + ONE user instruction (may be English, Tanglish, or Tamil). '
         . 'Return ONLY the updated HTML for that element — same tag, no markdown fences, no commentary, no questions. '
         . 'Change ONLY what was asked; preserve classes/ids/styles. '
-        . 'Tanglish: "color maathu"=change color, "periya aakku"=make bigger, "chinna"=smaller.';
+        . 'Tanglish: "color maathu"=change color, "periya aakku"=make bigger, "chinna"=smaller.'
+        . taste_snippet_addendum();
     $user = "### SELECTED ELEMENT\n```html\n" . substr($selectedHtml, 0, 8000) . "\n```\n\n"
         . "### USER INSTRUCTION (apply ONLY this)\n" . trim($instruction) . "\n\n"
         . "### OUTPUT\nReturn ONLY the updated element HTML now. Business: {$bizName}.";

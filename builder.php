@@ -226,6 +226,19 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
 .color-swatch input { position: absolute; opacity: 0; }
 .color-swatch label { display: block; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.2s, border-color 0.2s; }
 .color-swatch input:checked + label { border-color: #fff; transform: scale(1.15); box-shadow: 0 0 12px rgba(255,255,255,0.4); }
+/* ══ TASTE SKILL — design intelligence block ══ */
+.taste-block { margin-top: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(16,185,129,0.06)); border: 1.5px solid rgba(99,102,241,0.35); border-radius: 14px; }
+.taste-vibes { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0.75rem 0 1rem; }
+.taste-vibe input { position: absolute; opacity: 0; width: 0; height: 0; }
+.taste-vibe span { display: inline-block; padding: 0.42rem 0.8rem; border: 1.5px solid #283347; border-radius: 999px; background: #0b0f17; cursor: pointer; font-size: 0.76rem; font-weight: 700; color: #94a3b8; transition: all 0.2s; }
+.taste-vibe span:hover { border-color: #6366f1; color: #fff; }
+.taste-vibe input:checked + span { border-color: #818cf8; background: #1e1b4b; color: #c7d2fe; box-shadow: 0 0 12px rgba(99,102,241,0.3); }
+.taste-dials { display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 0.75rem; }
+.taste-dial { display: grid; grid-template-columns: 130px 1fr 52px; align-items: center; gap: 0.7rem; }
+.td-name { font-size: 0.76rem; font-weight: 600; color: #cbd5e1; }
+.taste-dial input[type="range"] { width: 100%; accent-color: #6366f1; cursor: pointer; }
+.td-val { font-size: 0.72rem; font-weight: 800; color: #a5b4fc; text-align: right; }
+@media (max-width: 520px) { .taste-dial { grid-template-columns: 1fr 52px; } .td-name { grid-column: 1 / -1; } }
 .check-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
 @media (max-width: 480px) { .check-grid { grid-template-columns: 1fr; } }
 .wcheck { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.85rem; border: 1.5px solid #283347; border-radius: 10px; background: #0b0f17; cursor: pointer; transition: all 0.2s; }
@@ -1022,11 +1035,49 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
     <div class="wizard-body">
       <!-- STEP 1 -->
       <div class="wizard-step active" id="step1">
-        <div class="wiz-section-label">Step 1 of 4 · Business Profile</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.1rem; flex-wrap:wrap; gap:0.6rem; background:#0e1320; padding:0.65rem 0.9rem; border-radius:10px; border:1px solid #1e293b;">
+          <div>
+            <div class="wiz-section-label" style="margin-bottom:0; font-size:0.78rem;">Step 1 of 4 · Business Profile</div>
+            <div style="font-size:0.72rem; color:#94a3b8; margin-top:2px;">Enter your business details below, or click Demo to test.</div>
+          </div>
+          <div style="display:flex; gap:0.45rem; align-items:center;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="fillDemoData('ecommerce')" style="background:#2e1065; border:1px solid #a855f7; color:#f3e8ff; font-size:0.75rem; font-weight:700; padding:0.4rem 0.8rem; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.35rem;" title="Fill with complete sample E-Commerce shop & products">
+              🛍️ E-Commerce Demo
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="fillDemoData('agency')" style="background:#1e1b4b; border:1px solid #6366f1; color:#c7d2fe; font-size:0.75rem; font-weight:700; padding:0.4rem 0.8rem; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:0.35rem;" title="Fill with sample agency business data">
+              🎯 Agency Demo
+            </button>
+            <div class="dropdown" style="position:relative; display:inline-block;">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="toggleDemoPresetsMenu(event)" style="background:#111827; border:1px solid #374151; color:#cbd5e1; font-size:0.75rem; font-weight:700; padding:0.4rem 0.65rem; border-radius:8px; cursor:pointer;" title="More demo presets">
+                ▼
+              </button>
+              <div id="demo-presets-menu" style="display:none; position:absolute; right:0; top:calc(100% + 5px); background:#0f172a; border:1px solid #334155; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.5); z-index:100; min-width:180px; overflow:hidden;">
+                <button type="button" onclick="fillDemoData('ecommerce')" style="width:100%; text-align:left; background:transparent; border:none; padding:0.5rem 0.85rem; color:#e2e8f0; font-size:0.75rem; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:0.4rem;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+                  🛍️ E-Commerce Store
+                </button>
+                <button type="button" onclick="fillDemoData('agency')" style="width:100%; text-align:left; background:transparent; border:none; padding:0.5rem 0.85rem; color:#e2e8f0; font-size:0.75rem; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:0.4rem;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+                  💼 Digital Agency
+                </button>
+                <button type="button" onclick="fillDemoData('cafe')" style="width:100%; text-align:left; background:transparent; border:none; padding:0.5rem 0.85rem; color:#e2e8f0; font-size:0.75rem; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:0.4rem;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+                  ☕ Cafe &amp; Bakery
+                </button>
+                <button type="button" onclick="fillDemoData('saas')" style="width:100%; text-align:left; background:transparent; border:none; padding:0.5rem 0.85rem; color:#e2e8f0; font-size:0.75rem; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:0.4rem;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+                  🚀 Tech Startup
+                </button>
+                <button type="button" onclick="fillDemoData('gym')" style="width:100%; text-align:left; background:transparent; border:none; padding:0.5rem 0.85rem; color:#e2e8f0; font-size:0.75rem; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:0.4rem;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+                  🏋️ Fitness Gym
+                </button>
+              </div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="clearWizardForm()" style="background:#111827; border:1px solid #374151; color:#9ca3af; font-size:0.75rem; font-weight:600; padding:0.4rem 0.65rem; border-radius:8px; cursor:pointer;" title="Clear all fields">
+              🧹 Clear
+            </button>
+          </div>
+        </div>
         <div class="w-row">
           <div class="w-group">
             <label class="w-label" for="biz_name">Business / Brand Name <span class="req">*</span></label>
-            <input class="w-input" type="text" id="biz_name" placeholder="e.g. Apex Digital" value="Zenith Studio">
+            <input class="w-input" type="text" id="biz_name" placeholder="e.g. Apex Studio, Zen Cafe, Dr. Smith Clinic" value="">
           </div>
           <div class="w-group">
             <label class="w-label" for="biz_type">Industry / Category <span class="req">*</span></label>
@@ -1053,15 +1104,15 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
         </div>
         <div class="w-group">
           <label class="w-label" for="biz_tagline">Core Mission / Tagline <span class="req">*</span></label>
-          <input class="w-input" type="text" id="biz_tagline" value="Crafting next-generation digital experiences that inspire and scale.">
+          <input class="w-input" type="text" id="biz_tagline" placeholder="e.g. Crafting exceptional experiences that inspire and scale." value="">
         </div>
         <div class="w-group">
           <label class="w-label" for="biz_audience">Target Audience</label>
-          <input class="w-input" type="text" id="biz_audience" value="High-growth brands and modern businesses seeking top-tier digital quality.">
+          <input class="w-input" type="text" id="biz_audience" placeholder="e.g. High-growth brands, modern businesses, local community..." value="">
         </div>
         <div class="w-group">
           <label class="w-label" for="biz_services">Services / Products Offered</label>
-          <input class="w-input" type="text" id="biz_services" value="UI/UX Design, Full-Stack Web Development, Brand Identity, Growth Optimization">
+          <input class="w-input" type="text" id="biz_services" placeholder="e.g. UI/UX Design, Web Development, Brand Identity, Consulting..." value="">
         </div>
         <div class="w-group">
           <label class="w-label" for="biz_products">🛒 Product List <span style="font-weight:400;color:#94a3b8;">(for product companies — one per line)</span></label>
@@ -1104,6 +1155,24 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
             <div class="color-swatch"><input type="radio" name="color_palette" id="cp_gold" value="gold"><label for="cp_gold" style="background:linear-gradient(135deg,#d97706,#f59e0b)"></label></div>
             <div class="color-swatch"><input type="radio" name="color_palette" id="cp_slate" value="slate"><label for="cp_slate" style="background:linear-gradient(135deg,#1e293b,#475569)"></label></div>
           </div>
+        </div>
+        <div class="w-group taste-block">
+          <label class="w-label">✦ Design Intelligence <span style="font-weight:400;color:#94a3b8;">(Taste Skill — reads your brief, sets the taste)</span></label>
+          <div class="taste-vibes">
+            <label class="taste-vibe"><input type="radio" name="taste_vibe" value="auto" checked><span>✦ Auto</span></label>
+            <label class="taste-vibe"><input type="radio" name="taste_vibe" value="minimalist"><span>Minimal</span></label>
+            <label class="taste-vibe"><input type="radio" name="taste_vibe" value="premium"><span>Premium</span></label>
+            <label class="taste-vibe"><input type="radio" name="taste_vibe" value="playful"><span>Playful</span></label>
+            <label class="taste-vibe"><input type="radio" name="taste_vibe" value="editorial"><span>Editorial</span></label>
+            <label class="taste-vibe"><input type="radio" name="taste_vibe" value="brutalist"><span>Brutalist</span></label>
+            <label class="taste-vibe"><input type="radio" name="taste_vibe" value="trust"><span>Trust-first</span></label>
+          </div>
+          <div class="taste-dials">
+            <div class="taste-dial"><span class="td-name">Layout variance</span><input type="range" id="taste_variance" min="0" max="10" value="0" oninput="updateTasteRead()"><span class="td-val" id="taste_variance_val">Auto</span></div>
+            <div class="taste-dial"><span class="td-name">Motion intensity</span><input type="range" id="taste_motion" min="0" max="10" value="0" oninput="updateTasteRead()"><span class="td-val" id="taste_motion_val">Auto</span></div>
+            <div class="taste-dial"><span class="td-name">Visual density</span><input type="range" id="taste_density" min="0" max="10" value="0" oninput="updateTasteRead()"><span class="td-val" id="taste_density_val">Auto</span></div>
+          </div>
+          <div class="w-hint" id="taste-read">✦ Auto: the AI reads your business + direction and picks the design language + dials (baseline 8/6/4). Move a slider to override.</div>
         </div>
       </div>
 
@@ -1280,7 +1349,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
         <span style="font-size:.7rem;color:#475569;font-weight:600;">Login, then edit your site freely</span>
       </div>
       <div class="preview-container" id="preview-container">
-        <iframe id="live-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-top-navigation-by-user-activation"></iframe>
+        <iframe id="live-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-top-navigation-by-user-activation allow-modals allow-popups allow-downloads"></iframe>
         <div class="pv-frame-spin" id="live-frame-spin" style="display:none;"><div class="wcl-mini-house"><div class="walls"></div><div class="roof"></div><div class="door"></div></div></div>
       </div>
     </div>
@@ -1392,7 +1461,7 @@ body { background:#0a0d14; color:#e2e8f0; font-family:'Inter',system-ui,sans-ser
         <button class="wbtn wbtn-ghost" onclick="closeFullscreenModal()">✕ Close</button>
       </div>
     </div>
-    <iframe class="modal-iframe" id="modal-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-top-navigation-by-user-activation"></iframe>
+    <iframe class="modal-iframe" id="modal-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-top-navigation-by-user-activation allow-modals allow-popups allow-downloads"></iframe>
     <div class="pv-frame-spin" id="modal-frame-spin" style="display:none;"><div class="wcl-mini-house"><div class="walls"></div><div class="roof"></div><div class="door"></div></div></div>
   </div>
 </div>
@@ -1938,6 +2007,50 @@ window.addEventListener('DOMContentLoaded', async () => {
 /* ══════════════════════════════════════════════════
    SESSION PERSISTENCE
 ═════════════════════════════════════════════════ */
+// TASTE SKILL - customer vibe + dial prefs (design intelligence).
+// Read by assets/js/opencode-service.js via window.collectTastePrefs and
+// embedded in every generation payload via collectWizardSnapshot.
+// 0 on a dial = Auto (server infers from brief, baseline 8/6/4).
+function collectTastePrefs() {
+  var vibeEl = document.querySelector('input[name="taste_vibe"]:checked');
+  var num = function (id) {
+    var el = document.getElementById(id);
+    var v = el ? parseInt(el.value || '0', 10) : 0;
+    if (isNaN(v) || v < 0) return 0;
+    return Math.min(10, v);
+  };
+  return {
+    vibe: (vibeEl && vibeEl.value) || 'auto',
+    variance: num('taste_variance'),
+    motion: num('taste_motion'),
+    density: num('taste_density')
+  };
+}
+window.collectTastePrefs = collectTastePrefs;
+document.addEventListener('change', function (e) {
+  if (e && e.target && e.target.name === 'taste_vibe') updateTasteRead();
+});
+
+function updateTasteRead() {
+  try {
+    var t = collectTastePrefs();
+    const show = function (id, v) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = v > 0 ? String(v) : 'Auto';
+    };
+    show('taste_variance_val', t.variance);
+    show('taste_motion_val', t.motion);
+    show('taste_density_val', t.density);
+    var vibeLabels = { auto: 'Auto', minimalist: 'Minimal', premium: 'Premium', playful: 'Playful', editorial: 'Editorial', brutalist: 'Brutalist', trust: 'Trust-first' };
+    var vibeLabel = vibeLabels[t.vibe] || 'Auto';
+    var box = document.getElementById('taste-read');
+    if (box) {
+      box.innerHTML = (t.vibe === 'auto' && !t.variance && !t.motion && !t.density)
+        ? 'Auto: the AI reads your business + direction and picks the design language + dials (baseline 8/6/4). Move a slider to override.'
+        : 'Taste: <strong style="color:#a5b4fc">' + vibeLabel + '</strong> - variance ' + (t.variance || 'auto') + ' - motion ' + (t.motion || 'auto') + ' - density ' + (t.density || 'auto');
+    }
+  } catch (e) {}
+}
 function collectWizardSnapshot() {
   const sections = Array.from(document.querySelectorAll('input[name="sections[]"]:checked')).map(c => c.value);
   return {
@@ -1960,6 +2073,7 @@ function collectWizardSnapshot() {
     biz_x:            document.getElementById('biz_x')?.value.trim() || '',
     biz_youtube:      document.getElementById('biz_youtube')?.value.trim() || '',
     admin_requirements: document.getElementById('admin_requirements')?.value.trim() || '',
+    taste: (typeof collectTastePrefs === 'function' ? collectTastePrefs() : { vibe: 'auto', variance: 0, motion: 0, density: 0 }),
     sections
   };
 }
@@ -2114,6 +2228,17 @@ function tryRestoreSession() {
       const r = document.querySelector(`input[name="color_palette"][value="${w.color_palette}"]`);
       if (r) r.checked = true;
     }
+    if (w.taste) {
+      if (w.taste.vibe) {
+        const tr = document.querySelector(`input[name="taste_vibe"][value="${w.taste.vibe}"]`);
+        if (tr) tr.checked = true;
+      }
+      ['variance', 'motion', 'density'].forEach(k => {
+        const el = document.getElementById('taste_' + k);
+        if (el && typeof w.taste[k] === 'number') el.value = Math.max(0, Math.min(10, w.taste[k]));
+      });
+      try { updateTasteRead(); } catch (e) {}
+    }
     if (Array.isArray(w.sections)) {
       document.querySelectorAll('input[name="sections[]"]').forEach(cb => {
         cb.checked = w.sections.includes(cb.value);
@@ -2239,6 +2364,124 @@ async function startFreshFromBanner() {
   updateWizDisplay();
   showToast('🧹 Fresh start — fill the wizard again');
 }
+
+/* ══════════════════════════════════════════════════
+   DEMO PRESETS & QUICK FILL
+═════════════════════════════════════════════════ */
+const DEMO_PRESETS = {
+  ecommerce: {
+    name: 'Aura Luxe Fashion & Lifestyle',
+    type: 'E-Commerce & Retail',
+    tagline: 'Curated premium fashion, designer accessories, and modern lifestyle essentials.',
+    audience: 'Discerning online shoppers, fashion lovers, and lifestyle trendsetters.',
+    services: 'Express Worldwide Shipping, Premium Organic Materials, 30-Day Easy Returns, 24/7 Priority Support',
+    products: "Minimalist Linen Overshirt | $58.00 | https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=600&q=80\n" +
+              "Chronograph Minimalist Watch | $145.00 | https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=600&q=80\n" +
+              "Handcrafted Leather Backpack | $110.00 | https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=600&q=80\n" +
+              "Matte Black Polarized Sunglasses | $42.00 | https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=600&q=80\n" +
+              "Italian Leather Bifold Wallet | $36.00 | https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=600&q=80\n" +
+              "ANC Wireless Earbuds Pro | $85.00 | https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=600&q=80",
+    reviews: "Sophia Martinez | The linen overshirt quality is unbelievable. Breathable, premium finish, and true to size! | Verified Buyer\n" +
+             "David Chen | The chronograph watch looks even better than the photos. Packaged securely with fast 2-day delivery! | Verified Customer\n" +
+             "Emma Watson | Exchanged sizes seamlessly through their customer support. Truly a 5-star shopping experience! | Verified Buyer",
+    style: 'modern',
+    color: 'purple'
+  },
+  agency: {
+    name: 'Zenith Studio',
+    type: 'Creative & Digital Agency',
+    tagline: 'Crafting next-generation digital experiences that inspire and scale.',
+    audience: 'High-growth brands and modern businesses seeking top-tier digital quality.',
+    services: 'UI/UX Design, Full-Stack Web Development, Brand Identity, Growth Optimization',
+    style: 'modern',
+    color: 'purple'
+  },
+  cafe: {
+    name: 'Zen Cafe & Bakery',
+    type: 'Restaurant, Cafe & Bar',
+    tagline: 'Artisan specialty coffee and handcrafted pastries made fresh daily.',
+    audience: 'Coffee enthusiasts, local community, breakfast lovers, and remote workers.',
+    services: 'Specialty Espresso, Cold Brew, Sourdough Pastries, Artisan Brunch, Whole Beans',
+    style: 'bold',
+    color: 'gold'
+  },
+  saas: {
+    name: 'Apex AI Cloud',
+    type: 'Tech Startup & SaaS',
+    tagline: 'Intelligent workflow automation and real-time analytics powered by AI.',
+    audience: 'Software engineers, fast-scaling startups, and modern enterprise teams.',
+    services: 'Automated Pipelines, Real-Time Dashboards, API Webhooks, 99.9% Uptime Cloud',
+    style: 'modern',
+    color: 'blue'
+  },
+  gym: {
+    name: 'Pulse Fitness Club',
+    type: 'Fitness Center & Personal Trainer',
+    tagline: 'Transform your physical performance with expert personal training and modern equipment.',
+    audience: 'Fitness lovers, athletes, and beginners ready to build strength and endurance.',
+    services: '1-on-1 Personal Training, HIIT Sessions, Custom Nutrition Coaching, Strength Zone',
+    style: 'bold',
+    color: 'green'
+  }
+};
+
+function fillDemoData(presetKey = 'agency') {
+  const p = DEMO_PRESETS[presetKey] || DEMO_PRESETS.agency;
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+  set('biz_name', p.name);
+  set('biz_type', p.type);
+  set('biz_tagline', p.tagline);
+  set('biz_audience', p.audience);
+  set('biz_services', p.services);
+  set('biz_products', p.products || '');
+  set('biz_reviews', p.reviews || '');
+
+  if (p.style) {
+    const r = document.querySelector(`input[name="design_style"][value="${p.style}"]`);
+    if (r) r.checked = true;
+  }
+  if (p.color) {
+    const c = document.querySelector(`input[name="color_palette"][value="${p.color}"]`);
+    if (c) c.checked = true;
+  }
+
+  const menu = document.getElementById('demo-presets-menu');
+  if (menu) menu.style.display = 'none';
+
+  saveSessionNow();
+  if (typeof updateGenerateButton === 'function') updateGenerateButton();
+  showToast(`✨ Demo data filled (${p.name})! Click Next or customize.`);
+}
+
+function clearWizardForm() {
+  const set = (id) => { const el = document.getElementById(id); if (el) el.value = ''; };
+  set('biz_name');
+  set('biz_tagline');
+  set('biz_audience');
+  set('biz_services');
+  set('biz_products');
+  set('biz_reviews');
+  const bizInp = document.getElementById('biz_name');
+  if (bizInp) bizInp.focus();
+  const menu = document.getElementById('demo-presets-menu');
+  if (menu) menu.style.display = 'none';
+  saveSessionNow();
+  if (typeof updateGenerateButton === 'function') updateGenerateButton();
+  showToast('🧹 Form cleared!');
+}
+
+function toggleDemoPresetsMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('demo-presets-menu');
+  if (menu) {
+    menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+  }
+}
+
+document.addEventListener('click', () => {
+  const menu = document.getElementById('demo-presets-menu');
+  if (menu && menu.style.display === 'block') menu.style.display = 'none';
+});
 
 /* ══════════════════════════════════════════════════
    WIZARD
@@ -2861,13 +3104,16 @@ function display3Designs(concepts, bizName) {
     const engineBadge = isAI
       ? `<div style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.68rem;font-weight:800;letter-spacing:0.04em;color:#6ee7b7;background:rgba(6,78,59,0.35);border:1px solid rgba(16,185,129,0.5);padding:0.22rem 0.6rem;border-radius:999px;margin-bottom:0.6rem;">✦ AI-GENERATED · ${escapeHtml(aiModelShort)}</div>`
       : `<div style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.68rem;font-weight:800;letter-spacing:0.04em;color:#fcd34d;background:rgba(120,53,15,0.35);border:1px solid rgba(245,158,11,0.5);padding:0.22rem 0.6rem;border-radius:999px;margin-bottom:0.6rem;">📄 TEMPLATE · server engine</div>`;
+    const tasteBadge = (isAI && c.meta && c.meta.tasteAudit && typeof c.meta.tasteAudit.score === 'number')
+      ? `<div style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.68rem;font-weight:800;letter-spacing:0.04em;color:#c4b5fd;background:rgba(76,29,149,0.35);border:1px solid rgba(139,92,246,0.5);padding:0.22rem 0.6rem;border-radius:999px;margin-bottom:0.6rem;margin-left:0.35rem;">✦ TASTE ${c.meta.tasteAudit.score}</div>`
+      : '';
     card.innerHTML = `
       <div class="design-badge-top">${escapeHtml(c.badge || `Variation ${i+1}`)}</div>
       <div class="design-number-badge">${i + 1}</div>
       <div class="design-preview-box"><div class="pv-spin"><div class="wcl-mini-house"><div class="walls"></div><div class="roof"></div><div class="door"></div></div></div><iframe class="design-preview-iframe" id="d${i}-iframe" onload="try{this.previousElementSibling.remove();}catch(e){}"></iframe></div>
       <div class="design-content">
         <h3>${escapeHtml(c.name)}</h3>
-        ${engineBadge}
+        ${engineBadge}${tasteBadge}
         <p>${escapeHtml(c.description)}</p>
         ${hasSubdesigns ? `<div style="font-size:0.72rem;color:#818cf8;font-weight:700;margin-bottom:0.6rem;letter-spacing:0.05em;">✦ 3 LAYOUT VARIANTS INSIDE</div>` : ''}
         <div class="design-actions">
@@ -3971,7 +4217,7 @@ async function executeRefine() {
         c.html = currentHtml;
         updateLiveIframe(currentHtml);
         updateUndoBtn();
-        showToast('✨ Site updated! [' + (res.engine || 'AI') + ']');
+        showToast('✨ Site updated! [' + (res.engine || 'AI') + (res.tasteAudit && typeof res.tasteAudit.score === 'number' ? ' · Taste ' + res.tasteAudit.score : '') + ']');
       }
       saveSessionNow();
       const pb = document.getElementById('preview-container');

@@ -12,11 +12,11 @@ $dir = (defined('STORAGE_DIR') ? STORAGE_DIR : __DIR__ . '/storage') . '/uploads
 $files = glob($dir . '/' . $h . '.*');
 $img = null;
 foreach ($files as $f) {
-    if (preg_match('/\.(jpe?g|png|gif|webp)$/i', $f)) { $img = $f; break; }
+    if (preg_match('/\.(jpe?g|png|gif|webp|svg)$/i', $f)) { $img = $f; break; }
 }
 if (!$img || !is_file($img)) { http_response_code(404); exit; }
 
-$mimes = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp'];
+$mimes = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp', 'svg' => 'image/svg+xml'];
 $ext = strtolower(pathinfo($img, PATHINFO_EXTENSION));
 header('Content-Type: ' . ($mimes[$ext] ?? 'application/octet-stream'));
 header('Cache-Control: public, max-age=31536000, immutable');

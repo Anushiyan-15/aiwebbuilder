@@ -121,3 +121,28 @@ define('GEMINI_MODEL',   'gemini-3.6-flash'); // or gemini-2.0-flash
 
 You can view all published websites anytime by visiting:
 `http://localhost/project/webbbuilder/published/`
+
+---
+
+## ✦ Taste Skill — Design-Intelligence Layer
+
+Adapted from the official approach at https://github.com/Leonxlnx/taste-skill
+(`design-taste-frontend` v2 for generation, `redesign-existing-projects` for edits).
+Project skill file: `skills/taste/SKILL.md`. Executable adapter: `includes/TasteSkill.php`.
+
+- **Wizard (Step 2)**: customer picks a vibe (Auto/Minimal/Premium/Playful/Editorial/Brutalist/Trust-first)
+  plus 3 dials — Layout variance / Motion intensity / Visual density (`0` = Auto, baseline `8/6/4`).
+  Collected by `collectTastePrefs()` in `builder.php`, embedded in every generation payload.
+- **Generation**: `taste_prompt_block()` (design read + dials + anti-slop hard bans) is injected into
+  every OpenCode free-lane and Gemini fast-lane prompt; `taste_system_addendum()` hardens the system prompts.
+- **AI editing**: `taste_edit_addendum()` enforces the audit-first protocol (scan → diagnose → surgical fix);
+  snippet micro-edits carry `taste_snippet_addendum()`.
+- **Pre-flight audit**: `taste_audit_html()` scores every AI-produced page (hero discipline, eyebrow restraint,
+  single CTA intent, no AI-purple/slop copy/dead links, alt text, reduced-motion, responsive, real photography).
+  Responses carry `taste` (design read + dials) and `taste_audit` (score 0–100 + issues); concept cards show a
+  `✦ TASTE <score>` badge.
+- **Close-the-loop polish**: `taste_apply_safety_net()` (free deterministic CSS patch, idempotent) runs on every
+  generation; weak pages (score < 85) get one AI polish pass via `POST /api/opencode.php {"action":"taste_repair",…}`
+  — frontend auto-fires it per slot in its own request budget and keeps the better-scoring version.
+- **Standalone audit**: `POST /api/opencode.php {"action":"taste_audit","html":"..."}`.
+- **Regression test**: `php test-taste.php` (33 checks, must all pass).

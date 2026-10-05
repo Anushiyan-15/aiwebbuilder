@@ -9,13 +9,15 @@
 // ═══════════════════════════════════════════════════════════════
 
 require_once __DIR__ . '/OpenCodeService.php';
+require_once __DIR__ . '/TasteSkill.php';
 
 function gemini_fast_models(): array {
     $models = [];
     if (defined('GEMINI_FAST_MODEL') && GEMINI_FAST_MODEL) $models[] = GEMINI_FAST_MODEL;
-    $models[] = 'gemini-3.5-flash-lite';
-    $models[] = 'gemini-3.5-flash'; // verified working 2026-10-01 probe
-    $models[] = 'gemini-3.8-flash';
+    $models[] = 'gemini-3.5-flash-lite'; // verified working 2026-10-05 probe (full page ~22s)
+    $models[] = 'gemini-3.5-flash';
+    $models[] = 'gemini-2.5-flash-lite'; // stable backup
+    $models[] = 'gemini-3.8-flash';      // last resort (503-overloaded on 2026-10-05)
     if (defined('GEMINI_MODEL') && GEMINI_MODEL) $models[] = GEMINI_MODEL;
     return array_values(array_unique(array_filter($models)));
 }
@@ -49,7 +51,12 @@ function gemini_chat_once(string $model, string $system, string $user, float $te
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlErr = curl_error($ch);
     curl_close($ch);
-    if ($curlErr !== '') return [false, '', 'Network error: ' . $curlErr, ['prompt' => 0, 'completion' => 0]];
+    // Log transport failures (timeouts/dns) — otherwise invisible in logs
+    // and indistinguishable from model errors during diagnosis.
+    if ($curlErr !== '') {
+        error_log('[GeminiService] model=' . $model . ' TRANSPORT err=' . substr($curlErr, 0, 160));
+        return [false, '', 'Network error: ' . $curlErr, ['prompt' => 0, 'completion' => 0]];
+    }
     $j = json_decode((string)$res, true);
     $usage = ['prompt' => 0, 'completion' => 0];
     if (isset($j['usageMetadata'])) {
@@ -78,6 +85,7 @@ function gemini_generate_one(array $data, string $variationId, string $mode, str
         . opencode_requirements_block($data) . "\n\n"
         . "## LAYOUT DIRECTION — \"{$variationId}\"\n" . opencode_layout_brief($variationId, $slot) . "\n\n"
         . opencode_palette_block((string)($data['color_palette'] ?? 'purple')) . "\n\n"
+        . taste_prompt_block($data, $variationId, $slot) . "\n\n"
         . "## OUTPUT BUDGET\n- Complete but efficient: all required sections, working nav/form/menu JS, responsive CSS.\n- Tight CSS (shared classes, no repetition, no filler). If the budget runs out, end cleanly after the last FULL section.\n\n## NOW OUTPUT THE HTML FILE";
     // Diversity rotation: variation+slot picks different starting model
     $base = gemini_fast_models();
@@ -101,7 +109,9 @@ function gemini_generate_one(array $data, string $variationId, string $mode, str
     $errors = [];
     $usageTotal = ['prompt' => 0, 'completion' => 0];
     foreach ($queue as $model) {
-        [$ok, $text, $err, $u] = gemini_chat_once($model, opencode_gen_system(), $user, $temperature, 8000, 28);
+        // 26s per attempt: healthy full-page gen is ~22s; two attempts must
+        // fit inside the frontend's ~58s fast_one budget (Apache Timeout 60s).
+        [$ok, $text, $err, $u] = gemini_chat_once($model, opencode_gen_system(), $user, $temperature, 10000, 26);
         $usageTotal = opencode_add_usage($usageTotal, $u);
         if (!$ok) { $errors[] = $err; continue; }
         if (opencode_is_refusal($text)) { $errors[] = $model . ': conversational reply'; continue; }
@@ -109,11 +119,36 @@ function gemini_generate_one(array $data, string $variationId, string $mode, str
         if (opencode_is_complete_html($html)) {
             if (!opencode_has_content($html)) { $errors[] = $model . ': blank page'; continue; }
             if (opencode_has_duplicate_structure($html)) { $errors[] = $model . ': duplicate structure (double body / repeated ids)'; continue; }
+            // Deterministic safety net only (free, instant). The AI polish
+            // pass runs as a SEPARATE taste_repair HTTP call (frontend-driven)
+            // so no single request exceeds the ~58s budget.
+            $html = taste_apply_safety_net($html);
             return [true, $html, $model, [], $usageTotal];
         }
         $errors[] = $model . ': incomplete HTML (' . strlen($html) . ' chars)';
     }
+    error_log('[GeminiService] generate_one ALL FAILED var=' . $variationId . ' slot=' . $slot . ': ' . substr(implode(' | ', array_slice($errors, 0, 4)), 0, 400));
     return [false, '', null, $errors, $usageTotal];
+}
+
+// ── TASTE repair pass: fix ONLY audit issues, quick attempt ────
+// Returns [ok, html, modelUsed|null, errors[], usage]
+function gemini_repair_html(string $html, array $issues): array {
+    if (trim($html) === '' || empty($issues)) {
+        return [false, '', null, ['Empty html or issues'], ['prompt' => 0, 'completion' => 0]];
+    }
+    $user = taste_repair_instruction($issues) . "\n\n### OUTPUT\nReturn the COMPLETE fixed HTML document now (<!DOCTYPE html> … </html>). No markdown fences, no commentary.\n\n### DOCUMENT\n```html\n" . substr($html, 0, 45000) . "\n```";
+    $usageTotal = ['prompt' => 0, 'completion' => 0];
+    foreach (['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite'] as $m) {
+        [$ok, $text, $err, $u] = gemini_chat_once($m, opencode_edit_system(), $user, 0.2, 12000, 26);
+        $usageTotal = opencode_add_usage($usageTotal, $u);
+        if (!$ok) continue;
+        $out = opencode_clean_html($text);
+        if (opencode_is_complete_html($out) && opencode_has_content($out) && !opencode_has_duplicate_structure($out)) {
+            return [true, taste_apply_safety_net($out), $m, [], $usageTotal];
+        }
+    }
+    return [false, '', null, ['repair pass failed'], $usageTotal];
 }
 
 // ── FAST: full-document edit, single shot ─────────────────────
@@ -124,6 +159,7 @@ function gemini_edit_html(string $currentHtml, string $instruction, string $bizN
     }
     $user = "### FULL DOCUMENT TO ANALYZE (read everything first)\n```html\n" . substr($currentHtml, 0, 40000) . "\n```\n\n"
         . "### USER INSTRUCTION (apply ONLY this)\n" . trim($instruction) . "\n\n"
+        . "### TASTE EDIT RULES\nAudit first, change ONLY what was asked, match the existing design system (radius scale, single accent, type pairing), keep contrast AA, no second accent color, no em-dash decoration.\n\n"
         . "### OUTPUT\nReturn the COMPLETE updated HTML document now. Business: {$bizName}.";
     $queue = [];
     if ($preferred) $queue[] = $preferred;
