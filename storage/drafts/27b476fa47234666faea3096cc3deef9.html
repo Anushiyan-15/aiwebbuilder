@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zen Cafe — Sip. Breathe. Be.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #dc2626;
+  --secondary: #f97316;
+  --accent: #fbbf24;
+  --tint: #fee2e2;
+  --bg: #ffffff;
+  --surface: #f8fafc;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --border: #e2e8f0;
+  --radius: 24px;
+  --radius-sm: 12px;
+  --shadow: 0 10px 30px -10px rgba(220, 38, 38, 0.1);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; scroll-behavior: smooth; }
+body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+
+h1, h2, h3, h4, h5, h6 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; color: var(--text); }
+
+.container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+header {
+  position: fixed; top: 0; left: 0; width: 100%; z-index: 1000;
+  background: rgba(255, 255, 255, 0.85); backdrop-blur: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border); transition: var(--transition);
+}
+header.scrolled { padding: 12px 0; box-shadow: var(--shadow); }
+.nav-wrap { display: flex; align-items: center; justify-content: space-between; height: 80px; transition: var(--transition); }
+header.scrolled .nav-wrap { height: 64px; }
+.logo { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 800; color: var(--text); text-decoration: none; display: flex; align-items: center; gap: 8px; }
+.logo span { color: var(--primary); }
+
+.nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
+.nav-links a { text-decoration: none; color: var(--text-muted); font-weight: 500; font-size: 15px; transition: var(--transition); }
+.nav-links a:hover { color: var(--primary); }
+
+.clay-btn {
+  background: var(--primary); color: #ffffff; padding: 14px 28px; border-radius: var(--radius-sm);
+  font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 8px 20px -4px rgba(220, 38, 38, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.3), inset 0 -3px 0 rgba(0, 0, 0, 0.2);
+  transition: var(--transition); border: none; cursor: pointer;
+}
+.clay-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 25px -4px rgba(220, 38, 38, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.2); }
+
+.hamburger { display: none; background: none; border: none; cursor: pointer; font-size: 24px; color: var(--text); }
+
+.hero {
+  padding: 180px 0 100px; position: relative; background: radial-gradient(circle at top right, var(--tint) 0%, transparent 60%);
+  overflow: hidden;
+}
+.hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+.hero h1 { font-size: clamp(40px, 6vw, 72px); line-height: 1.1; margin-bottom: 24px; }
+.hero h1 span { background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero p { font-size: clamp(16px, 2vw, 18px); color: var(--text-muted); margin-bottom: 36px; max-width: 540px; }
+.hero-cta { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.hero-img { position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.hero-img img { width: 100%; height: auto; display: block; transform: scale(1.02); transition: var(--transition); }
+.hero-img:hover img { transform: scale(1); }
+
+.metrics { padding: 80px 0; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+.metric-card {
+  background: var(--bg); padding: 32px; border-radius: var(--radius); border: 1px solid var(--border);
+  box-shadow: var(--shadow); text-align: center; transition: var(--transition);
+}
+.metric-card:hover { transform: translateY(-5px); border-color: var(--primary); }
+.metric-card h3 { font-size: 36px; color: var(--primary); margin-bottom: 8px; }
+.metric-card p { color: var(--text-muted); font-size: 14px; font-weight: 500; }
+
+.services { padding: 120px 0; }
+.section-header { text-align: center; max-width: 700px; margin: 0 auto 64px; }
+.section-header span { color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; margin-bottom: 12px; display: block; }
+.section-header h2 { font-size: clamp(32px, 4vw, 48px); margin-bottom: 16px; }
+.section-header p { color: var(--text-muted); font-size: 16px; }
+
+.bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
+.bento-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 40px; display: flex; flex-direction: column; justify-content: space-between;
+  transition: var(--transition); position: relative; overflow: hidden; box-shadow: var(--shadow);
+}
+.bento-card:hover { transform: translateY(-5px); border-color: var(--primary); }
+.bento-card.span-7 { grid-column: span 7; }
+.bento-card.span-5 { grid-column: span 5; }
+.bento-card.span-6 { grid-column: span 6; }
+.bento-card h3 { font-size: 24px; margin-bottom: 16px; }
+.bento-card p { color: var(--text-muted); margin-bottom: 24px; }
+.bento-icon { width: 56px; height: 56px; background: var(--tint); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 24px; margin-bottom: 24px; }
+.bento-card img { width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius-sm); margin-top: 16px; }
+
+.about { padding: 120px 0; background: var(--text); color: #ffffff; border-radius: var(--radius); margin: 0 24px; }
+.about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; padding: 0 48px; }
+.about h2 { color: #ffffff; font-size: clamp(32px, 4vw, 48px); margin-bottom: 24px; }
+.about h2 span { color: var(--primary); }
+.about p { color: #94a3b8; font-size: 16px; margin-bottom: 24px; }
+.about-img { border-radius: var(--radius); overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+.about-img img { width: 100%; height: auto; display: block; }
+
+.contact { padding: 120px 0; position: relative; }
+.contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+.contact-info { background: var(--surface); padding: 48px; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.contact-info h3 { font-size: 28px; margin-bottom: 16px; }
+.contact-info p { color: var(--text-muted); margin-bottom: 32px; }
+.contact-detail { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; color: var(--text); font-weight: 500; }
+.contact-detail i { color: var(--primary); font-size: 20px; }
+
+.contact-form-wrap { background: var(--bg); padding: 48px; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: var(--text); }
+.form-control { width: 100%; padding: 14px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); font-family: inherit; font-size: 15px; color: var(--text); transition: var(--transition); }
+.form-control:focus { outline: none; border-color: var(--primary); background: var(--bg); box-shadow: 0 0 0 3px var(--tint); }
+textarea.form-control { resize: vertical; min-height: 120px; }
+
+.map-container { margin-top: 24px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); }
+.map-container iframe { width: 100%; height: 200px; border: 0; display: block; }
+
+footer { background: var(--text); color: #94a3b8; padding: 80px 0 40px; border-top: 1px solid var(--border); }
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 48px; margin-bottom: 64px; }
+.footer-brand p { margin-top: 16px; color: #94a3b8; max-width: 320px; font-size: 14px; }
+.footer-col h4 { color: #ffffff; font-size: 16px; margin-bottom: 20px; }
+.footer-col ul { list-style: none; }
+.footer-col ul li { margin-bottom: 12px; }
+.footer-col ul a { color: #94a3b8; text-decoration: none; font-size: 14px; transition: var(--transition); }
+.footer-col ul a:hover { color: var(--primary); }
+.footer-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 32px; border-top: 1px solid #1e293b; font-size: 14px; }
+
+.toast {
+  position: fixed; bottom: 24px; right: 24px; background: var(--text); color: #fff; padding: 16px 24px;
+  border-radius: var(--radius-sm); box-shadow: var(--shadow); z-index: 2000; display: flex; align-items: center; gap: 12px;
+  transform: translateY(100px); opacity: 0; transition: var(--transition); border-left: 4px solid var(--primary);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+.back-to-top {
+  position: fixed; bottom: 24px; left: 24px; width: 48px; height: 48px; background: var(--primary); color: #fff;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none;
+  box-shadow: var(--shadow); z-index: 999; opacity: 0; transform: translateY(20px); transition: var(--transition); pointer-events: none;
+}
+.back-to-top.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.back-to-top:hover { background: var(--secondary); }
+
+@media (max-width: 860px) {
+  .nav-links { position: fixed; top: 80px; left: 0; width: 100%; background: var(--bg); flex-direction: column; padding: 32px; border-bottom: 1px solid var(--border); transform: translateY(-150%); transition: var(--transition); box-shadow: var(--shadow); }
+  .nav-links.active { transform: translateY(0); }
+  .hamburger { display: block; }
+  .hero-grid, .about-grid, .contact-grid, .footer-grid, .metrics-grid { grid-template-columns: 1fr; }
+  .bento-card.span-7, .bento-card.span-5, .bento-card.span-6 { grid-column: span 12; }
+  .about { margin: 0 12px; padding: 60px 0; }
+  .about-grid { padding: 0 24px; }
+}
+
+.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.8s ease, transform 0.8s ease; }
+.reveal.active { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<header id="navbar">
+  <div class="container nav-wrap">
+    <a href="#" class="logo">zen <span>cafe</span></a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#services">Menu & Services</a></li>
+      <li><a href="#about">Our Story</a></li>
+      <li><a href="#metrics">Impact</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <a href="#contact" class="clay-btn">Reserve a Table</a>
+    <button class="hamburger" id="hamburger" aria-label="Toggle Navigation">☰</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container hero-grid">
+    <div class="reveal">
+      <h1>Sip. Breathe. <span>Be.</span></h1>
+      <p>Crafting next-generation digital experiences and immersive cafe spaces that inspire, calm, and scale.</p>
+      <div class="hero-cta">
+        <a href="#contact" class="clay-btn">Explore Menu & Services</a>
+        <a href="#about" class="clay-btn" style="background: var(--surface); color: var(--text); border: 1px solid var(--border);">Our Story</a>
+      </div>
+    </div>
+    <div class="hero-img reveal">
+      <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=70" alt="Zen Cafe Interior and Coffee Setup">
+    </div>
+  </div>
+</section>
+
+<section class="metrics" id="metrics">
+  <div class="container metrics-grid">
+    <div class="metric-card reveal">
+      <h3><span class="counter" data-target="99">0</span>%</h3>
+      <p>Client Satisfaction</p>
+    </div>
+    <div class="metric-card reveal">
+      <h3><span class="counter" data-target="15">0</span>k+</h3>
+      <p>Coffees Served</p>
+    </div>
+    <div class="metric-card reveal">
+      <h3><span class="counter" data-target="100">0</span>+</h3>
+      <p>Digital Projects</p>
+    </div>
+    <div class="metric-card reveal">
+      <h3><span class="counter" data-target="24">0</span>/7</h3>
+      <p>Serene Ambiance</p>
+    </div>
+  </div>
+</section>
+
+<section class="services" id="services">
+  <div class="container">
+    <div class="section-header reveal">
+      <span>Excellence in Every Detail</span>
+      <h2>Our Offerings & Specialties</h2>
+      <p>Discover our signature blend of minimalist digital craftsmanship and artisan cafe highlights.</p>
+    </div>
+    <div class="bento-grid">
+      <div class="bento-card span-7 reveal">
+        <div>
+          <div class="bento-icon">☕</div>
+          <h3>Artisan Menu Highlights</h3>
+          <p>Hand-crafted espresso drinks, organic single-origin pour overs, and fresh daily pastries designed to elevate your daily ritual. $4.50 – $8.00</p>
+        </div>
+        <img src="https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1200&q=70" alt="Artisan Coffee">
+      </div>
+      <div class="bento-card span-5 reveal">
+        <div>
+          <div class="bento-icon">✨</div>
+          <h3>UI/UX Design</h3>
+          <p>Crafting intuitive, calming, and high-converting digital interfaces tailored for high-growth modern brands.</p>
+        </div>
+      </div>
+      <div class="bento-card span-5 reveal">
+        <div>
+          <div class="bento-icon">💻</div>
+          <h3>Full-Stack Web Dev</h3>
+          <p>Robust, high-performance web applications built with cutting-edge tech stack for seamless scalability.</p>
+        </div>
+      </div>
+      <div class="bento-card span-7 reveal">
+        <div>
+          <div class="bento-icon">🌱</div>
+          <h3>Brand Identity & Growth</h3>
+          <p>Cohesive visual storytelling and strategic growth optimization designed to make your business stand out effortlessly.</p>
+        </div>
+        <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=70" alt="Minimalist Workspace">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="about" id="about">
+  <div class="container about-grid">
+    <div class="reveal">
+      <span>Our Story</span>
+      <h2>Designed for tranquility, built for <span>growth</span>.</h2>
+      <p>Zen Cafe was founded on a simple premise: modern life moves too fast. We wanted to create a physical sanctuary and a digital studio where clarity meets creativity. Every cup we pour and every line of code we write is imbued with intention, mindfulness, and uncompromising quality.</p>
+      <p>Join us in redefining what it means to experience a brand, whether you are sitting at our oak wood bar or launching your next big enterprise.</p>
+      <a href="#contact" class="clay-btn">Visit Us Today</a>
+    </div>
+    <div class="about-img reveal">
+      <img src="https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=1200&q=70" alt="Cozy Zen Cafe Interior">
+    </div>
+  </div>
+</section>
+
+<section class="contact" id="contact">
+  <div class="container">
+    <div class="section-header reveal">
+      <span>Get In Touch</span>
+      <h2>Let's Start a Conversation</h2>
+      <p>Ready to collaborate or grab a cup of coffee? Reach out to our team below.</p>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-info reveal">
+        <h3>Visit & Connect</h3>
+        <p>Drop by our flagship location or send us a message. We are always ready to welcome new friends and partners.</p>
+        <div class="contact-detail">
+          <i>📍</i> 450 Innovation Parkway, San Francisco, CA
+        </div>
+        <div class="contact-detail">
+          <i>✉️</i> hello@zenithstudio.com
+        </div>
+        <div class="contact-detail">
+          <i>📞</i> +1 (555) 890-1234
+        </div>
+        <div class="contact-detail">
+          <i>⏰</i> Mon-Sun: 7:00 AM – 7:00 PM
+        </div>
+        <div class="map-container">
+          <iframe src="https://www.google.com/maps?q=450+Innovation+Parkway,+San+Francisco,+CA&output=embed" loading="lazy" title="Location Map"></iframe>
+        </div>
+        <div style="margin-top: 16px;">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=450+Innovation+Parkway,+San+Francisco,+CA" target="_blank" rel="noopener" style="color: var(--primary); font-weight: 600; text-decoration: none;">Get Directions →</a>
+        </div>
+      </div>
+      <div class="contact-form-wrap reveal">
+        <form id="contact-form" method="POST">
+          <div class="form-group">
+            <label for="name">Your Name *</label>
+            <input type="text" id="name" name="name" class="form-control" required placeholder="John Doe">
+          </div>
+          <div class="form-group">
+            <label for="email">Email Address *</label>
+            <input type="email" id="email" name="email" class="form-control" required placeholder="john@example.com">
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number (Optional)</label>
+            <input type="tel" id="phone" name="phone" class="form-control" placeholder="+1 (555) 000-0000">
+          </div>
+          <div class="form-group">
+            <label for="message">Your Message *</label>
+            <textarea id="message" name="message" class="form-control" required placeholder="Tell us about your project or reservation..."></textarea>
+          </div>
+          <button type="submit" class="clay-btn" style="width: 100%;">Send Message</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <a href="#" class="logo" style="color: #fff;">zen <span>cafe</span></a>
+      <p>Crafting next-generation digital experiences and tranquil spaces that inspire and scale.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Quick Links</h4>
+      <ul>
+        <li><a href="#services">Menu & Services</a></li>
+        <li><a href="#about">Our Story</a></li>
+        <li><a href="#metrics">Impact</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Contact Info</h4>
+      <ul>
+        <li>hello@zenithstudio.com</li>
+        <li>+1 (555) 890-1234</li>
+        <li>450 Innovation Parkway, San Francisco, CA</li>
+      </ul>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <p>&copy; <span id="year"></span> Zen Cafe. All rights reserved.</p>
+    <p>Sip. Breathe. Be.</p>
+  </div>
+</footer>
+
+<div class="toast" id="toast">
+  <span>✓ Message sent successfully! We'll be in touch soon.</span>
+</div>
+
+<a href="#" class="back-to-top" id="backToTop" aria-label="Back to top">↑</a>
+
+<script>
+document.getElementById('year').textContent = new Date().getFullYear();
+
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 40) {
+    navbar.classList.add('scrolled');
+  } else {
+    navbar.classList.remove('scrolled');
+  }
+});
+
+const hamburger = document.getElementById('hamburger');
+const navLinks = document.getElementById('nav-links');
+hamburger.addEventListener('click', () => {
+  navLinks.classList.toggle('active');
+});
+
+document.querySelectorAll('.nav-links a').forEach(link => {
+  link.addEventListener('click', () => {
+    navLinks.classList.remove('active');
+  });
+});
+
+const observerOptions = { threshold: 0.15 };
+const observer = new IntersectionObserver((entries, observer) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('active');
+      observer.unobserve(entry.target);
+    }
+  });
+}, observerOptions);
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+const counters = document.querySelectorAll('.counter');
+let counted = false;
+const metricsSection = document.getElementById('metrics');
+
+window.addEventListener('scroll', () => {
+  const rect = metricsSection.getBoundingClientRect();
+  if (rect.top < window.innerHeight && !counted) {
+    counters.forEach(counter => {
+      const target = +counter.getAttribute('data-target');
+      let count = 0;
+      const speed = target / 50;
+      const updateCount = () => {
+        count += speed;
+        if (count < target) {
+          counter.innerText = Math.ceil(count);
+          setTimeout(updateCount, 30);
+        } else {
+          counter.innerText = target;
+        }
+      };
+      updateCount();
+    });
+    counted = true;
+  }
+});
+
+const backToTop = document.getElementById('backToTop');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 400) {
+    backToTop.classList.add('show');
+  } else {
+    backToTop.classList.remove('show');
+  }
+});
+
+const contactForm = document.getElementById('contact-form');
+const toast = document.getElementById('toast');
+contactForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  toast.classList.add('show');
+  contactForm.reset();
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 4000);
+});
+</script>
+
+</body>
+</html>

@@ -2408,6 +2408,7 @@ $page_title = 'Visual Studio — Canva-Style Web Studio';
     let fullscreenMode = false;
     let mobileEditMode = false;
     let editingImage = null;
+    let editingImageKey = null;
     let suppressEditorOpen = false;
     let lockedThemeCSS = '';
     let lockedBodyCSS = '';
@@ -3050,6 +3051,7 @@ p{color:#64748b;max-width:520px;line-height:1.6}
       const attrs = comp.getAttributes() || {},
         src = attrs.src || '';
       cropState.oldSrc = src;
+      cropState.key = imgCompKey(comp);
       if (!src) {
         showToast('⚠️ Image has no source');
         return;
@@ -3253,20 +3255,23 @@ p{color:#64748b;max-width:520px;line-height:1.6}
         closeCropTool();
         return;
       }
-      // Use the image's own crossOrigin if available, fall back to anonymous
+      // Only request CORS for true cross-origin URLs; same-origin + data:
+      // URLs stay clean (avoids needless taint/blocked-canvas failures).
       const tmp = new Image();
-      tmp.crossOrigin = imgEl.crossOrigin || 'anonymous';
+      try {
+        const abs = new URL(imgEl.src, window.location.href);
+        if (/^https?:/i.test(imgEl.src) && abs.origin !== window.location.origin) {
+          tmp.crossOrigin = imgEl.crossOrigin || 'anonymous';
+        }
+      } catch (e) { tmp.crossOrigin = imgEl.crossOrigin || 'anonymous'; }
       tmp.onload = () => {
         const finishCrop = (finalUrl) => {
-          // ★ Re-resolve live component: canvas may have re-rendered while crop was open
-          let target = comp;
-          if (!isCompAttached(target)) {
-            const selImg = (selectedComponent && (selectedComponent.get('tagName') || '').toLowerCase() === 'img') ? selectedComponent : null;
-            target = findImgCompBySrc(cropState.oldSrc) || selImg;
-            if (target) {
-              cropState.originalComp = target;
-              try { grapesEditor.select(target); } catch (e) {}
-            }
+          // ★ Bulletproof re-resolve: canvas may have re-rendered while crop was open
+          let target = resolveLiveImgComp(cropState.key, comp);
+          if (target) {
+            cropState.originalComp = target;
+            cropState.key = imgCompKey(target);
+            try { grapesEditor.select(target); } catch (e) {}
           }
           if (!target || !isCompAttached(target)) {
             showToast('⚠️ Canvas changed — select the image again & retry crop', 5000);
@@ -5573,10 +5578,12 @@ ${WC_ANIMATION_RUNTIME}
 
     function openImageEditor(comp) {
       editingImage = comp;
+      editingImageKey = imgCompKey(comp);
       const attrs = comp.getAttributes ? (comp.getAttributes() || {}) : {},
         style = comp.getStyle ? (comp.getStyle() || {}) : {},
         el = comp.getEl && comp.getEl();
-      document.getElementById('ie-src').value = attrs.src || (el ? el.src : '') || '';
+      // ★ getAttribute (raw) — el.src resolves to absolute and causes drift
+      document.getElementById('ie-src').value = attrs.src || (el ? (el.getAttribute('src') || '') : '') || '';
       document.getElementById('ie-alt').value = attrs.alt || '';
       const w = parseCssSize(style.width || (el?.style?.width) || '100%', 'px'),
         h = parseCssSize(style.height || (el?.style?.height) || 'auto', 'px');
@@ -5594,6 +5601,7 @@ ${WC_ANIMATION_RUNTIME}
     function closeImageEditor() {
       document.getElementById('image-editor-modal').classList.remove('active');
       editingImage = null;
+      editingImageKey = null;
     }
 
     function previewImageEditor() {
@@ -5640,6 +5648,15 @@ ${WC_ANIMATION_RUNTIME}
        opening an editor and pressing Apply (frame reload, device switch).
        A detached comp accepts setAttributes silently but never serializes —
        THAT is the "studio shows new, preview/save show old" ghost. */
+    function normImgSrc(s) {
+      try {
+        s = String(s || '').trim();
+        if (!s || s.indexOf('data:') === 0) return s;
+        const u = new URL(s, window.location.href);
+        return (u.pathname + u.search).toLowerCase();
+      } catch (e) { return String(s || '').trim().toLowerCase(); }
+    }
+
     function isCompAttached(comp) {
       try {
         if (!comp || !grapesEditor) return false;
@@ -5658,6 +5675,7 @@ ${WC_ANIMATION_RUNTIME}
         const root = grapesEditor.DomComponents && grapesEditor.DomComponents.getWrapper
           ? grapesEditor.DomComponents.getWrapper() : null;
         if (!root) return null;
+        const want = normImgSrc(src);
         let found = null;
         const walk = (c) => {
           if (found || !c) return;
@@ -5665,7 +5683,8 @@ ${WC_ANIMATION_RUNTIME}
             const t = (c.get('tagName') || '').toLowerCase();
             if (t === 'img') {
               const a = c.getAttributes ? (c.getAttributes() || {}) : {};
-              if ((a.src || '') === src) { found = c; return; }
+              // ★ Normalized compare: survives relative↔absolute & encoding drift
+              if ((a.src || '') === src || normImgSrc(a.src || '') === want) { found = c; return; }
             }
           } catch (e) {}
           const kids = c.components && c.components();
@@ -5676,13 +5695,80 @@ ${WC_ANIMATION_RUNTIME}
       } catch (e) { return null; }
     }
 
+    /* ★ Document-order img helpers: index fallback survives re-renders
+       even when the src itself changed mid-edit. */
+    function eachImgComp(fn) {
+      try {
+        const root = grapesEditor.DomComponents && grapesEditor.DomComponents.getWrapper
+          ? grapesEditor.DomComponents.getWrapper() : null;
+        if (!root) return;
+        const walk = (c) => {
+          if (!c) return;
+          try {
+            if ((c.get('tagName') || '').toLowerCase() === 'img') fn(c);
+          } catch (e) {}
+          const kids = c.components && c.components();
+          if (kids && kids.length) kids.forEach(walk);
+        };
+        walk(root);
+      } catch (e) {}
+    }
+
+    function imgDocIndex(comp) {
+      let idx = -1, n = -1;
+      eachImgComp((c) => { n++; if (c === comp) idx = n; });
+      return idx;
+    }
+
+    function nthImgComp(n) {
+      let out = null, i = -1;
+      eachImgComp((c) => { i++; if (i === n) out = c; });
+      return out;
+    }
+
+    function imgCompKey(comp) {
+      try {
+        const a = (comp && comp.getAttributes) ? (comp.getAttributes() || {}) : {};
+        let raw = a.src || '';
+        if (!raw) { try { const el = comp.getEl && comp.getEl(); raw = (el && el.getAttribute('src')) || ''; } catch (e) {} }
+        return { src: raw || '', idx: imgDocIndex(comp) };
+      } catch (e) { return { src: '', idx: -1 }; }
+    }
+
+    /* ★ Resolve a LIVE img comp from a captured key. Order:
+       original (if attached) → selected img → normalized-src match →
+       absolute-form match → document-order index → single-img fallback. */
+    function resolveLiveImgComp(key, origComp) {
+      try {
+        if (origComp && isCompAttached(origComp)) return origComp;
+        const sel = (typeof selectedComponent !== 'undefined') ? selectedComponent : null;
+        if (sel && (sel.get('tagName') || '').toLowerCase() === 'img' && isCompAttached(sel)) return sel;
+        if (key) {
+          if (key.src) {
+            const bySrc = findImgCompBySrc(key.src);
+            if (bySrc) return bySrc;
+          }
+          if (typeof key.idx === 'number' && key.idx >= 0) {
+            const byIdx = nthImgComp(key.idx);
+            if (byIdx) return byIdx;
+          }
+        }
+        let count = 0, only = null;
+        eachImgComp((c) => { count++; only = c; });
+        if (count === 1) return only;
+      } catch (e) {}
+      return null;
+    }
+
     /* ★ Verify the new image REALLY landed in serialized canvas HTML.
+       Normalized compare (path+query, &amp;-aware): serializers normalize
+       URLs, which caused false "not applied" before.
        Returns 'ok' | 'model' | 'html' | 'args' (console carries details). */
     function verifyImageApplied(comp, src) {
       try {
         if (!comp || !src || !grapesEditor) return 'args';
         const attrs = comp.getAttributes ? (comp.getAttributes() || {}) : {};
-        if ((attrs.src || '') !== src) {
+        if (normImgSrc(attrs.src || '') !== normImgSrc(src)) {
           console.warn('[studio] verify: model attr mismatch', { attached: isCompAttached(comp) });
           return 'model';
         }
@@ -5694,12 +5780,29 @@ ${WC_ANIMATION_RUNTIME}
           }
         } catch (e) {}
         const html = grapesEditor.getHtml() || '';
-        // Probe the distinctive middle of the src (JPEG heads all look alike).
-        // ★ Check BOTH raw and HTML-escaped forms: serializers turn & into
-        // &amp; (Unsplash/stock URLs), which caused false "not applied".
-        const probe = src.length > 120 ? src.slice(32, 96) : src;
-        const escProbe = probe.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        if (probe && (html.indexOf(probe) !== -1 || html.indexOf(escProbe) !== -1)) return 'ok';
+        // Probe normalized: collect every <img src> (unescape &amp;) and compare
+        // path+query so relative↔absolute / localhost↔127.0.0.1 drift can't fail us.
+        const want = normImgSrc(src);
+        let found = false;
+        if (src.indexOf('data:') === 0) {
+          const probe = src.length > 120 ? src.slice(32, 96) : src;
+          found = !!probe && html.indexOf(probe) !== -1;
+        } else {
+          try {
+            const re = /<img\b[^>]*\ssrc\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+            let m;
+            while ((m = re.exec(html)) !== null) {
+              const raw = (m[1] || m[2] || '').replace(/&amp;/g, '&');
+              if (raw === src || normImgSrc(raw) === want) { found = true; break; }
+            }
+          } catch (e) {}
+          if (!found) {
+            const probe = src.length > 120 ? src.slice(32, 96) : src;
+            const escProbe = probe.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            found = !!probe && (html.indexOf(probe) !== -1 || html.indexOf(escProbe) !== -1);
+          }
+        }
+        if (found) return 'ok';
         console.warn('[studio] verify: src missing from getHtml', {
           attached: isCompAttached(comp), srcLen: src.length, htmlLen: html.length
         });
@@ -5715,10 +5818,12 @@ ${WC_ANIMATION_RUNTIME}
       const height = composeCssSize('ie-height-value', 'ie-height-unit', 'auto');
       const radius = parseInt(document.getElementById('ie-radius').value, 10);
       const fit = document.getElementById('ie-fit').value || 'cover';
-      // ★ Re-resolve live component in case the canvas re-rendered mid-edit
-      let target = editingImage;
-      const oldSrc = (target.getAttributes ? (target.getAttributes() || {}).src : '') || '';
-      if (!isCompAttached(target)) {
+      // ★ Bulletproof re-resolve: key (src+index) survives canvas re-renders
+      let target = resolveLiveImgComp(editingImageKey, editingImage);
+      if (target && target !== editingImage) { editingImage = target; editingImageKey = imgCompKey(target); }
+      if (!target) {
+        // Last resort: legacy src lookup
+        const oldSrc = (editingImage && editingImage.getAttributes ? (editingImage.getAttributes() || {}).src : '') || '';
         const selImg = (selectedComponent && (selectedComponent.get('tagName') || '').toLowerCase() === 'img') ? selectedComponent : null;
         target = findImgCompBySrc(oldSrc) || selImg;
         if (target) editingImage = target;
@@ -5742,7 +5847,12 @@ ${WC_ANIMATION_RUNTIME}
       try { document.getElementById('ie-file').value = ''; } catch (e) {}
       // ★ Honest result: saved + actually in canvas HTML?
       const imgRes = src ? verifyImageApplied(target, src) : 'ok';
-      if (imgRes === 'ok') showToast(imgSaved ? `🖼️ Image updated ✓ Saved` : `⚠️ Image updated but storage full — use a smaller image`);
+      if (imgRes === 'ok') {
+        try { grapesEditor.select(target); } catch (e) {}
+        if (editingImage !== target) editingImage = target;
+        editingImageKey = imgCompKey(target);
+        showToast(imgSaved ? `🖼️ Image updated ✓ Saved` : `⚠️ Image updated but storage full — use a smaller image`);
+      }
       else if (imgRes === 'model') showToast('⚠️ Image NOT applied — select the image again & retry', 5000);
       else showToast('⚠️ Image NOT saved to page — select the image again & retry', 5000);
       closeImageEditor();
@@ -6961,7 +7071,13 @@ ${WC_ANIMATION_RUNTIME}
       // would otherwise break Puter calls with "model not found" errors).
       if (window.PuterService?.setModel) window.PuterService.setModel(model);
       try { localStorage.setItem('webcraft_puter_model', model); } catch (e) {}
-      showToast(`AI Model set to ${model}`);
+      // Nudge: only space-bunny-free is verified working via HTTP right now;
+      // other free models 403 without an OpenCode session (auto-fallback covers).
+      if (model && model !== 'space-bunny-free' && /free|pickle|mimo|jev|longcat|nemotron/i.test(model)) {
+        showToast(`AI Model set to ${model} (if slow, ★ Space Bunny is verified fastest now)`);
+      } else {
+        showToast(`AI Model set to ${model}`);
+      }
     }
 
     async function togglePuterAccountMenu(e) {
@@ -7075,6 +7191,74 @@ ${WC_ANIMATION_RUNTIME}
       return escaped;
     }
 
+    /* ★ Local smart-style fallback (no network — never fails).
+       Handles common Tanglish style commands instantly when AI lanes are down:
+       color change, periya/chinna size, dark/light mode. Returns true if handled. */
+    function applyLocalSmartStyle(q) {
+      try {
+        const lower = String(q || '').toLowerCase();
+        const comp = (typeof selectedComponent !== 'undefined') ? selectedComponent : null;
+        const hasSel = !!(comp && comp.getEl);
+        const colorMap = { blue:'#2563eb', green:'#059669', red:'#dc2626', gold:'#d97706', purple:'#6366f1', orange:'#f97316', pink:'#ec4899', black:'#0f172a' };
+        let wantColor = null;
+        for (const k in colorMap) { if (lower.includes(k)) { wantColor = colorMap[k]; break; } }
+        const hexM = lower.match(/#([0-9a-f]{6}|[0-9a-f]{3})/);
+        if (hexM) wantColor = hexM[0];
+        const wantBigger = /periya|bigger|large|increase|big/i.test(q);
+        const wantSmaller = /chinna|smaller|small|decrease/i.test(q);
+        const wantDark = /dark|night(.*)mode|black(.*)mode/i.test(lower);
+        const wantLight = /light(.*)mode|white(.*)mode|clean mode/i.test(lower);
+
+        // Selected-element tweaks (instant, offline)
+        if (hasSel && (wantColor || wantBigger || wantSmaller)) {
+          const el = comp.getEl();
+          if (!el) return false;
+          const tag = (el.tagName || 'DIV').toLowerCase();
+          const isText = /h1|h2|h3|h4|p|span|a|li|button/.test(tag);
+          if (wantColor) { if (isText) el.style.color = wantColor; else el.style.backgroundColor = wantColor; }
+          if (wantBigger || wantSmaller) {
+            const cur = parseFloat(window.getComputedStyle(el).fontSize) || 16;
+            el.style.fontSize = Math.round(cur * (wantBigger ? 1.25 : 0.8)) + 'px';
+          }
+          syncCanvasToHtml();
+          if (projectData && projectData.designs && projectData.designs[activeConceptIndex]) {
+            projectData.designs[activeConceptIndex].html = currentHtml;
+            saveProjectData();
+          }
+          renderSmartLayers();
+          appendMagicChat(`✨ Applied locally (offline): ${escapeHtml(q)}`, 'ai');
+          showToast('✨ Updated (offline smart-style) & saved!');
+          return true;
+        }
+        // Whole-page color / theme swaps (mirror of server smart engine)
+        if (!hasSel && (wantColor || wantDark || wantLight)) {
+          let mod = currentHtml, msg = '';
+          if (wantDark) {
+            mod = mod.split('#ffffff').join('#090d16').split('#fafbfe').join('#090d16').split('#f8fafc').join('#0f172a');
+            msg = 'Switched to dark mode (offline).';
+          } else if (wantLight) {
+            mod = mod.split('#090d16').join('#ffffff').split('#0f172a').join('#f8fafc').split('#111622').join('#ffffff');
+            msg = 'Switched to light mode (offline).';
+          } else if (wantColor) {
+            mod = mod.split('#6366f1').join(wantColor).split('#a855f7').join(wantColor);
+            msg = `Applied color ${wantColor} across the page (offline).`;
+          }
+          if (mod !== currentHtml) {
+            currentHtml = mod;
+            if (projectData && projectData.designs && projectData.designs[activeConceptIndex]) {
+              projectData.designs[activeConceptIndex].html = currentHtml;
+              saveProjectData();
+            }
+            loadHtmlIntoStudioCanvas();
+            appendMagicChat(`✨ ${escapeHtml(msg)}`, 'ai');
+            showToast('✨ Updated (offline smart-style) & saved!');
+            return true;
+          }
+        }
+      } catch (e) { console.warn('[local smart-style]', e); }
+      return false;
+    }
+
     async function executeMagicAi() {
       const input = document.getElementById('magic-input');
       const q = input.value.trim();
@@ -7107,11 +7291,23 @@ ${WC_ANIMATION_RUNTIME}
       }
 
       try {
-        // ★ Free-model first: selected model in dropdown (magic-model-select → OpenCodeAI)
-        // edits page as user asked, both whole-page and selected-element modes.
+        // ★ Selected element → SNIPPET lane first (small I/O, fits free caps,
+        // respects dropdown model). Whole page → full-doc lane.
         // Puter.js is fallback only for selected-element micro-edits.
         let result = null;
-        if (window.OpenCodeAI?.editWithFallback) {
+        if (hasSelected && selectedPayload && window.OpenCodeAI?.editSnippet) {
+          try {
+            result = await window.OpenCodeAI.editSnippet({
+              userPrompt: q,
+              selectedHtml: selectedPayload.html || '',
+              bizName: projectData?.bizName || 'Website'
+            });
+          } catch (snipErr) {
+            console.warn('[Snippet lane failed, trying full-doc]:', snipErr?.message);
+            result = null;
+          }
+        }
+        if (!result && window.OpenCodeAI?.editWithFallback) {
           try {
             let enriched = q;
             if (hasSelected && selectedPayload) {
@@ -7193,6 +7389,8 @@ ${WC_ANIMATION_RUNTIME}
           try {
             await executeGeminiBackendFallback(q, snap);
           } catch (backendErr) {
+            // Last net: offline smart-style (color/size/dark-light) — no network needed
+            if (applyLocalSmartStyle(q)) return;
             appendMagicChat(`⚠️ Backend failed: ${escapeHtml(backendErr.message)}`, 'ai');
             showToast('AI request failed: ' + backendErr.message);
           }

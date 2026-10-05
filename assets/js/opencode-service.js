@@ -115,7 +115,7 @@ window.OpenCodeAI = (function () {
   async function analyzeRequirements(data, onProgress) {
     if (onProgress) onProgress({ stage: 'analyzing', pct: 12, message: 'OpenCode AI analysing requirements…' });
     try {
-      const j = await post('/api/opencode.php', { action: 'analyze', data, model: getModel() }, 30000);
+      const j = await post('/api/opencode.php', { action: 'analyze', data, model: getModel() }, 12000);
       if (j && j.brief) {
         if (onProgress) onProgress({ stage: 'analyzing', pct: 30, message: 'Design brief ready' + (j.model ? ' (' + j.model + ')' : '') });
         return j.brief;
@@ -125,20 +125,59 @@ window.OpenCodeAI = (function () {
     return `AUDIENCE: ${d.biz_audience || 'Modern clients'}\nSECTIONS: ${(d.sections || []).join(', ') || 'hero, services, about, metrics, contact, footer'}\nPALETTE: ${d.color_palette || 'purple'}\nTYPE: Plus Jakarta Sans + Inter\nDIFFERENTIATORS: glass nav; clay CTAs; scroll-reveal`;
   }
 
-  /* One fast-lane call (Gemini flash-lite: full page ~28s). */
-  async function generateFast(data, variation, mode, brief, slot) {
+  /* Original flow: all 3 slots on gemini-3.5-flash-lite (~18s each, parallel).
+     Diversity via temperature + layout brief + slot direction only. */
+  const SLOT_LANES = [
+    [ { kind: 'fast',  model: 'gemini-3.5-flash-lite', temp: 0.7 },
+      { kind: 'fast',  model: 'gemini-3.5-flash',      temp: 0.8 } ],
+    [ { kind: 'fast',  model: 'gemini-3.5-flash-lite', temp: 0.95 },
+      { kind: 'fast',  model: 'gemini-3.5-flash',      temp: 0.9 } ],
+    [ { kind: 'fast',  model: 'gemini-3.5-flash-lite', temp: 0.55 },
+      { kind: 'fast',  model: 'gemini-3.5-flash',      temp: 0.6 } ]
+  ];
+
+  /* One fast-lane call (Gemini single-shot full page ~20s). */
+  async function generateFast(data, variation, mode, brief, slot, model, temp) {
     const j = await post('/api/opencode.php', {
       action: 'fast_one', data, variation, mode, brief,
+      model: model || undefined, temperature: (typeof temp === 'number' ? temp : undefined),
       slot: (typeof slot === 'number' ? slot : -1)
-    }, 35000);
+    }, 31000);
     if (j && j.success && j.html && j.html.length > 500) return j;
     throw new Error(((j && (j.errors || [])[0]) || (j && j.error) || 'fast lane failed') + ' [' + variation + ']');
   }
 
-  /* OpenCode chunked lane (slow but sure) — fills slots the fast lane missed. */
-  async function generateOne(data, variation, mode, brief, slot) {
+  /* OpenCode QUICK lane (space-bunny single-shot ~40s — 3rd AI leg). */
+  async function generateQuick(data, variation, mode, brief, slot, temp) {
     const j = await post('/api/opencode.php', {
-      action: 'generate_one', data, variation, mode, brief, model: getModel(),
+      action: 'quick_one', data, variation, mode, brief, model: getModel(),
+      temperature: (typeof temp === 'number' ? temp : undefined),
+      slot: (typeof slot === 'number' ? slot : -1)
+    }, 100000);
+    if (j && j.success && j.html && j.html.length > 500) return j;
+    throw new Error(((j && (j.errors || [])[0]) || (j && j.error) || 'quick lane failed') + ' [' + variation + ']');
+  }
+
+  /* Run one slot through its lane list in order — first success wins. */
+  async function runSlotLanes(data, variation, mode, brief, slot, lanes) {
+    let lastErr = null;
+    for (const lane of lanes) {
+      try {
+        if (lane.kind === 'quick') {
+          const j = await generateQuick(data, variation, mode, brief, slot, lane.temp);
+          return { j, engine: 'opencode-quick' };
+        }
+        const j = await generateFast(data, variation, mode, brief, slot, lane.model, lane.temp);
+        return { j, engine: 'gemini' };
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('slot lanes failed [' + variation + ']');
+  }
+  /* OpenCode chunked lane (slow but sure) — final net for missing slots.
+     Diversity: each missing slot tries a DIFFERENT free model. */
+  async function generateOne(data, variation, mode, brief, slot, modelOverride) {
+    const j = await post('/api/opencode.php', {
+      action: 'generate_one', data, variation, mode, brief, model: modelOverride || getModel(),
       slot: (typeof slot === 'number' ? slot : -1)
     }, 280000);
     if (j && j.success && j.html && j.html.length > 500) return j;
@@ -153,9 +192,9 @@ window.OpenCodeAI = (function () {
     };
   }
 
-  /* ── MAIN: 3 premium variations — FAST lane first (~30s), then ──
-     OpenCode chunks for any missing slots, then server templates.
-     Results are re-ordered to classic/bold/editorial. */
+  /* ── MAIN: 3 variations, all gemini-3.5-flash-lite (original flow, ~18s each) ──
+     Diversity via temperature + layout brief + slot direction.
+     Missing slots → instant server templates (caller merges). Bounded ≈ 100s. */
   async function generateConcepts(data, mode, options) {
     options = options || {};
     const onProgress = options.onProgress;
@@ -165,7 +204,7 @@ window.OpenCodeAI = (function () {
     const secs = () => Math.round((Date.now() - t0) / 1000) + 's';
     if (onProgress) onProgress({
       stage: 'generating', pct: 38,
-      message: 'Fast AI crafting 3 variations…',
+      message: 'Gemini-lite crafting 3 variations (temps 0.7 / 0.95 / 0.55)…',
       completedCount: 0
     });
 
@@ -182,33 +221,29 @@ window.OpenCodeAI = (function () {
       });
     };
 
-    // LANE 1 (fast, ~30s): all 3 in parallel, tiny stagger
-    await Promise.all(VARIATIONS.map((v, i) =>
-      new Promise(r => setTimeout(r, i * 1000))
-      .then(() => generateFast(data, v, mode, brief)).then(
-        (j) => {
+    // LANE 1 (3 different AIs in parallel, 250ms stagger): first success per slot wins.
+    // Bounded 100s — missing slots fall to instant server templates (caller),
+    // no slow chunked lane. Total generation ≈ analyze(≤12s) + 100s max.
+    let laneDone = false;
+    const lane1 = Promise.all(VARIATIONS.map((v, i) =>
+      new Promise(r => setTimeout(r, i * 250))
+      .then(() => runSlotLanes(data, v, mode, brief, -1, SLOT_LANES[i])).then(
+        ({ j, engine }) => {
+          if (laneDone) return;
           tok += (j.usage?.prompt || 0) + (j.usage?.completion || 0);
-          slots[i] = shapeDesign(v, j, data, mode, brief, 'gemini');
+          slots[i] = shapeDesign(v, j, data, mode, brief, engine);
         },
         (e) => { errors.push(v + ': ' + (e?.message || e)); }
-      ).then(() => { if (slots[i]) bump(`✓ ${done + 1}/3 fast variations ready`); })
+      ).then(() => { if (!laneDone && slots[i]) bump(`✓ ${done + 1}/3 variations ready (${slots[i].meta.model || 'AI'})`); })
     ));
-
-    // LANE 2 (slow but sure): OpenCode chunks for missing slots only
-    const missing = VARIATIONS.map((v, i) => (slots[i] ? -1 : i)).filter(i => i >= 0);
-    if (missing.length && missing.length < 3) {
-      if (onProgress) onProgress({ stage: 'generating', pct: 90, completedCount: done, message: `Fast lane: ${3 - missing.length}/3 — filling ${missing.length} via OpenCode… ${tokStr()}` });
-    }
-    await Promise.all(missing.map((i) => {
-      const v = VARIATIONS[i];
-      return generateOne(data, v, mode, brief).then(
-        (j) => {
-          tok += (j.usage?.prompt || 0) + (j.usage?.completion || 0);
-          slots[i] = shapeDesign(v, j, data, mode, brief, 'opencode');
-        },
-        (e) => { errors.push(v + ': ' + (e?.message || e)); }
-      ).then(() => { if (slots[i]) bump(`✓ variation ready`); });
-    }));
+    await Promise.race([
+      lane1,
+      new Promise(r => setTimeout(() => {
+        if (!laneDone) errors.push('lane timeout 100s — remaining slots use templates');
+        r();
+      }, 100000))
+    ]);
+    laneDone = true;
 
     const designs = slots.filter(Boolean);
     if (!designs.length) {
@@ -232,32 +267,43 @@ window.OpenCodeAI = (function () {
     if (options.model) setModel(options.model);
     const brief = options.brief || await analyzeRequirements(data, onProgress);
     const t0 = Date.now();
-    if (onProgress) onProgress({ stage: 'generating', pct: 40, completedCount: 0, message: `Fast AI crafting 3 ${variation} layouts…` });
+    if (onProgress) onProgress({ stage: 'generating', pct: 40, completedCount: 0, message: `3-AI crafting 3 ${variation} layouts (each different)…` });
     const slots = [null, null, null];
     const errors = [];
     let done = 0, tok = 0;
     const tokStr = () => `· ~${(tok / 1000).toFixed(1)}k tokens`;
-    // Staggered starts — avoids free-tier 429 bursts.
-    await Promise.all([0, 1, 2].map((s) =>
-      new Promise(r => setTimeout(r, s * 1000))
-      .then(() => generateFast(data, variation, mode, brief, s)).then(
-        (j) => {
+    // 250ms stagger — 429-safe but fast. Each layout a different primary AI.
+    // Bounded 100s — missing layouts fall to template layouts (caller).
+    let subDone = false;
+    const subAll = Promise.all([0, 1, 2].map((s) =>
+      new Promise(r => setTimeout(r, s * 250))
+      .then(() => runSlotLanes(data, variation, mode, brief, s, SLOT_LANES[s])).then(
+        ({ j, engine }) => {
           tok += (j.usage?.prompt || 0) + (j.usage?.completion || 0);
           slots[s] = {
             id: variation + '-' + SLOT_META[s].suffix,
             name: `${conceptNum}${SLOT_META[s].suffix} · ${SLOT_META[s].label.replace('Layout ', '')} (${variation})`,
-            badge: 'AI Layout ' + SLOT_META[s].suffix,
+            badge: 'AI Layout ' + SLOT_META[s].suffix + ' · ' + (j.model || engine),
             description: `AI-generated ${SLOT_META[s].label} in ${variation} style.`,
             html: j.html,
-            meta: { bizName: data.biz_name, mode, engine: 'gemini', model: j.model, brief, generatedAt: new Date().toISOString() }
+            meta: { bizName: data.biz_name, mode, engine, model: j.model, brief, generatedAt: new Date().toISOString() }
           };
         },
         (e) => { errors.push('slot' + s + ': ' + (e?.message || e)); }
       ).then(() => {
+        if (subDone) return;
         done++;
         if (onProgress) onProgress({ stage: 'generating', pct: 40 + Math.round((done / 3) * 55), completedCount: done, message: `✓ ${done}/3 AI layouts ready (${Math.round((Date.now() - t0) / 1000)}s) ${tokStr()}…` });
       })
     ));
+    await Promise.race([
+      subAll,
+      new Promise(r => setTimeout(() => {
+        if (!subDone) errors.push('layout lane timeout 100s — remaining use templates');
+        r();
+      }, 100000))
+    ]);
+    subDone = true;
     const designs = slots.filter(Boolean);
     if (!designs.length) throw new Error('AI subdesigns failed (' + errors.slice(0, 2).join(' | ') + '). Using template layouts.');
     if (onProgress) onProgress({ stage: 'done', pct: 100, completedCount: designs.length, message: `✓ ${designs.length}/3 AI layouts ready ${tokStr()}` });
@@ -341,13 +387,37 @@ window.OpenCodeAI = (function () {
     throw err;
   }
 
+  /* ── SNIPPET EDIT (selected element only — small I/O, fits free caps) ──
+     First choice for selected-element micro-edits. Returns snippet HTML. */
+  async function editSnippet({ userPrompt, selectedHtml = '', bizName = 'Website' }) {
+    const instruction = enrichTanglish(userPrompt);
+    if (!instruction.trim() || selectedHtml.trim().length < 20) {
+      throw new Error('Select an element on canvas first, then describe the change.');
+    }
+    const j = await post('/api/opencode.php', {
+      action: 'edit_snippet', selected_html: selectedHtml.slice(0, 8000),
+      instruction, biz_name: bizName, model: getModel()
+    }, 95000);
+    if (j && j.success && j.html) {
+      return {
+        conversation: j.response_msg || '✨ OpenCode AI updated the selected element.',
+        isEdit: true, updatedHtml: j.html, engine: 'opencode-snippet', model: j.model || getModel()
+      };
+    }
+    const err = new Error(((j && (j.errors || [])[0]) || (j && j.error) || 'Snippet edit failed'));
+    err.detail = j;
+    throw err;
+  }
+
   /* ── Combined edit chain for one-click UI use ──
      OpenCode free models → server Gemini/refine → smart template notice.
      (No Puter dependency.) */
   async function editWithFallback({ userPrompt, currentHtml = '', bizName = 'Website' }) {
+    const laneErrs = [];
     try {
       return await chatAndEdit({ userPrompt, currentHtml, bizName });
     } catch (e1) {
+      laneErrs.push(e1?.message || 'fast+opencode edit failed');
       console.warn('[OpenCodeAI] lane failed, trying Gemini refine:', e1?.message);
     }
     // Gemini / smart-engine lane (server)
@@ -357,16 +427,21 @@ window.OpenCodeAI = (function () {
         return { conversation: j.response_msg || '✨ Applied via server AI.', isEdit: true, updatedHtml: j.html, engine: j.source || 'gemini' };
       }
       if (j && j.html && j.success === false) throw new Error(j.error || 'refine failed');
-    } catch (e2) { console.warn('[OpenCodeAI] refine lane failed:', e2?.message); }
-    throw new Error('All AI lanes failed — try a template action (e.g. "Add a pricing table with 3 plans") or another free model.');
+    } catch (e2) {
+      laneErrs.push(e2?.message || 'refine failed');
+      console.warn('[OpenCodeAI] refine lane failed:', e2?.message);
+    }
+    const err = new Error('All AI lanes failed (' + laneErrs.slice(0, 2).join(' | ').slice(0, 220) + '). Try a template action (e.g. "Add a pricing table with 3 plans") or switch model to ★ Space Bunny.');
+    err.lanes = laneErrs;
+    throw err;
   }
 
   const service = {
     FREE_MODELS, VARIATIONS,
     selectedModel: getModel(),
     getModel, setModel, getModels,
-    analyzeRequirements, generateOne, generateConcepts, generateSubDesigns,
-    chatAndEdit, editWithFallback, enrichTanglish, refreshModelDropdown
+    analyzeRequirements, generateOne, generateQuick, generateConcepts, generateSubDesigns,
+    chatAndEdit, editSnippet, editWithFallback, enrichTanglish, refreshModelDropdown
   };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => { try { refreshModelDropdown(); } catch (e) {} });

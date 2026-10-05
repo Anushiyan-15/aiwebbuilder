@@ -569,8 +569,8 @@ function opencode_generate_variation(array $data, string $variationId, string $m
         $errors = array_merge($errors, $errs);
         $usageTotal = opencode_add_usage($usageTotal, $cu);
         if (!$ok) {
-            // One patient retry (free-tier rate limits) before giving up
-            sleep(5);
+            // One quick retry (free-tier rate limits) before giving up
+            sleep(2);
             [$ok, $text, $used, $errs, $cu] = opencode_chat_fallback(
                 $model,
                 [
@@ -606,20 +606,71 @@ function opencode_generate_variation(array $data, string $variationId, string $m
             continue; // → fresh strict rebuild
         }
         $errors[] = ($used ?: 'ai') . ': chunk ' . ($c + 1) . ' appended (' . strlen($full) . ' chars), continuing…';
-        sleep(2); // be gentle on free-tier rate limits
+        sleep(1); // be gentle on free-tier rate limits
     }
     if (opencode_is_complete_html($full) && opencode_has_content($full) && !opencode_has_duplicate_structure($full)) return [true, $full, $usedModel, [], $usageTotal];
     if ($full === '') return [false, '', null, $errors, $usageTotal];
     return [false, '', null, array_merge($errors, ['incomplete/blank/duplicate after chunks (' . strlen($full) . ' chars): ' . substr($lastRaw, 0, 120)]), $usageTotal];
 }
 
-// ── High-level: surgical AI edit of a full document ───────────
+// ── QUICK: single-shot premium variation via OpenCode free lane ──
+// 3rd AI leg (space-bunny working via HTTP). SINGLE attempt, no 429-wait,
+// no retry loop — speed first, lane diversity covers reliability.
+// ~35-70s, complete doc validated same as chunked lane.
 // Returns [ok, html, modelUsed|null, errors[], usage]
+function opencode_generate_quick(array $data, string $variationId, string $mode, string $brief, ?string $model = null, int $slot = -1, ?float $temperature = null): array {
+    $modeLabel = ['static' => 'Static Website (HTML/CSS/JS only)', 'admin' => 'Website + Admin Panel + PHP Backend (JSON storage, NO database)', 'database' => 'Website + Admin Panel + PHP Backend + MySQL Database (full stack)'][$mode] ?? $mode;
+    if ($temperature === null) {
+        $temps = ['classic' => 0.7, 'bold' => 0.95, 'editorial' => 0.6];
+        $temperature = $temps[$variationId] ?? 0.75;
+        if ($slot >= 0) $temperature = min(1.1, $temperature + $slot * 0.05);
+    }
+    $user = "## TASK\nGenerate the complete, production-ready HTML file for the \"{$variationId}\" variant — be BOLD and DISTINCTIVE, your own creative idea.\n\n"
+        . "## GENERATION MODE — ALREADY DECIDED (DO NOT ASK)\nType: **{$modeLabel}**\nOutput the PUBLIC WEBSITE HTML only.\n\n"
+        . "## AI DESIGN BRIEF (follow tightly)\n{$brief}\n\n"
+        . "## CRITICAL OUTPUT RULES\n- Output ONLY raw HTML. No chat, no questions, no markdown.\n- First line: <!DOCTYPE html> / Last line: </html>\n\n"
+        . opencode_requirements_block($data) . "\n\n"
+        . "## LAYOUT DIRECTION — \"{$variationId}\"\n" . opencode_layout_brief($variationId, $slot) . "\n\n"
+        . opencode_palette_block((string)($data['color_palette'] ?? 'purple')) . "\n\n"
+        . "## OUTPUT BUDGET\n- Complete but efficient single response: all required sections, working nav/form/menu JS, responsive CSS.\n- Tight CSS (shared classes, no repetition). End cleanly after the last FULL section.\n\n## NOW OUTPUT THE HTML FILE";
+    $errors = [];
+    $usageTotal = ['prompt' => 0, 'completion' => 0];
+    [$ok, $text, $used, $errs, $cu] = opencode_chat_fallback(
+        $model,
+        [
+            ['role' => 'system', 'content' => opencode_gen_system()],
+            ['role' => 'user', 'content' => $user],
+        ],
+        (float)$temperature, 8000, 90, false
+    );
+    $errors = array_merge($errors, $errs);
+    $usageTotal = opencode_add_usage($usageTotal, $cu);
+    if ($ok) {
+        if (!opencode_is_refusal($text)) {
+            $html = opencode_clean_html($text);
+            if (opencode_is_complete_html($html) && opencode_has_content($html) && !opencode_has_duplicate_structure($html)) {
+                return [true, $html, $used, [], $usageTotal];
+            }
+            $errors[] = ($used ?: 'ai') . ': incomplete/blank quick HTML (' . strlen($html) . ' chars)';
+        } else {
+            $errors[] = ($used ?: 'ai') . ': conversational reply';
+        }
+    }
+    return [false, '', null, $errors, $usageTotal];
+}
+
+// ── High-level: surgical AI edit of a full document ───────────
+// Head+tail slice keeps nav/hero AND footer/contact in context even for
+// huge pages (middle truncated with marker). Returns [ok, html, modelUsed|null, errors[], usage]
 function opencode_edit_html(string $currentHtml, string $instruction, string $bizName = 'Website', ?string $model = null): array {
     if (trim($instruction) === '' || strlen($currentHtml) < 100) {
         return [false, '', null, ['Empty instruction or HTML'], ['prompt' => 0, 'completion' => 0]];
     }
-    $user = "### FULL DOCUMENT TO ANALYZE (read everything first)\n```html\n" . substr($currentHtml, 0, 60000) . "\n```\n\n"
+    $ctx = $currentHtml;
+    if (strlen($ctx) > 50000) {
+        $ctx = substr($ctx, 0, 25000) . "\n<!-- ...[middle truncated for budget]... -->\n" . substr($ctx, -25000);
+    }
+    $user = "### FULL DOCUMENT TO ANALYZE (read everything first)\n```html\n" . $ctx . "\n```\n\n"
         . "### USER INSTRUCTION (apply ONLY this)\n" . trim($instruction) . "\n\n"
         . "### OUTPUT\nReturn the COMPLETE updated HTML document now. Business: {$bizName}.";
     $usageTotal = ['prompt' => 0, 'completion' => 0];
@@ -643,4 +694,37 @@ function opencode_edit_html(string $currentHtml, string $instruction, string $bi
         }
     }
     return [false, '', null, ['AI edit did not return a complete document'], $usageTotal];
+}
+
+// ── Snippet edit: small selected-element HTML in → updated snippet out ──
+// Fits free-tier output caps (no full-document validation). Used for
+// selected-element micro-edits in Studio. Returns [ok, snippet, modelUsed|null, errors[], usage]
+function opencode_edit_snippet(string $selectedHtml, string $instruction, string $bizName = 'Website', ?string $model = null): array {
+    $selectedHtml = trim($selectedHtml);
+    if (trim($instruction) === '' || strlen($selectedHtml) < 20) {
+        return [false, '', null, ['Empty instruction or selected HTML'], ['prompt' => 0, 'completion' => 0]];
+    }
+    $system = 'You are an expert front-end engineer doing a SURGICAL MICRO-EDIT. '
+        . 'You receive ONE HTML element + ONE user instruction (may be English, Tanglish, or Tamil). '
+        . 'Return ONLY the updated HTML for that element — same tag, no markdown fences, no commentary, no questions. '
+        . 'Change ONLY what was asked; preserve classes/ids/styles. '
+        . 'Tanglish: "color maathu"=change color, "periya aakku"=make bigger, "chinna"=smaller.';
+    $user = "### SELECTED ELEMENT\n```html\n" . substr($selectedHtml, 0, 8000) . "\n```\n\n"
+        . "### USER INSTRUCTION (apply ONLY this)\n" . trim($instruction) . "\n\n"
+        . "### OUTPUT\nReturn ONLY the updated element HTML now. Business: {$bizName}.";
+    [$ok, $text, $used, $errs, $usage] = opencode_chat_fallback(
+        $model,
+        [
+            ['role' => 'system', 'content' => $system],
+            ['role' => 'user', 'content' => $user],
+        ],
+        0.3, 2500,
+        defined('OPENCODE_TIMEOUT') ? (int)OPENCODE_TIMEOUT : 90
+    );
+    if (!$ok) return [false, '', null, $errs, $usage];
+    $snippet = trim(preg_replace('/^```(?:html)?\s*/i', '', preg_replace('/```\s*$/', '', trim($text))));
+    if (strlen($snippet) < 10 || stripos($snippet, '<') === false) {
+        return [false, '', null, ['AI snippet edit returned no HTML'], $usage];
+    }
+    return [true, $snippet, $used, [], $usage];
 }

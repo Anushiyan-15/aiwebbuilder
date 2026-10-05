@@ -98,7 +98,8 @@ if ($action === 'fast_one') {
     if ($brief === '') {
         [$bok, $brief, $bused] = opencode_analyze_requirements($data, $model);
     }
-    [$ok, $html, $used, $errors, $usage] = gemini_generate_one($data, $variation, $mode, $brief, $slot);
+    $fastTemp = isset($req['temperature']) ? max(0.1, min(1.2, (float)$req['temperature'])) : null;
+    [$ok, $html, $used, $errors, $usage] = gemini_generate_one($data, $variation, $mode, $brief, $slot, $model, $fastTemp);
     if ($ok) {
         echo json_encode([
             'success' => true, 'engine' => 'gemini', 'model' => $used,
@@ -175,6 +176,37 @@ if ($action === 'generate_one') {
     exit;
 }
 
+// ── QUICK LANE (OpenCode single-shot: 3rd AI leg, ~40s) ──
+if ($action === 'quick_one') {
+    $data = is_array($req['data'] ?? null) ? $req['data'] : [];
+    $variation = preg_replace('/[^a-z]/', '', strtolower((string)($req['variation'] ?? 'classic')));
+    if (!in_array($variation, ['classic', 'bold', 'editorial'], true)) $variation = 'classic';
+    $mode = in_array(($req['mode'] ?? 'static'), ['static', 'admin', 'database'], true) ? $req['mode'] : 'static';
+    $slot = isset($req['slot']) ? max(-1, min(2, (int)$req['slot'])) : -1;
+    $brief = trim((string)($req['brief'] ?? ''));
+    if ($brief === '') {
+        [$bok, $brief, $bused] = opencode_analyze_requirements($data, $model);
+    }
+    $qTemp = isset($req['temperature']) ? max(0.1, min(1.2, (float)$req['temperature'])) : null;
+    [$ok, $html, $used, $errors, $usage] = opencode_generate_quick($data, $variation, $mode, $brief, $model, $slot, $qTemp);
+    if ($ok) {
+        echo json_encode([
+            'success' => true, 'engine' => 'opencode-quick', 'model' => $used,
+            'variation' => $variation, 'slot' => $slot, 'html' => $html, 'brief' => $brief,
+            'usage' => $usage,
+        ], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo json_encode([
+            'success' => false, 'engine' => 'opencode-quick-failed',
+            'variation' => $variation, 'brief' => $brief,
+            'error' => 'OpenCode quick lane failed.',
+            'errors' => array_slice($errors, 0, 6),
+            'fallback' => 'gemini-then-templates',
+        ], JSON_UNESCAPED_UNICODE);
+    }
+    exit;
+}
+
 if ($action === 'edit') {
     $html = (string)($req['current_html'] ?? '');
     $instruction = trim((string)($req['instruction'] ?? ''));
@@ -200,6 +232,33 @@ if ($action === 'edit') {
             'fallback' => 'gemini-then-smart-engine',
             'hint' => 'Retry via api/generate.php action=refine (Gemini → smart engine).',
             'html' => $html,
+        ], JSON_UNESCAPED_UNICODE);
+    }
+    exit;
+}
+
+if ($action === 'edit_snippet') {
+    $sel = (string)($req['selected_html'] ?? $req['current_html'] ?? '');
+    $instruction = trim((string)($req['instruction'] ?? ''));
+    $biz = trim((string)($req['biz_name'] ?? 'Website')) ?: 'Website';
+    if ($sel === '' || $instruction === '') {
+        echo json_encode(['success' => false, 'error' => 'Missing selected_html or instruction']);
+        exit;
+    }
+    [$ok, $out, $used, $errors, $usage] = opencode_edit_snippet($sel, $instruction, $biz, $model);
+    if ($ok) {
+        echo json_encode([
+            'success' => true, 'engine' => 'opencode-snippet', 'model' => $used,
+            'html' => $out, 'changed' => (trim($out) !== trim($sel)),
+            'usage' => $usage,
+            'response_msg' => '✨ OpenCode AI updated the selected element' . ($used ? " ({$used})" : '') . '.',
+        ], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo json_encode([
+            'success' => false, 'engine' => 'opencode-snippet-failed',
+            'error' => 'OpenCode AI snippet edit failed.',
+            'errors' => array_slice($errors, 0, 6),
+            'fallback' => 'puter-then-smart-style',
         ], JSON_UNESCAPED_UNICODE);
     }
     exit;

@@ -14,6 +14,7 @@ function gemini_fast_models(): array {
     $models = [];
     if (defined('GEMINI_FAST_MODEL') && GEMINI_FAST_MODEL) $models[] = GEMINI_FAST_MODEL;
     $models[] = 'gemini-3.5-flash-lite';
+    $models[] = 'gemini-3.5-flash'; // verified working 2026-10-01 probe
     $models[] = 'gemini-3.8-flash';
     if (defined('GEMINI_MODEL') && GEMINI_MODEL) $models[] = GEMINI_MODEL;
     return array_values(array_unique(array_filter($models)));
@@ -65,8 +66,10 @@ function gemini_chat_once(string $model, string $system, string $user, float $te
 }
 
 // ── FAST: one premium variation, single shot (fits 30s) ────────
+// 3-AI diversity: each variation/slot starts on a DIFFERENT Gemini model
+// + different temperature, so 3 designs look/think differently.
 // Returns [ok, html, modelUsed|null, errors[], usage]
-function gemini_generate_one(array $data, string $variationId, string $mode, string $brief, int $slot = -1, ?string $preferred = null): array {
+function gemini_generate_one(array $data, string $variationId, string $mode, string $brief, int $slot = -1, ?string $preferred = null, ?float $temperature = null): array {
     $modeLabel = ['static' => 'Static Website (HTML/CSS/JS only)', 'admin' => 'Website + Admin Panel + PHP Backend (JSON storage, NO database)', 'database' => 'Website + Admin Panel + PHP Backend + MySQL Database (full stack)'][$mode] ?? $mode;
     $user = "## TASK\nGenerate the complete, production-ready HTML file for the \"{$variationId}\" variant.\n\n"
         . "## GENERATION MODE — ALREADY DECIDED (DO NOT ASK)\nType: **{$modeLabel}**\nOutput the PUBLIC WEBSITE HTML only.\n\n"
@@ -76,15 +79,29 @@ function gemini_generate_one(array $data, string $variationId, string $mode, str
         . "## LAYOUT DIRECTION — \"{$variationId}\"\n" . opencode_layout_brief($variationId, $slot) . "\n\n"
         . opencode_palette_block((string)($data['color_palette'] ?? 'purple')) . "\n\n"
         . "## OUTPUT BUDGET\n- Complete but efficient: all required sections, working nav/form/menu JS, responsive CSS.\n- Tight CSS (shared classes, no repetition, no filler). If the budget runs out, end cleanly after the last FULL section.\n\n## NOW OUTPUT THE HTML FILE";
+    // Diversity rotation: variation+slot picks different starting model
+    $base = gemini_fast_models();
+    $rot = 0;
+    $vIdx = array_search($variationId, ['classic', 'bold', 'editorial'], true);
+    if ($vIdx === false) $vIdx = 0;
+    $rot = ($vIdx + max(0, $slot)) % max(1, count($base));
+    if ($rot > 0) $base = array_merge(array_slice($base, $rot), array_slice($base, 0, $rot));
+    // Diversity temperature: bold = wild, classic = balanced, editorial = precise
+    if ($temperature === null) {
+        $temps = ['classic' => 0.7, 'bold' => 0.95, 'editorial' => 0.55];
+        $temperature = $temps[$variationId] ?? 0.75;
+        if ($slot >= 0) $temperature = min(1.2, $temperature + $slot * 0.1);
+    }
+    $temperature = max(0.1, min(1.2, (float)$temperature));
     $queue = [];
     if ($preferred) $queue[] = $preferred;
-    foreach (gemini_fast_models() as $m) {
+    foreach ($base as $m) {
         if (!in_array($m, $queue, true)) $queue[] = $m;
     }
     $errors = [];
     $usageTotal = ['prompt' => 0, 'completion' => 0];
     foreach ($queue as $model) {
-        [$ok, $text, $err, $u] = gemini_chat_once($model, opencode_gen_system(), $user, 0.7, 8000, 28);
+        [$ok, $text, $err, $u] = gemini_chat_once($model, opencode_gen_system(), $user, $temperature, 8000, 28);
         $usageTotal = opencode_add_usage($usageTotal, $u);
         if (!$ok) { $errors[] = $err; continue; }
         if (opencode_is_refusal($text)) { $errors[] = $model . ': conversational reply'; continue; }
